@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/budgets/domain/budget_status.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,9 +24,13 @@ class CategoryTotal {
 class TransactionsRepository {
   final AppDatabase db;
   final DateTime Function() _clock;
+  final Notifier? notifier;
 
-  TransactionsRepository(this.db, {DateTime Function()? clock})
-      : _clock = clock ?? DateTime.now;
+  TransactionsRepository(
+    this.db, {
+    DateTime Function()? clock,
+    this.notifier,
+  })  : _clock = clock ?? DateTime.now;
 
   DateTime _now() => _clock().toUtc();
 
@@ -75,7 +81,7 @@ class TransactionsRepository {
     final id = const Uuid().v4();
     final now = _now();
 
-    return db.transaction(() async {
+    await db.transaction(() async {
       await db.into(db.transactions).insert(
             TransactionsCompanion.insert(
               id: id,
@@ -97,6 +103,20 @@ class TransactionsRepository {
 
       return id;
     });
+
+    final notif = notifier;
+    if (type == TxType.expense && notif != null) {
+      try {
+        await evaluateBudgetAlerts(
+          categoryId,
+          nowLocal: occurredAt,
+          db: db,
+          notifier: notif,
+        );
+      } catch (_) {}
+    }
+
+    return id;
   }
 
   Future<void> update(
@@ -139,6 +159,22 @@ class TransactionsRepository {
         }
       }
     });
+
+    final notif = notifier;
+    if (notif != null) {
+      try {
+        final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
+            .getSingleOrNull();
+        if (tx != null && tx.type == TxType.expense) {
+          await evaluateBudgetAlerts(
+            tx.categoryId,
+            nowLocal: tx.occurredAt.toLocal(),
+            db: db,
+            notifier: notif,
+          );
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> softDelete(String id) async {

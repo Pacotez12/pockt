@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/features/recurring/domain/recurrence.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,11 +9,13 @@ class RecurringRepository {
   final AppDatabase _db;
   final DateTime Function() _clock;
   final Uuid _uuid;
+  final Notifier? notifier;
 
   RecurringRepository(
     this._db, {
     DateTime Function()? clock,
     Uuid? uuid,
+    this.notifier,
   })  : _clock = clock ?? DateTime.now,
         _uuid = uuid ?? const Uuid();
 
@@ -42,6 +45,17 @@ class RecurringRepository {
     int? dayOfWeek,
     int? monthOfYear,
   }) async {
+    final notif = notifier;
+    if (notif != null) {
+      final countResult = await (_db.selectOnly(_db.recurringRules)
+            ..addColumns([_db.recurringRules.id.count()]))
+          .getSingle();
+      final total = countResult.read(_db.recurringRules.id.count()) ?? 0;
+      if (total == 0) {
+        await notif.ensurePermission();
+      }
+    }
+
     final id = _uuid.v4();
     final today = _todayLocal();
     final yesterday = DateTime(today.year, today.month, today.day - 1);

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
+import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/recurring/data/recurring_repository.dart';
@@ -19,7 +20,10 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
 });
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
-  return TransactionsRepository(ref.watch(databaseProvider));
+  return TransactionsRepository(
+    ref.watch(databaseProvider),
+    notifier: ref.watch(notifierProvider),
+  );
 });
 
 final keywordsRepositoryProvider = Provider<KeywordsRepository>((ref) {
@@ -32,7 +36,10 @@ final incomeScheduleRepositoryProvider =
 });
 
 final recurringRepositoryProvider = Provider<RecurringRepository>((ref) {
-  return RecurringRepository(ref.watch(databaseProvider));
+  return RecurringRepository(
+    ref.watch(databaseProvider),
+    notifier: ref.watch(notifierProvider),
+  );
 });
 
 final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
@@ -40,6 +47,10 @@ final suggestionsRepositoryProvider = Provider<SuggestionsRepository>((ref) {
 });
 
 final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
-  return BudgetsRepository(ref.watch(databaseProvider));
+  return BudgetsRepository(
+    ref.watch(databaseProvider),
+    notifier: ref.watch(notifierProvider),
+  );
 });
+
 

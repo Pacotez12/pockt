@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
+import 'package:pockt/core/notifications/notifier.dart';
 import 'package:uuid/uuid.dart';
 
 class BudgetView {
@@ -13,9 +14,10 @@ class BudgetView {
 }
 
 class BudgetsRepository {
-  BudgetsRepository(this._db);
+  BudgetsRepository(this._db, {this.notifier});
 
   final AppDatabase _db;
+  final Notifier? notifier;
 
   Stream<List<BudgetView>> watchAll() {
     final query = _db.select(_db.budgets).join([
@@ -38,6 +40,17 @@ class BudgetsRepository {
   }
 
   Future<void> setLimit(String categoryId, int monthlyLimit) async {
+    final notif = notifier;
+    if (notif != null) {
+      final countResult = await (_db.selectOnly(_db.budgets)
+            ..addColumns([_db.budgets.id.count()]))
+          .getSingle();
+      final total = countResult.read(_db.budgets.id.count()) ?? 0;
+      if (total == 0) {
+        await notif.ensurePermission();
+      }
+    }
+
     final existing = await (_db.select(_db.budgets)
           ..where((b) => b.categoryId.equals(categoryId)))
         .getSingleOrNull();
