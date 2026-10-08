@@ -227,4 +227,76 @@ void main() {
     final local = toLocal(tx.occurredAt);
     expect(local.hour == 0 && local.minute == 0 && local.second == 0, isFalse);
   });
+
+  testWidgets('al tocar una categoría en la grilla existe un Hero en vuelo con tag cat-<id>', (t) async {
+    await openEntry(t);
+
+    final cat = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!
+        .firstWhere((c) => c.name == 'Comida');
+    final heroTag = 'cat-${cat.id}';
+
+    // Antes del tap no hay shuttle en vuelo
+    expect(find.byKey(ValueKey('hero-flight-$heroTag')), findsNothing);
+
+    // Tocamos la categoría Comida en la grilla
+    await t.tap(find.text('Comida'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 150));
+
+    // Durante la transición, el Hero está en vuelo dentro del Overlay
+    final flightShuttle = find.byKey(ValueKey('hero-flight-$heroTag'));
+    expect(flightShuttle, findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(Overlay), matching: flightShuttle),
+      findsOneWidget,
+    );
+
+    // Completamos la animación
+    await t.pumpAndSettle();
+
+    // Al finalizar la transición, el shuttle termina y la pantalla de teclado está lista
+    expect(flightShuttle, findsNothing);
+    expect(find.text('Gs. 0'), findsOneWidget);
+  });
+
+  testWidgets('con reduce motion la transición no monta el Hero en vuelo', (t) async {
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+        ],
+        child: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    onPressed: () => showEntryFlow(context),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('Open'));
+    await t.pumpAndSettle();
+
+    final cat = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!
+        .firstWhere((c) => c.name == 'Comida');
+    final heroTag = 'cat-${cat.id}';
+
+    await t.tap(find.text('Comida'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 150));
+
+    // Con reduce motion no hay Hero en vuelo en el Overlay
+    expect(find.byKey(ValueKey('hero-flight-$heroTag')), findsNothing);
+
+    await t.pumpAndSettle();
+    expect(find.text('Gs. 0'), findsOneWidget);
+  });
 }

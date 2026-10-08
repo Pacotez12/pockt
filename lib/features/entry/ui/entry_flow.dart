@@ -581,32 +581,35 @@ class _CategoryGridState extends ConsumerState<_CategoryGrid> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Hero(
-                    tag: 'cat-${cat.id}',
-                    createRectTween: (begin, end) =>
-                        SpringRectTween(begin: begin, end: end),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: catColor,
-                          boxShadow: [
-                            BoxShadow(
-                              color: catColor.withValues(
-                                  alpha: isDark ? 0.35 : 0.20),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: categoryIcon(
-                          cat.icon,
-                          size: 28,
-                          color: const Color(0xFF141414),
+                  HeroMode(
+                    enabled: !MediaQuery.disableAnimationsOf(context),
+                    child: Hero(
+                      tag: 'cat-${cat.id}',
+                      createRectTween: (begin, end) =>
+                          SpringRectTween(begin: begin, end: end),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: catColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: catColor.withValues(
+                                    alpha: isDark ? 0.35 : 0.20),
+                                blurRadius: 14,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: categoryIcon(
+                            cat.icon,
+                            size: 28,
+                            color: const Color(0xFF141414),
+                          ),
                         ),
                       ),
                     ),

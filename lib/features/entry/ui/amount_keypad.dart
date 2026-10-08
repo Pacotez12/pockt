@@ -176,45 +176,123 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 ),
                 const Spacer(flex: 1),
                 // Category Pill with shared Hero
-                Hero(
-                  tag: 'cat-${_category.id}',
-                  createRectTween: (begin, end) =>
-                      SpringRectTween(begin: begin, end: end),
-                  flightShuttleBuilder: (
-                    flightContext,
-                    animation,
-                    flightDirection,
-                    fromHeroContext,
-                    toHeroContext,
-                  ) {
-                    return Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: categoryColor.withValues(
-                            alpha: isDark ? 0.22 : 0.14,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: categoryColor.withValues(
-                              alpha: isDark ? 0.6 : 0.4,
+                HeroMode(
+                  enabled: !MediaQuery.disableAnimationsOf(context),
+                  child: Hero(
+                    tag: 'cat-${_category.id}',
+                    createRectTween: (begin, end) =>
+                        SpringRectTween(begin: begin, end: end),
+                    flightShuttleBuilder: (
+                      flightContext,
+                      animation,
+                      flightDirection,
+                      fromHeroContext,
+                      toHeroContext,
+                    ) {
+                      final catColor = Color(
+                        isDark ? _category.colorDark : _category.colorLight,
+                      );
+                      final pillBg = categoryColor.withValues(
+                        alpha: isDark ? 0.22 : 0.14,
+                      );
+                      final targetBorderAlpha = isDark ? 0.6 : 0.4;
+                      final targetShadowAlpha = isDark ? 0.35 : 0.20;
+
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, _) {
+                          final t = animation.value.clamp(0.0, 1.0);
+                          final bg = Color.lerp(catColor, pillBg, t)!;
+                          final radius = BorderRadius.circular(29.0 - 9.0 * t);
+                          final borderAlpha = targetBorderAlpha * t;
+                          final shadowAlpha = targetShadowAlpha * (1.0 - t);
+                          final shadowBlur = 14.0 * (1.0 - t);
+                          final shadowOffset = Offset(0, 4.0 * (1.0 - t));
+
+                          // Cross-fade: Version A (icono centrado oscuro) se desvanece de 0 a 0.45;
+                          // Version B (fila con icono y texto nítido) entra de 0.35 a 0.8.
+                          final alphaA = ((0.45 - t) / 0.45).clamp(0.0, 1.0);
+                          final alphaB = ((t - 0.35) / 0.45).clamp(0.0, 1.0);
+
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: Container(
+                              key: ValueKey('hero-flight-cat-${_category.id}'),
+                              decoration: BoxDecoration(
+                                color: bg,
+                                borderRadius: radius,
+                                border: borderAlpha > 0.01
+                                    ? Border.all(
+                                        color: categoryColor.withValues(
+                                          alpha: borderAlpha,
+                                        ),
+                                        width: 1,
+                                      )
+                                    : null,
+                                boxShadow: shadowAlpha > 0.01
+                                    ? [
+                                        BoxShadow(
+                                          color: catColor.withValues(
+                                            alpha: shadowAlpha,
+                                          ),
+                                          blurRadius: shadowBlur,
+                                          offset: shadowOffset,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                alignment: Alignment.center,
+                                children: [
+                                  if (alphaA > 0.01)
+                                    Opacity(
+                                      opacity: alphaA,
+                                      child: Center(
+                                        child: categoryIcon(
+                                          _category.icon,
+                                          size: 28,
+                                          color: const Color(0xFF141414),
+                                        ),
+                                      ),
+                                    ),
+                                  if (alphaB > 0.01)
+                                    Opacity(
+                                      opacity: alphaB,
+                                      child: Center(
+                                        child: OverflowBox(
+                                          maxWidth: double.infinity,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              categoryIcon(
+                                                _category.icon,
+                                                size: 20,
+                                                color: colors.textPrimary,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _category.name,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: colors.textPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                            width: 1,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: categoryIcon(
-                          _category.icon,
-                          size: 20,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
                   child: Material(
                     type: MaterialType.transparency,
                     child: Container(
@@ -260,7 +338,8 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
                 // Formatted Amount Display
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
