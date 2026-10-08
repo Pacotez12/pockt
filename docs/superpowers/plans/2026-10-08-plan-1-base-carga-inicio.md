@@ -510,7 +510,7 @@ Se ejecuta **después de la Task 10**. La app ya está instalada en el A54 con d
 **Interfaces:**
 - Tablas nuevas:
   - `CategoryKeywords`: `id` (UUID), `categoryId` (FK), `keyword` (normalizado: minúsculas, sin tildes), `source` (`enum KeywordSource { seed, user }`). Único (`categoryId`, `keyword`).
-  - `MerchantMemory`: `merchantKey` (PK, normalizado), `categoryId`, `uses` (int), `lastUsedAt`.
+  - `MerchantMemory`: `merchantKey` (normalizado), `categoryId`, `uses` (int), `lastUsedAt`. PK compuesta (`merchantKey`, `categoryId`): un mismo comercio puede contarse en varias categorías.
 - Migración v2: crea las dos tablas y copia `kSeedCategoryKeywords` a `CategoryKeywords` **por id de categoría** (resolviendo el nombre una sola vez, en la migración). A partir de ahí el parser no usa más los nombres.
 - `KeywordsRepository(AppDatabase db)`:
   - `Stream<List<CategoryKeyword>> watchFor(String categoryId)`

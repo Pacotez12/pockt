@@ -101,5 +101,24 @@ void main() {
       expect(res.occurredLocalDay, DateTime(2026, 10, 7));
       expect(res.merchant, 'Superseis Los Laureles');
     });
+
+    test('tolerancia a errores de tipeo con Damerau-Levenshtein', () {
+      // 'suoer 230 mil' -> Hogar (distancia 1 a 'super')
+      final r1 = parseNaturalEntry('suoer 230 mil', nowLocal: now, keywordToCategoryId: keywords);
+      expect(r1, isNotNull);
+      expect(r1!.amount, 230000);
+      expect(r1.categoryId, hogar);
+
+      // 'cafr 15000' -> Comida (distancia 1 a 'cafe')
+      final r2 = parseNaturalEntry('cafr 15000', nowLocal: now, keywordToCategoryId: keywords);
+      expect(r2, isNotNull);
+      expect(r2!.amount, 15000);
+      expect(r2.categoryId, comida);
+
+      // 'bar' no matchea 'bat' (palabra corta de menos de 4 letras, solo exacta)
+      final r3 = parseNaturalEntry('bar 15000', nowLocal: now, keywordToCategoryId: {'bat': transporte});
+      expect(r3, isNotNull);
+      expect(r3!.categoryId, isNull);
+    });
   });
 }

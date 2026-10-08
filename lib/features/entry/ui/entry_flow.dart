@@ -118,12 +118,22 @@ class _EntryCategoryPickerScreenState
   ParsedEntry? _proposal;
   StreamSubscription<List<Category>>? _categoriesSub;
   List<Category> _activeCategories = const [];
+  Map<String, String> _keywordMap = const {};
 
   @override
   void initState() {
     super.initState();
     _currentType = widget.initialType;
     _subscribeCategories();
+    _loadKeywords();
+  }
+
+  void _loadKeywords() async {
+    final kwRepo = ref.read(keywordsRepositoryProvider);
+    final map = await kwRepo.keywordMap();
+    if (mounted) {
+      setState(() => _keywordMap = map);
+    }
   }
 
   @override
@@ -154,7 +164,9 @@ class _EntryCategoryPickerScreenState
       return;
     }
     final now = toLocal(DateTime.now());
-    final keywords = buildKeywordToCategoryIdMap(_activeCategories);
+    final keywords = _keywordMap.isNotEmpty
+        ? _keywordMap
+        : buildKeywordToCategoryIdMap(_activeCategories);
     final parsed = parseNaturalEntry(
       text,
       nowLocal: now,

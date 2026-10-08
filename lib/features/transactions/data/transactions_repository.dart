@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:uuid/uuid.dart';
 
 class TxView {
@@ -27,6 +28,38 @@ class TransactionsRepository {
 
   DateTime _now() => _clock().toUtc();
 
+  Future<void> _upsertMerchantMemory(
+    String merchant,
+    String categoryId,
+    DateTime occurredAt,
+  ) async {
+    final key = normalizeKeyword(merchant);
+    if (key.isEmpty) return;
+
+    final existing = await (db.select(db.merchantMemory)
+          ..where((m) => m.merchantKey.equals(key) & m.categoryId.equals(categoryId)))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      final newest = occurredAt.isAfter(existing.lastUsedAt) ? occurredAt : existing.lastUsedAt;
+      await (db.update(db.merchantMemory)
+            ..where((m) => m.merchantKey.equals(key) & m.categoryId.equals(categoryId)))
+          .write(MerchantMemoryCompanion(
+        uses: Value(existing.uses + 1),
+        lastUsedAt: Value(newest),
+      ));
+    } else {
+      await db.into(db.merchantMemory).insert(
+            MerchantMemoryCompanion.insert(
+              merchantKey: key,
+              categoryId: categoryId,
+              uses: 1,
+              lastUsedAt: occurredAt,
+            ),
+          );
+    }
+  }
+
   Future<String> add({
     required TxType type,
     required int amount,
@@ -42,22 +75,28 @@ class TransactionsRepository {
     final id = const Uuid().v4();
     final now = _now();
 
-    await db.into(db.transactions).insert(
-          TransactionsCompanion.insert(
-            id: id,
-            type: type,
-            amount: amount,
-            categoryId: categoryId,
-            occurredAt: occurredAt.toUtc(),
-            createdAt: now,
-            updatedAt: now,
-            source: TxSource.manual,
-            merchant: Value(merchant),
-            note: Value(note),
-          ),
-        );
+    return db.transaction(() async {
+      await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              id: id,
+              type: type,
+              amount: amount,
+              categoryId: categoryId,
+              occurredAt: occurredAt.toUtc(),
+              createdAt: now,
+              updatedAt: now,
+              source: TxSource.manual,
+              merchant: Value(merchant),
+              note: Value(note),
+            ),
+          );
 
-    return id;
+      if (merchant != null && merchant.trim().isNotEmpty) {
+        await _upsertMerchantMemory(merchant, categoryId, occurredAt.toUtc());
+      }
+
+      return id;
+    });
   }
 
   Future<void> update(
@@ -72,16 +111,34 @@ class TransactionsRepository {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
     }
 
-    final companion = TransactionsCompanion(
-      amount: amount != null ? Value(amount) : const Value.absent(),
-      categoryId: categoryId != null ? Value(categoryId) : const Value.absent(),
-      occurredAt: occurredAt != null ? Value(occurredAt.toUtc()) : const Value.absent(),
-      merchant: merchant != null ? Value(merchant) : const Value.absent(),
-      note: note != null ? Value(note) : const Value.absent(),
-      updatedAt: Value(_now()),
-    );
+    await db.transaction(() async {
+      final companion = TransactionsCompanion(
+        amount: amount != null ? Value(amount) : const Value.absent(),
+        categoryId: categoryId != null ? Value(categoryId) : const Value.absent(),
+        occurredAt: occurredAt != null ? Value(occurredAt.toUtc()) : const Value.absent(),
+        merchant: merchant != null ? Value(merchant) : const Value.absent(),
+        note: note != null ? Value(note) : const Value.absent(),
+        updatedAt: Value(_now()),
+      );
 
-    await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(companion);
+      await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(companion);
+
+      if (merchant != null && merchant.trim().isNotEmpty) {
+        String effectiveCatId = categoryId ?? '';
+        DateTime effectiveOccurredAt = occurredAt ?? _now();
+        if (categoryId == null || occurredAt == null) {
+          final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
+              .getSingleOrNull();
+          if (tx != null) {
+            effectiveCatId = categoryId ?? tx.categoryId;
+            effectiveOccurredAt = occurredAt ?? tx.occurredAt;
+          }
+        }
+        if (effectiveCatId.isNotEmpty) {
+          await _upsertMerchantMemory(merchant, effectiveCatId, effectiveOccurredAt.toUtc());
+        }
+      }
+    });
   }
 
   Future<void> softDelete(String id) async {

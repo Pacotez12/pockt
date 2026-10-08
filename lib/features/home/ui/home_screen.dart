@@ -6,6 +6,7 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
+import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
@@ -14,6 +15,7 @@ import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/transactions/ui/tx_row.dart';
 
@@ -281,19 +283,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colors.glassFill,
-            border: Border.all(color: colors.glassBorder),
-          ),
-          child: Center(
-            child: Icon(
-              uiIcon('gear'),
-              size: 16,
-              color: colors.textPrimary,
+        Pressable(
+          key: const ValueKey('home-settings-button'),
+          onTap: () {
+            Haptics.tick();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const CategoryKeywordsScreen(),
+              ),
+            );
+          },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.glassFill,
+              border: Border.all(color: colors.glassBorder),
+            ),
+            child: Center(
+              child: Icon(
+                uiIcon('gear'),
+                size: 16,
+                color: colors.textPrimary,
+              ),
             ),
           ),
         ),

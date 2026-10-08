@@ -116,3 +116,30 @@ class Settings extends Table {
   @override
   Set<Column> get primaryKey => {key};
 }
+
+enum KeywordSource { seed, user }
+
+class CategoryKeywords extends Table {
+  TextColumn get id => text()();
+  TextColumn get categoryId => text().references(Categories, #id)();
+  TextColumn get keyword => text()();
+  TextColumn get source => textEnum<KeywordSource>()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {categoryId, keyword},
+      ];
+}
+
+class MerchantMemory extends Table {
+  TextColumn get merchantKey => text()();
+  TextColumn get categoryId => text().references(Categories, #id)();
+  IntColumn get uses => integer()();
+  DateTimeColumn get lastUsedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {merchantKey, categoryId};
+}

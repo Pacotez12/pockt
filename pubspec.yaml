@@ -21,6 +21,7 @@ dependencies:
   phosphor_flutter: 2.1.0
 
 dev_dependencies:
+  sqlite3: 3.5.2
   flutter_test:
     sdk: flutter
   integration_test:

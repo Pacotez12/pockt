@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/features/entry/domain/natural_parser.dart';
+import 'package:uuid/uuid.dart';
 
 part 'app_database.g.dart';
 
@@ -13,13 +15,15 @@ part 'app_database.g.dart';
   Budgets,
   DayMarks,
   Settings,
+  CategoryKeywords,
+  MerchantMemory,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -27,8 +31,90 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (m) async {
         await m.createAll();
         await _seedCategories();
+        await _seedCategoryKeywords();
+      },
+      onUpgrade: (m, from, to) async {
+        if (from < 2) {
+          await m.createTable(categoryKeywords);
+          await m.createTable(merchantMemory);
+          await _seedCategoryKeywords();
+          await _preloadMerchantMemory();
+        }
       },
     );
+  }
+
+  Future<void> _seedCategoryKeywords() async {
+    final cats = await select(categories).get();
+    final companionList = <CategoryKeywordsCompanion>[];
+    const uuid = Uuid();
+
+    for (final cat in cats) {
+      final list = kSeedCategoryKeywords[cat.name];
+      if (list != null) {
+        final seen = <String>{};
+        for (final kw in list) {
+          final norm = normalizeKeyword(kw);
+          if (norm.isNotEmpty && seen.add(norm)) {
+            companionList.add(
+              CategoryKeywordsCompanion.insert(
+                id: uuid.v4(),
+                categoryId: cat.id,
+                keyword: norm,
+                source: KeywordSource.seed,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    if (companionList.isNotEmpty) {
+      await batch((b) {
+        b.insertAll(categoryKeywords, companionList);
+      });
+    }
+  }
+
+  Future<void> _preloadMerchantMemory() async {
+    final txs = await (select(transactions)
+          ..where((t) => t.merchant.isNotNull() & t.deletedAt.isNull()))
+        .get();
+
+    final counts = <(String, String), ({int uses, DateTime lastUsedAt})>{};
+
+    for (final tx in txs) {
+      final m = tx.merchant?.trim();
+      if (m == null || m.isEmpty) continue;
+      final norm = normalizeKeyword(m);
+      if (norm.isEmpty) continue;
+
+      final pair = (norm, tx.categoryId);
+      final current = counts[pair];
+      if (current == null) {
+        counts[pair] = (uses: 1, lastUsedAt: tx.occurredAt);
+      } else {
+        final newest = tx.occurredAt.isAfter(current.lastUsedAt)
+            ? tx.occurredAt
+            : current.lastUsedAt;
+        counts[pair] = (uses: current.uses + 1, lastUsedAt: newest);
+      }
+    }
+
+    if (counts.isNotEmpty) {
+      final companions = counts.entries.map((e) {
+        return MerchantMemoryCompanion.insert(
+          merchantKey: e.key.$1,
+          categoryId: e.key.$2,
+          uses: e.value.uses,
+          lastUsedAt: e.value.lastUsedAt,
+        );
+      }).toList();
+
+      await batch((b) {
+        b.insertAll(merchantMemory, companions);
+      });
+    }
   }
 
   Future<void> _seedCategories() async {

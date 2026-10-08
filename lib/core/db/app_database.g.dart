@@ -4166,6 +4166,664 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 }
 
+class $CategoryKeywordsTable extends CategoryKeywords
+    with TableInfo<$CategoryKeywordsTable, CategoryKeyword> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoryKeywordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id)',
+    ),
+  );
+  static const VerificationMeta _keywordMeta = const VerificationMeta(
+    'keyword',
+  );
+  @override
+  late final GeneratedColumn<String> keyword = GeneratedColumn<String>(
+    'keyword',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<KeywordSource, String> source =
+      GeneratedColumn<String>(
+        'source',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<KeywordSource>($CategoryKeywordsTable.$convertersource);
+  @override
+  List<GeneratedColumn> get $columns => [id, categoryId, keyword, source];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'category_keywords';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CategoryKeyword> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('keyword')) {
+      context.handle(
+        _keywordMeta,
+        keyword.isAcceptableOrUnknown(data['keyword']!, _keywordMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keywordMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {categoryId, keyword},
+  ];
+  @override
+  CategoryKeyword map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CategoryKeyword(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      )!,
+      keyword: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}keyword'],
+      )!,
+      source: $CategoryKeywordsTable.$convertersource.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}source'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $CategoryKeywordsTable createAlias(String alias) {
+    return $CategoryKeywordsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<KeywordSource, String, String> $convertersource =
+      const EnumNameConverter<KeywordSource>(KeywordSource.values);
+}
+
+class CategoryKeyword extends DataClass implements Insertable<CategoryKeyword> {
+  final String id;
+  final String categoryId;
+  final String keyword;
+  final KeywordSource source;
+  const CategoryKeyword({
+    required this.id,
+    required this.categoryId,
+    required this.keyword,
+    required this.source,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['category_id'] = Variable<String>(categoryId);
+    map['keyword'] = Variable<String>(keyword);
+    {
+      map['source'] = Variable<String>(
+        $CategoryKeywordsTable.$convertersource.toSql(source),
+      );
+    }
+    return map;
+  }
+
+  CategoryKeywordsCompanion toCompanion(bool nullToAbsent) {
+    return CategoryKeywordsCompanion(
+      id: Value(id),
+      categoryId: Value(categoryId),
+      keyword: Value(keyword),
+      source: Value(source),
+    );
+  }
+
+  factory CategoryKeyword.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CategoryKeyword(
+      id: serializer.fromJson<String>(json['id']),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      keyword: serializer.fromJson<String>(json['keyword']),
+      source: $CategoryKeywordsTable.$convertersource.fromJson(
+        serializer.fromJson<String>(json['source']),
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'keyword': serializer.toJson<String>(keyword),
+      'source': serializer.toJson<String>(
+        $CategoryKeywordsTable.$convertersource.toJson(source),
+      ),
+    };
+  }
+
+  CategoryKeyword copyWith({
+    String? id,
+    String? categoryId,
+    String? keyword,
+    KeywordSource? source,
+  }) => CategoryKeyword(
+    id: id ?? this.id,
+    categoryId: categoryId ?? this.categoryId,
+    keyword: keyword ?? this.keyword,
+    source: source ?? this.source,
+  );
+  CategoryKeyword copyWithCompanion(CategoryKeywordsCompanion data) {
+    return CategoryKeyword(
+      id: data.id.present ? data.id.value : this.id,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      keyword: data.keyword.present ? data.keyword.value : this.keyword,
+      source: data.source.present ? data.source.value : this.source,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoryKeyword(')
+          ..write('id: $id, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('keyword: $keyword, ')
+          ..write('source: $source')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, categoryId, keyword, source);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CategoryKeyword &&
+          other.id == this.id &&
+          other.categoryId == this.categoryId &&
+          other.keyword == this.keyword &&
+          other.source == this.source);
+}
+
+class CategoryKeywordsCompanion extends UpdateCompanion<CategoryKeyword> {
+  final Value<String> id;
+  final Value<String> categoryId;
+  final Value<String> keyword;
+  final Value<KeywordSource> source;
+  final Value<int> rowid;
+  const CategoryKeywordsCompanion({
+    this.id = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.keyword = const Value.absent(),
+    this.source = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CategoryKeywordsCompanion.insert({
+    required String id,
+    required String categoryId,
+    required String keyword,
+    required KeywordSource source,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       categoryId = Value(categoryId),
+       keyword = Value(keyword),
+       source = Value(source);
+  static Insertable<CategoryKeyword> custom({
+    Expression<String>? id,
+    Expression<String>? categoryId,
+    Expression<String>? keyword,
+    Expression<String>? source,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (categoryId != null) 'category_id': categoryId,
+      if (keyword != null) 'keyword': keyword,
+      if (source != null) 'source': source,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CategoryKeywordsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? categoryId,
+    Value<String>? keyword,
+    Value<KeywordSource>? source,
+    Value<int>? rowid,
+  }) {
+    return CategoryKeywordsCompanion(
+      id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
+      keyword: keyword ?? this.keyword,
+      source: source ?? this.source,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (keyword.present) {
+      map['keyword'] = Variable<String>(keyword.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(
+        $CategoryKeywordsTable.$convertersource.toSql(source.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoryKeywordsCompanion(')
+          ..write('id: $id, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('keyword: $keyword, ')
+          ..write('source: $source, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MerchantMemoryTable extends MerchantMemory
+    with TableInfo<$MerchantMemoryTable, MerchantMemoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MerchantMemoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _merchantKeyMeta = const VerificationMeta(
+    'merchantKey',
+  );
+  @override
+  late final GeneratedColumn<String> merchantKey = GeneratedColumn<String>(
+    'merchant_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id)',
+    ),
+  );
+  static const VerificationMeta _usesMeta = const VerificationMeta('uses');
+  @override
+  late final GeneratedColumn<int> uses = GeneratedColumn<int>(
+    'uses',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastUsedAtMeta = const VerificationMeta(
+    'lastUsedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastUsedAt = GeneratedColumn<DateTime>(
+    'last_used_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    merchantKey,
+    categoryId,
+    uses,
+    lastUsedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'merchant_memory';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MerchantMemoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('merchant_key')) {
+      context.handle(
+        _merchantKeyMeta,
+        merchantKey.isAcceptableOrUnknown(
+          data['merchant_key']!,
+          _merchantKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_merchantKeyMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('uses')) {
+      context.handle(
+        _usesMeta,
+        uses.isAcceptableOrUnknown(data['uses']!, _usesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usesMeta);
+    }
+    if (data.containsKey('last_used_at')) {
+      context.handle(
+        _lastUsedAtMeta,
+        lastUsedAt.isAcceptableOrUnknown(
+          data['last_used_at']!,
+          _lastUsedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastUsedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {merchantKey, categoryId};
+  @override
+  MerchantMemoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MerchantMemoryData(
+      merchantKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}merchant_key'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      )!,
+      uses: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}uses'],
+      )!,
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_used_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MerchantMemoryTable createAlias(String alias) {
+    return $MerchantMemoryTable(attachedDatabase, alias);
+  }
+}
+
+class MerchantMemoryData extends DataClass
+    implements Insertable<MerchantMemoryData> {
+  final String merchantKey;
+  final String categoryId;
+  final int uses;
+  final DateTime lastUsedAt;
+  const MerchantMemoryData({
+    required this.merchantKey,
+    required this.categoryId,
+    required this.uses,
+    required this.lastUsedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['merchant_key'] = Variable<String>(merchantKey);
+    map['category_id'] = Variable<String>(categoryId);
+    map['uses'] = Variable<int>(uses);
+    map['last_used_at'] = Variable<DateTime>(lastUsedAt);
+    return map;
+  }
+
+  MerchantMemoryCompanion toCompanion(bool nullToAbsent) {
+    return MerchantMemoryCompanion(
+      merchantKey: Value(merchantKey),
+      categoryId: Value(categoryId),
+      uses: Value(uses),
+      lastUsedAt: Value(lastUsedAt),
+    );
+  }
+
+  factory MerchantMemoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MerchantMemoryData(
+      merchantKey: serializer.fromJson<String>(json['merchantKey']),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      uses: serializer.fromJson<int>(json['uses']),
+      lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'merchantKey': serializer.toJson<String>(merchantKey),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'uses': serializer.toJson<int>(uses),
+      'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+    };
+  }
+
+  MerchantMemoryData copyWith({
+    String? merchantKey,
+    String? categoryId,
+    int? uses,
+    DateTime? lastUsedAt,
+  }) => MerchantMemoryData(
+    merchantKey: merchantKey ?? this.merchantKey,
+    categoryId: categoryId ?? this.categoryId,
+    uses: uses ?? this.uses,
+    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+  );
+  MerchantMemoryData copyWithCompanion(MerchantMemoryCompanion data) {
+    return MerchantMemoryData(
+      merchantKey: data.merchantKey.present
+          ? data.merchantKey.value
+          : this.merchantKey,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      uses: data.uses.present ? data.uses.value : this.uses,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MerchantMemoryData(')
+          ..write('merchantKey: $merchantKey, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('uses: $uses, ')
+          ..write('lastUsedAt: $lastUsedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(merchantKey, categoryId, uses, lastUsedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MerchantMemoryData &&
+          other.merchantKey == this.merchantKey &&
+          other.categoryId == this.categoryId &&
+          other.uses == this.uses &&
+          other.lastUsedAt == this.lastUsedAt);
+}
+
+class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
+  final Value<String> merchantKey;
+  final Value<String> categoryId;
+  final Value<int> uses;
+  final Value<DateTime> lastUsedAt;
+  final Value<int> rowid;
+  const MerchantMemoryCompanion({
+    this.merchantKey = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.uses = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MerchantMemoryCompanion.insert({
+    required String merchantKey,
+    required String categoryId,
+    required int uses,
+    required DateTime lastUsedAt,
+    this.rowid = const Value.absent(),
+  }) : merchantKey = Value(merchantKey),
+       categoryId = Value(categoryId),
+       uses = Value(uses),
+       lastUsedAt = Value(lastUsedAt);
+  static Insertable<MerchantMemoryData> custom({
+    Expression<String>? merchantKey,
+    Expression<String>? categoryId,
+    Expression<int>? uses,
+    Expression<DateTime>? lastUsedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (merchantKey != null) 'merchant_key': merchantKey,
+      if (categoryId != null) 'category_id': categoryId,
+      if (uses != null) 'uses': uses,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MerchantMemoryCompanion copyWith({
+    Value<String>? merchantKey,
+    Value<String>? categoryId,
+    Value<int>? uses,
+    Value<DateTime>? lastUsedAt,
+    Value<int>? rowid,
+  }) {
+    return MerchantMemoryCompanion(
+      merchantKey: merchantKey ?? this.merchantKey,
+      categoryId: categoryId ?? this.categoryId,
+      uses: uses ?? this.uses,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (merchantKey.present) {
+      map['merchant_key'] = Variable<String>(merchantKey.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (uses.present) {
+      map['uses'] = Variable<int>(uses.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<DateTime>(lastUsedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MerchantMemoryCompanion(')
+          ..write('merchantKey: $merchantKey, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('uses: $uses, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4180,6 +4838,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BudgetsTable budgets = $BudgetsTable(this);
   late final $DayMarksTable dayMarks = $DayMarksTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $CategoryKeywordsTable categoryKeywords = $CategoryKeywordsTable(
+    this,
+  );
+  late final $MerchantMemoryTable merchantMemory = $MerchantMemoryTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4193,6 +4855,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     budgets,
     dayMarks,
     settings,
+    categoryKeywords,
+    merchantMemory,
   ];
 }
 
@@ -4318,6 +4982,44 @@ final class $$CategoriesTableReferences
     ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_budgetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CategoryKeywordsTable, List<CategoryKeyword>>
+  _categoryKeywordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.categoryKeywords,
+    aliasName: 'categories__id__category_keywords__category_id',
+  );
+
+  $$CategoryKeywordsTableProcessedTableManager get categoryKeywordsRefs {
+    final manager = $$CategoryKeywordsTableTableManager(
+      $_db,
+      $_db.categoryKeywords,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _categoryKeywordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$MerchantMemoryTable, List<MerchantMemoryData>>
+  _merchantMemoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.merchantMemory,
+    aliasName: 'categories__id__merchant_memory__category_id',
+  );
+
+  $$MerchantMemoryTableProcessedTableManager get merchantMemoryRefs {
+    final manager = $$MerchantMemoryTableTableManager(
+      $_db,
+      $_db.merchantMemory,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_merchantMemoryRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4491,6 +5193,56 @@ class $$CategoriesTableFilterComposer
           }) => $$BudgetsTableFilterComposer(
             $db: $db,
             $table: $db.budgets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> categoryKeywordsRefs(
+    Expression<bool> Function($$CategoryKeywordsTableFilterComposer f) f,
+  ) {
+    final $$CategoryKeywordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.categoryKeywords,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoryKeywordsTableFilterComposer(
+            $db: $db,
+            $table: $db.categoryKeywords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> merchantMemoryRefs(
+    Expression<bool> Function($$MerchantMemoryTableFilterComposer f) f,
+  ) {
+    final $$MerchantMemoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.merchantMemory,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MerchantMemoryTableFilterComposer(
+            $db: $db,
+            $table: $db.merchantMemory,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4711,6 +5463,56 @@ class $$CategoriesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> categoryKeywordsRefs<T extends Object>(
+    Expression<T> Function($$CategoryKeywordsTableAnnotationComposer a) f,
+  ) {
+    final $$CategoryKeywordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.categoryKeywords,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoryKeywordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categoryKeywords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> merchantMemoryRefs<T extends Object>(
+    Expression<T> Function($$MerchantMemoryTableAnnotationComposer a) f,
+  ) {
+    final $$MerchantMemoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.merchantMemory,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MerchantMemoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.merchantMemory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CategoriesTableTableManager
@@ -4732,6 +5534,8 @@ class $$CategoriesTableTableManager
             bool recurringRulesRefs,
             bool incomeSchedulesRefs,
             bool budgetsRefs,
+            bool categoryKeywordsRefs,
+            bool merchantMemoryRefs,
           })
         > {
   $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
@@ -4804,6 +5608,8 @@ class $$CategoriesTableTableManager
                 recurringRulesRefs = false,
                 incomeSchedulesRefs = false,
                 budgetsRefs = false,
+                categoryKeywordsRefs = false,
+                merchantMemoryRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -4813,6 +5619,8 @@ class $$CategoriesTableTableManager
                     if (recurringRulesRefs) db.recurringRules,
                     if (incomeSchedulesRefs) db.incomeSchedules,
                     if (budgetsRefs) db.budgets,
+                    if (categoryKeywordsRefs) db.categoryKeywords,
+                    if (merchantMemoryRefs) db.merchantMemory,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -4922,6 +5730,48 @@ class $$CategoriesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (categoryKeywordsRefs)
+                        await $_getPrefetchedData<
+                          Category,
+                          $CategoriesTable,
+                          CategoryKeyword
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._categoryKeywordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).categoryKeywordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.categoryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (merchantMemoryRefs)
+                        await $_getPrefetchedData<
+                          Category,
+                          $CategoriesTable,
+                          MerchantMemoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._merchantMemoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).merchantMemoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.categoryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4948,6 +5798,8 @@ typedef $$CategoriesTableProcessedTableManager =
         bool recurringRulesRefs,
         bool incomeSchedulesRefs,
         bool budgetsRefs,
+        bool categoryKeywordsRefs,
+        bool merchantMemoryRefs,
       })
     >;
 typedef $$TransactionsTableCreateCompanionBuilder =
@@ -7549,6 +8401,621 @@ typedef $$SettingsTableProcessedTableManager =
       Setting,
       PrefetchHooks Function()
     >;
+typedef $$CategoryKeywordsTableCreateCompanionBuilder =
+    CategoryKeywordsCompanion Function({
+      required String id,
+      required String categoryId,
+      required String keyword,
+      required KeywordSource source,
+      Value<int> rowid,
+    });
+typedef $$CategoryKeywordsTableUpdateCompanionBuilder =
+    CategoryKeywordsCompanion Function({
+      Value<String> id,
+      Value<String> categoryId,
+      Value<String> keyword,
+      Value<KeywordSource> source,
+      Value<int> rowid,
+    });
+
+final class $$CategoryKeywordsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $CategoryKeywordsTable, CategoryKeyword> {
+  $$CategoryKeywordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) => db.categories
+      .createAlias('category_keywords__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager get categoryId {
+    final $_column = $_itemColumn<String>('category_id')!;
+
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CategoryKeywordsTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoryKeywordsTable> {
+  $$CategoryKeywordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get keyword => $composableBuilder(
+    column: $table.keyword,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<KeywordSource, KeywordSource, String>
+  get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CategoryKeywordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoryKeywordsTable> {
+  $$CategoryKeywordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get keyword => $composableBuilder(
+    column: $table.keyword,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CategoryKeywordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoryKeywordsTable> {
+  $$CategoryKeywordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get keyword =>
+      $composableBuilder(column: $table.keyword, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<KeywordSource, String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CategoryKeywordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoryKeywordsTable,
+          CategoryKeyword,
+          $$CategoryKeywordsTableFilterComposer,
+          $$CategoryKeywordsTableOrderingComposer,
+          $$CategoryKeywordsTableAnnotationComposer,
+          $$CategoryKeywordsTableCreateCompanionBuilder,
+          $$CategoryKeywordsTableUpdateCompanionBuilder,
+          (CategoryKeyword, $$CategoryKeywordsTableReferences),
+          CategoryKeyword,
+          PrefetchHooks Function({bool categoryId})
+        > {
+  $$CategoryKeywordsTableTableManager(
+    _$AppDatabase db,
+    $CategoryKeywordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoryKeywordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoryKeywordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoryKeywordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> categoryId = const Value.absent(),
+                Value<String> keyword = const Value.absent(),
+                Value<KeywordSource> source = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoryKeywordsCompanion(
+                id: id,
+                categoryId: categoryId,
+                keyword: keyword,
+                source: source,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String categoryId,
+                required String keyword,
+                required KeywordSource source,
+                Value<int> rowid = const Value.absent(),
+              }) => CategoryKeywordsCompanion.insert(
+                id: id,
+                categoryId: categoryId,
+                keyword: keyword,
+                source: source,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CategoryKeywordsTable, CategoryKeyword>(table),
+                  $$CategoryKeywordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({categoryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.categoryId,
+                        referencedTable: $$CategoryKeywordsTableReferences
+                            ._categoryIdTable(db),
+                        referencedColumn: $$CategoryKeywordsTableReferences
+                            ._categoryIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CategoryKeywordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoryKeywordsTable,
+      CategoryKeyword,
+      $$CategoryKeywordsTableFilterComposer,
+      $$CategoryKeywordsTableOrderingComposer,
+      $$CategoryKeywordsTableAnnotationComposer,
+      $$CategoryKeywordsTableCreateCompanionBuilder,
+      $$CategoryKeywordsTableUpdateCompanionBuilder,
+      (CategoryKeyword, $$CategoryKeywordsTableReferences),
+      CategoryKeyword,
+      PrefetchHooks Function({bool categoryId})
+    >;
+typedef $$MerchantMemoryTableCreateCompanionBuilder =
+    MerchantMemoryCompanion Function({
+      required String merchantKey,
+      required String categoryId,
+      required int uses,
+      required DateTime lastUsedAt,
+      Value<int> rowid,
+    });
+typedef $$MerchantMemoryTableUpdateCompanionBuilder =
+    MerchantMemoryCompanion Function({
+      Value<String> merchantKey,
+      Value<String> categoryId,
+      Value<int> uses,
+      Value<DateTime> lastUsedAt,
+      Value<int> rowid,
+    });
+
+final class $$MerchantMemoryTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $MerchantMemoryTable,
+          MerchantMemoryData
+        > {
+  $$MerchantMemoryTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
+      db.categories.createAlias('merchant_memory__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager get categoryId {
+    final $_column = $_itemColumn<String>('category_id')!;
+
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MerchantMemoryTableFilterComposer
+    extends Composer<_$AppDatabase, $MerchantMemoryTable> {
+  $$MerchantMemoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get merchantKey => $composableBuilder(
+    column: $table.merchantKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get uses => $composableBuilder(
+    column: $table.uses,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MerchantMemoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $MerchantMemoryTable> {
+  $$MerchantMemoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get merchantKey => $composableBuilder(
+    column: $table.merchantKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get uses => $composableBuilder(
+    column: $table.uses,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MerchantMemoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MerchantMemoryTable> {
+  $$MerchantMemoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get merchantKey => $composableBuilder(
+    column: $table.merchantKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get uses =>
+      $composableBuilder(column: $table.uses, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MerchantMemoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MerchantMemoryTable,
+          MerchantMemoryData,
+          $$MerchantMemoryTableFilterComposer,
+          $$MerchantMemoryTableOrderingComposer,
+          $$MerchantMemoryTableAnnotationComposer,
+          $$MerchantMemoryTableCreateCompanionBuilder,
+          $$MerchantMemoryTableUpdateCompanionBuilder,
+          (MerchantMemoryData, $$MerchantMemoryTableReferences),
+          MerchantMemoryData,
+          PrefetchHooks Function({bool categoryId})
+        > {
+  $$MerchantMemoryTableTableManager(
+    _$AppDatabase db,
+    $MerchantMemoryTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MerchantMemoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MerchantMemoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MerchantMemoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> merchantKey = const Value.absent(),
+                Value<String> categoryId = const Value.absent(),
+                Value<int> uses = const Value.absent(),
+                Value<DateTime> lastUsedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MerchantMemoryCompanion(
+                merchantKey: merchantKey,
+                categoryId: categoryId,
+                uses: uses,
+                lastUsedAt: lastUsedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String merchantKey,
+                required String categoryId,
+                required int uses,
+                required DateTime lastUsedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MerchantMemoryCompanion.insert(
+                merchantKey: merchantKey,
+                categoryId: categoryId,
+                uses: uses,
+                lastUsedAt: lastUsedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MerchantMemoryTable, MerchantMemoryData>(table),
+                  $$MerchantMemoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({categoryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.categoryId,
+                        referencedTable: $$MerchantMemoryTableReferences
+                            ._categoryIdTable(db),
+                        referencedColumn: $$MerchantMemoryTableReferences
+                            ._categoryIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MerchantMemoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MerchantMemoryTable,
+      MerchantMemoryData,
+      $$MerchantMemoryTableFilterComposer,
+      $$MerchantMemoryTableOrderingComposer,
+      $$MerchantMemoryTableAnnotationComposer,
+      $$MerchantMemoryTableCreateCompanionBuilder,
+      $$MerchantMemoryTableUpdateCompanionBuilder,
+      (MerchantMemoryData, $$MerchantMemoryTableReferences),
+      MerchantMemoryData,
+      PrefetchHooks Function({bool categoryId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7569,4 +9036,8 @@ class $AppDatabaseManager {
       $$DayMarksTableTableManager(_db, _db.dayMarks);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$CategoryKeywordsTableTableManager get categoryKeywords =>
+      $$CategoryKeywordsTableTableManager(_db, _db.categoryKeywords);
+  $$MerchantMemoryTableTableManager get merchantMemory =>
+      $$MerchantMemoryTableTableManager(_db, _db.merchantMemory);
 }
