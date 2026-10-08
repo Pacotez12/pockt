@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/theme.dart';
-
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 
 class PocktApp extends StatelessWidget {
@@ -18,7 +18,7 @@ class PocktApp extends StatelessWidget {
         body: Center(
           child: Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.add, size: 48, color: Colors.white),
+              icon: Icon(uiIcon('plus'), size: 48, color: Colors.white),
               onPressed: () => showEntryFlow(context),
             ),
           ),

@@ -5,6 +5,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/haptics.dart';
+import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/features/entry/ui/amount_keypad.dart';
@@ -47,7 +48,7 @@ Future<void> showEntryFlow(
       PageRouteBuilder<bool>(
         transitionDuration: const Duration(milliseconds: 350),
         reverseTransitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (context, _, __) => AmountKeypadScreen(
+        pageBuilder: (context, _, _) => AmountKeypadScreen(
           category: editing.category,
           type: editing.tx.type,
           editing: editing,
@@ -69,7 +70,7 @@ Future<void> showEntryFlow(
         PageRouteBuilder<bool>(
           transitionDuration: const Duration(milliseconds: 350),
           reverseTransitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (context, _, __) => AmountKeypadScreen(
+          pageBuilder: (context, _, _) => AmountKeypadScreen(
             category: category,
             type: initialType,
           ),
@@ -80,11 +81,12 @@ Future<void> showEntryFlow(
     }
   }
 
+  if (!context.mounted) return;
   await Navigator.of(context).push<void>(
     PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 350),
       reverseTransitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, _, __) => EntryCategoryPickerScreen(
+      pageBuilder: (context, _, _) => EntryCategoryPickerScreen(
         initialType: initialType,
       ),
       transitionsBuilder: entrySpringTransitionsBuilder,
@@ -157,7 +159,7 @@ class _EntryCategoryPickerScreenState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: Icon(uiIcon('x'), size: 22),
                         color: colors.textSecondary,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -202,7 +204,7 @@ class _EntryCategoryPickerScreenState
                               const Duration(milliseconds: 350),
                           reverseTransitionDuration:
                               const Duration(milliseconds: 300),
-                          pageBuilder: (context, _, __) => AmountKeypadScreen(
+                          pageBuilder: (context, _, _) => AmountKeypadScreen(
                             category: category,
                             type: _currentType,
                           ),
@@ -333,9 +335,10 @@ class _CategoryGridState extends ConsumerState<_CategoryGrid> {
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: Text(
+                        child: categoryIcon(
                           cat.icon,
-                          style: const TextStyle(fontSize: 24),
+                          size: 28,
+                          color: const Color(0xFF141414),
                         ),
                       ),
                     ),

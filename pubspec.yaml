@@ -18,6 +18,7 @@ dependencies:
   uuid: 4.6.0
   timezone: 0.11.1
   flutter_timezone: 5.1.1
+  phosphor_flutter: 2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -27,6 +28,12 @@ dev_dependencies:
   build_runner: 2.16.2
   riverpod_generator: 4.0.9
   mocktail: 1.0.5
+
+dependency_overrides:
+  phosphor_flutter:
+    git:
+      url: https://github.com/hiake21c/flutter.git
+      ref: flutter-3.44-support
 
 flutter:
   uses-material-design: true

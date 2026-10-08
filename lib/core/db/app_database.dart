@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000001'),
         name: Value('Comida'),
-        icon: Value('🍔'),
+        icon: Value('fork-knife'),
         colorDark: Value(0xFFFF9F43),
         colorLight: Value(0xFFD9771A),
         kind: Value(CategoryKind.expense),
@@ -46,7 +46,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000002'),
         name: Value('Transporte'),
-        icon: Value('🚗'),
+        icon: Value('car-profile'),
         colorDark: Value(0xFF54A0FF),
         colorLight: Value(0xFF1F6FD1),
         kind: Value(CategoryKind.expense),
@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000003'),
         name: Value('Hogar'),
-        icon: Value('🏠'),
+        icon: Value('house-line'),
         colorDark: Value(0xFF1DD1A1),
         colorLight: Value(0xFF0E9673),
         kind: Value(CategoryKind.expense),
@@ -64,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000004'),
         name: Value('Salud'),
-        icon: Value('💊'),
+        icon: Value('heartbeat'),
         colorDark: Value(0xFFFF6B6B),
         colorLight: Value(0xFFD64545),
         kind: Value(CategoryKind.expense),
@@ -73,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000005'),
         name: Value('Ocio'),
-        icon: Value('🍿'),
+        icon: Value('popcorn'),
         colorDark: Value(0xFFC56CF0),
         colorLight: Value(0xFF9B3FC9),
         kind: Value(CategoryKind.expense),
@@ -82,7 +82,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000006'),
         name: Value('Servicios'),
-        icon: Value('⚡'),
+        icon: Value('lightning'),
         colorDark: Value(0xFF48DBFB),
         colorLight: Value(0xFF0E9CBF),
         kind: Value(CategoryKind.expense),
@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000007'),
         name: Value('Educación'),
-        icon: Value('📚'),
+        icon: Value('graduation-cap'),
         colorDark: Value(0xFFA4B0BE),
         colorLight: Value(0xFF5D6B7A),
         kind: Value(CategoryKind.expense),
@@ -100,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000008'),
         name: Value('Regalos'),
-        icon: Value('🎁'),
+        icon: Value('gift'),
         colorDark: Value(0xFFFECA57),
         colorLight: Value(0xFFC9921A),
         kind: Value(CategoryKind.expense),
@@ -109,7 +109,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000009'),
         name: Value('Ropa'),
-        icon: Value('👕'),
+        icon: Value('t-shirt'),
         colorDark: Value(0xFFF368E0),
         colorLight: Value(0xFFC43BB2),
         kind: Value(CategoryKind.expense),
@@ -118,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000010'),
         name: Value('Otros'),
-        icon: Value('📦'),
+        icon: Value('package'),
         colorDark: Value(0xFF8395A7),
         colorLight: Value(0xFF556677),
         kind: Value(CategoryKind.expense),
@@ -129,7 +129,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000011'),
         name: Value('Sueldo'),
-        icon: Value('💼'),
+        icon: Value('briefcase'),
         colorDark: Value(0xFF10B981),
         colorLight: Value(0xFF059669),
         kind: Value(CategoryKind.income),
@@ -138,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000012'),
         name: Value('Extra'),
-        icon: Value('✨'),
+        icon: Value('sparkle'),
         colorDark: Value(0xFF06B6D4),
         colorLight: Value(0xFF0891B2),
         kind: Value(CategoryKind.income),
@@ -147,7 +147,7 @@ class AppDatabase extends _$AppDatabase {
       const CategoriesCompanion(
         id: Value('018f0000-0000-7000-8000-000000000013'),
         name: Value('Otros ingresos'),
-        icon: Value('📥'),
+        icon: Value('arrow-circle-down'),
         colorDark: Value(0xFF6366F1),
         colorLight: Value(0xFF4338CA),
         kind: Value(CategoryKind.income),

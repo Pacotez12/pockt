@@ -1,10 +1,10 @@
-import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/haptics.dart';
+import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
@@ -145,7 +145,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: Icon(uiIcon('x'), size: 22),
                         color: colors.textSecondary,
                         onPressed: () => Navigator.of(context).pop(false),
                       ),
@@ -178,7 +178,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(_category.icon, style: const TextStyle(fontSize: 18)),
+                            categoryIcon(_category.icon, size: 20, color: colors.textPrimary),
                             const SizedBox(width: 8),
                             Text(
                               _category.name,
@@ -428,7 +428,7 @@ class _OptionalChips extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _ChipButton(
-          icon: Icons.storefront_outlined,
+          icon: uiIcon('storefront'),
           label: merchant?.isNotEmpty == true ? merchant! : 'Comercio',
           isActive: merchant?.isNotEmpty == true,
           onTap: () => _showEditDialog(
@@ -441,7 +441,7 @@ class _OptionalChips extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _ChipButton(
-          icon: Icons.edit_note_outlined,
+          icon: uiIcon('note'),
           label: note?.isNotEmpty == true ? note! : 'Nota',
           isActive: note?.isNotEmpty == true,
           onTap: () => _showEditDialog(
