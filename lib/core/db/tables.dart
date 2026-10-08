@@ -58,6 +58,11 @@ class SuggestedTransactions extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {source, sourceRef, occurredAt},
+      ];
 }
 
 class RecurringRules extends Table {

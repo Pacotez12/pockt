@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -32,6 +32,11 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
         await _seedCategories();
         await _seedCategoryKeywords();
+        // Instalaciones nuevas: el mismo índice único que crea la migración v3.
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
+          'ON suggested_transactions (source, source_ref, occurred_at);',
+        );
       },
       onUpgrade: (m, from, to) async {
         if (from < 2) {
@@ -39,6 +44,12 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(merchantMemory);
           await _seedCategoryKeywords();
           await _preloadMerchantMemory();
+        }
+        if (from < 3) {
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
+            'ON suggested_transactions (source, source_ref, occurred_at);',
+          );
         }
       },
     );

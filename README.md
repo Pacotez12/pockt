@@ -11,7 +11,7 @@ Una app de finanzas personales para Android, rápida para anotar y hermosa de us
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/estado-en%20desarrollo-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-0.1-FF8A3D)](#estado)
 
 </div>
 
@@ -22,7 +22,7 @@ Una app de finanzas personales para Android, rápida para anotar y hermosa de us
 Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por eso todo gira alrededor de cargar un gasto en **tres toques**, y de que mirar tus finanzas sea algo que *querés* hacer.
 
 - **Categoría primero.** Tocás la burbuja de la categoría, se transforma en el teclado con su color, ponés el monto y listo.
-- **Texto natural.** Escribís `super 230 mil ayer` o `bolt 28.500` y Pockt lo entiende.
+- **Texto natural que aprende.** Escribís `super 230 mil ayer` o `bolt 28.500` y Pockt lo entiende. Cada comercio que guardás queda en una libreta local: la próxima vez ya sabe su categoría, y tolera errores de tipeo.
 - **Tus días, a la vista.** Un calendario de calor del mes, al estilo de las contribuciones de GitHub, que muestra en qué días gastaste más. Tocás un día y ves en qué se fue.
 - **Presupuestos por categoría** con avisos al 80 % y al 100 %.
 - **Recurrentes y cobros** (quincenales o mensuales) que te esperan en una bandeja para confirmar, sin cargarse a ciegas.
@@ -100,8 +100,8 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 
 | Etapa | Contenido | |
 |---|---|---|
-| **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos | 🚧 en curso |
-| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos | ⏳ |
+| **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
+| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos | 🚧 en curso |
 | **Plan 3** | Reportes, recordatorios, widget y acceso rápido | ⏳ |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
