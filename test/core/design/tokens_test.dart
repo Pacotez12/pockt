@@ -15,6 +15,12 @@ void main() {
   test('lerp interpola entre claro y oscuro', () {
     final mid = PocktColors.dark.lerp(PocktColors.light, 0.5);
     expect(mid.background, isNot(PocktColors.dark.background));
+    expect(mid.sheetSurface, isNot(PocktColors.dark.sheetSurface));
+  });
+
+  test('sheetSurface oscuro es 0xFF18181B y claro es blanco', () {
+    expect(PocktColors.dark.sheetSurface, const Color(0xFF18181B));
+    expect(PocktColors.light.sheetSurface, const Color(0xFFFFFFFF));
   });
 
   test('colores heat y brand coinciden con especificación', () {

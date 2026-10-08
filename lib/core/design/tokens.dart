@@ -10,6 +10,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
   final Color brandStart;
   final Color brandEnd;
   final Color positive;
+  final Color sheetSurface;
   final List<Color> heat;
 
   const PocktColors({
@@ -22,6 +23,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     required this.brandStart,
     required this.brandEnd,
     required this.positive,
+    required this.sheetSurface,
     required this.heat,
   });
 
@@ -35,6 +37,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
     positive: const Color(0xFF1DD1A1),
+    sheetSurface: const Color(0xFF18181B),
     heat: const [
       Color(0x0DFFFFFF),
       Color(0x38FF7A45),
@@ -54,6 +57,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
     positive: const Color(0xFF0E9673),
+    sheetSurface: const Color(0xFFFFFFFF),
     heat: const [
       Color(0x0D000000),
       Color(0xFFFFB08A),
@@ -74,6 +78,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     Color? brandStart,
     Color? brandEnd,
     Color? positive,
+    Color? sheetSurface,
     List<Color>? heat,
   }) {
     return PocktColors(
@@ -86,6 +91,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
       brandStart: brandStart ?? this.brandStart,
       brandEnd: brandEnd ?? this.brandEnd,
       positive: positive ?? this.positive,
+      sheetSurface: sheetSurface ?? this.sheetSurface,
       heat: heat ?? this.heat,
     );
   }
@@ -103,6 +109,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
       brandStart: Color.lerp(brandStart, other.brandStart, t)!,
       brandEnd: Color.lerp(brandEnd, other.brandEnd, t)!,
       positive: Color.lerp(positive, other.positive, t)!,
+      sheetSurface: Color.lerp(sheetSurface, other.sheetSurface, t)!,
       heat: List<Color>.generate(
         5,
         (i) => Color.lerp(heat[i], other.heat[i], t)!,

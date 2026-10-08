@@ -89,9 +89,9 @@ class DayDetailSheet extends ConsumerWidget {
                   height: sheetHeight,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF18181B).withValues(alpha: 0.96)
-                        : Colors.white.withValues(alpha: 0.98),
+                    color: colors.sheetSurface.withValues(
+                      alpha: isDark ? 0.96 : 0.98,
+                    ),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                     border: Border(
                       top: BorderSide(
