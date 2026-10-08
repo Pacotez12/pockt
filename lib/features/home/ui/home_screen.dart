@@ -505,7 +505,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: item.tx.type == TxType.income
-                                    ? const Color(0xFF1DD1A1)
+                                    ? colors.positive
                                     : colors.textPrimary,
                               ),
                             ),

@@ -9,6 +9,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
   final Color textTertiary;
   final Color brandStart;
   final Color brandEnd;
+  final Color positive;
   final List<Color> heat;
 
   const PocktColors({
@@ -20,6 +21,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     required this.textTertiary,
     required this.brandStart,
     required this.brandEnd,
+    required this.positive,
     required this.heat,
   });
 
@@ -32,6 +34,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     textTertiary: Colors.white.withValues(alpha: 0.45),
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
+    positive: const Color(0xFF1DD1A1),
     heat: const [
       Color(0x0DFFFFFF),
       Color(0x38FF7A45),
@@ -50,6 +53,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     textTertiary: Colors.black.withValues(alpha: 0.45),
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
+    positive: const Color(0xFF0E9673),
     heat: const [
       Color(0x0D000000),
       Color(0xFFFFB08A),
@@ -69,6 +73,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
     Color? textTertiary,
     Color? brandStart,
     Color? brandEnd,
+    Color? positive,
     List<Color>? heat,
   }) {
     return PocktColors(
@@ -80,6 +85,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
       textTertiary: textTertiary ?? this.textTertiary,
       brandStart: brandStart ?? this.brandStart,
       brandEnd: brandEnd ?? this.brandEnd,
+      positive: positive ?? this.positive,
       heat: heat ?? this.heat,
     );
   }
@@ -96,6 +102,7 @@ class PocktColors extends ThemeExtension<PocktColors> {
       textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
       brandStart: Color.lerp(brandStart, other.brandStart, t)!,
       brandEnd: Color.lerp(brandEnd, other.brandEnd, t)!,
+      positive: Color.lerp(positive, other.positive, t)!,
       heat: List<Color>.generate(
         5,
         (i) => Color.lerp(heat[i], other.heat[i], t)!,

@@ -20,8 +20,10 @@ void main() {
   test('colores heat y brand coinciden con especificación', () {
     expect(PocktColors.dark.brandStart, const Color(0xFFFF8A3D));
     expect(PocktColors.dark.brandEnd, const Color(0xFFFF3D7F));
+    expect(PocktColors.dark.positive, const Color(0xFF1DD1A1));
     expect(PocktColors.light.brandStart, const Color(0xFFFF8A3D));
     expect(PocktColors.light.brandEnd, const Color(0xFFFF3D7F));
+    expect(PocktColors.light.positive, const Color(0xFF0E9673));
 
     expect(PocktColors.dark.heat, [
       const Color(0x0DFFFFFF),
