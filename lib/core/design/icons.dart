@@ -148,6 +148,8 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'pencil-simple': PhosphorIconsRegular.pencilSimple,
   'storefront': PhosphorIconsRegular.storefront,
   'note': PhosphorIconsRegular.note,
+  'sparkle': PhosphorIconsRegular.sparkle,
+  'caret-right': PhosphorIconsRegular.caretRight,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -164,6 +166,8 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'pencil-simple': PhosphorIconsFill.pencilSimple,
   'storefront': PhosphorIconsFill.storefront,
   'note': PhosphorIconsFill.note,
+  'sparkle': PhosphorIconsFill.sparkle,
+  'caret-right': PhosphorIconsFill.caretRight,
 };
 
 /// Devuelve el [IconData] de Phosphor en estilo Regular o Fill según [filled].

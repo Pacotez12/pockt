@@ -15,12 +15,18 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
   final Category category;
   final TxType type;
   final TxView? editing;
+  final int? initialAmount;
+  final DateTime? initialDate;
+  final String? initialMerchant;
 
   const AmountKeypadScreen({
     super.key,
     required this.category,
     required this.type,
     this.editing,
+    this.initialAmount,
+    this.initialDate,
+    this.initialMerchant,
   });
 
   @override
@@ -45,9 +51,11 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
       _merchant = widget.editing!.tx.merchant;
       _note = widget.editing!.tx.note;
     } else {
-      _digits = '';
-      _occurredAt = DateTime.now();
-      _merchant = null;
+      _digits = widget.initialAmount != null && widget.initialAmount! > 0
+          ? widget.initialAmount.toString()
+          : '';
+      _occurredAt = widget.initialDate ?? DateTime.now();
+      _merchant = widget.initialMerchant;
       _note = null;
     }
   }

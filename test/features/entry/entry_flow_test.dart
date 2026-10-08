@@ -188,4 +188,24 @@ void main() {
     final updatedList = (await t.runAsync(() => txRepo.watchRecent().first))!;
     expect(updatedList.single.tx.amount, 30000);
   });
+
+  testWidgets('escribir bolt 28.500 y confirmar la propuesta abre el teclado de Transporte con Gs. 28.500', (t) async {
+    await openEntry(t);
+    final textField = find.byType(TextField);
+    expect(textField, findsOneWidget);
+    await t.enterText(textField, 'bolt 28.500');
+    await t.pumpAndSettle();
+
+    final proposal = find.byKey(const ValueKey('natural-proposal-card'));
+    expect(proposal, findsOneWidget);
+    expect(find.descendant(of: proposal, matching: find.text('Transporte')), findsOneWidget);
+    expect(find.descendant(of: proposal, matching: find.text('Gs. 28.500')), findsOneWidget);
+
+    await t.tap(proposal);
+    await t.pumpAndSettle();
+
+    expect(find.text('Gs. 28.500'), findsOneWidget);
+    expect(find.text('Transporte'), findsOneWidget);
+    expect(find.text('Guardar'), findsOneWidget);
+  });
 }
