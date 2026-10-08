@@ -5,6 +5,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
+import 'package:pockt/features/transactions/ui/transactions_screen.dart';
 
 /// Shell principal con barra flotante de vidrio y selector de pestañas:
 /// Inicio · Movimientos · ＋ · Presupuestos · Reportes.
@@ -32,7 +33,7 @@ class _AppShellState extends State<AppShell> {
             index: _currentIndex,
             children: const [
               HomeScreen(),
-              _PlaceholderTab(title: 'Movimientos', subtitle: 'Próximamente'),
+              TransactionsScreen(),
               _PlaceholderTab(title: 'Presupuestos', subtitle: 'Próximamente'),
               _PlaceholderTab(title: 'Reportes', subtitle: 'Próximamente'),
             ],
@@ -76,6 +77,7 @@ class _AppShellState extends State<AppShell> {
                       iconKey: 'house',
                     ),
                     _buildNavItem(
+                      key: const ValueKey('tab-movimientos'),
                       index: 1,
                       label: 'Movimientos',
                       iconKey: 'arrows-left-right',
@@ -102,6 +104,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   Widget _buildNavItem({
+    Key? key,
     required int index,
     required String label,
     required String iconKey,
@@ -111,6 +114,7 @@ class _AppShellState extends State<AppShell> {
 
     return Expanded(
       child: Pressable(
+        key: key,
         onTap: () {
           setState(() {
             _currentIndex = index;

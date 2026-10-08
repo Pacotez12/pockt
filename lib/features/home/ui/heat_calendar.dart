@@ -148,10 +148,12 @@ class HeatCalendar extends StatelessWidget {
 
               return HeatCalendarDayCell(
                 day: day,
+                year: year,
+                month: month,
                 level: level,
                 isToday: isToday,
                 isFuture: isFuture,
-                onTap: () => onDayTap(day),
+                onTap: isFuture ? null : () => onDayTap(day),
               );
             },
           ),
@@ -188,6 +190,8 @@ class _WeekdayHeader extends StatelessWidget {
 /// Celda individual del calendario de calor.
 class HeatCalendarDayCell extends StatelessWidget {
   final int? day;
+  final int? year;
+  final int? month;
   final int level;
   final bool isToday;
   final bool isFuture;
@@ -196,6 +200,8 @@ class HeatCalendarDayCell extends StatelessWidget {
   const HeatCalendarDayCell({
     super.key,
     required this.day,
+    this.year,
+    this.month,
     required this.level,
     required this.isToday,
     required this.isFuture,
@@ -258,9 +264,21 @@ class HeatCalendarDayCell extends StatelessWidget {
       );
     }
 
+    Widget cellWidget = cellContent;
+    if (day != null && !isFuture && year != null && month != null) {
+      cellWidget = Hero(
+        tag: 'day-sheet-$year-$month-$day',
+        createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
+        child: Material(
+          color: Colors.transparent,
+          child: cellWidget,
+        ),
+      );
+    }
+
     return Pressable(
       onTap: onTap,
-      child: cellContent,
+      child: cellWidget,
     );
   }
 }

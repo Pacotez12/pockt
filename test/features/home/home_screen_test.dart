@@ -9,6 +9,7 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
@@ -121,5 +122,27 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.text('Comida'), findsOneWidget);
+  });
+
+  testWidgets('tocar un día en el calendario abre el detalle', (t) async {
+    final categories = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final comida = categories.firstWhere((c) => c.name == 'Comida');
+
+    await t.runAsync(() async {
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 25000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+      );
+    });
+
+    await pumpHomeScreen(t);
+
+    await t.tap(find.text('5'));
+    await t.pumpAndSettle();
+
+    expect(find.byType(DayDetailSheet), findsOneWidget);
+    expect(find.text('Lunes 5 de octubre'), findsOneWidget);
   });
 }

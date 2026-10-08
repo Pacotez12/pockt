@@ -76,5 +76,14 @@ void main() {
     // Tap en el día 24 llama a onDayTap
     await t.tap(find.text('24'));
     expect(tappedDay, equals(24));
+
+    // Tap en día futuro no hace nada
+    tappedDay = null;
+    await t.tap(find.text('25'));
+    expect(tappedDay, isNull);
+
+    // Tap en día pasado llama a onDayTap
+    await t.tap(find.text('10'));
+    expect(tappedDay, equals(10));
   });
 }

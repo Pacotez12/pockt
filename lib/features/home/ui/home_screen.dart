@@ -7,12 +7,15 @@ import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/domain/heat_levels.dart';
+import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:pockt/features/transactions/ui/tx_row.dart';
 
 const List<String> _kMonthNames = [
   'Enero',
@@ -213,7 +216,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       levels: heatLevels(_dailyTotals),
                       todayLocal: _getNow(),
                       onDayTap: (day) {
-                        // Task 9 abrirá el detalle del día
+                        showDayDetail(context, DateTime(_year, _month, day));
                       },
                     ),
                   ),
@@ -397,7 +400,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildRecentTransactions(BuildContext context) {
     final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -435,109 +437,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               : Column(
                   children: [
                     for (final item in _recentTxs)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.10)
-                                    : Colors.black.withValues(alpha: 0.05),
-                              ),
-                              child: Center(
-                                child: categoryIcon(
-                                  item.category.icon,
-                                  size: 16,
-                                  color: Color(
-                                    isDark
-                                        ? item.category.colorDark
-                                        : item.category.colorLight,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    item.tx.merchant?.isNotEmpty == true
-                                        ? item.tx.merchant!
-                                        : (item.tx.note?.isNotEmpty == true
-                                            ? item.tx.note!
-                                            : item.category.name),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: colors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _txSubtitle(item),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 11,
-                                      color: colors.textTertiary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              item.tx.type == TxType.income
-                                  ? '+${formatGs(item.tx.amount, symbol: false)}'
-                                  : formatGs(item.tx.amount, symbol: false),
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: item.tx.type == TxType.income
-                                    ? colors.positive
-                                    : colors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
+                      SwipeableTxRow(
+                        view: item,
+                        subtitle: formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
                       ),
                   ],
                 ),
         ),
       ],
     );
-  }
-
-  String _txSubtitle(TxView item) {
-    final local = toLocal(item.tx.occurredAt);
-    final timeStr =
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    final now = _getNow();
-    final isSameDay =
-        local.year == now.year && local.month == now.month && local.day == now.day;
-
-    if (isSameDay) {
-      if (item.tx.merchant?.isNotEmpty == true) {
-        return '${item.category.name} · $timeStr';
-      }
-      return timeStr;
-    }
-
-    final dateStr = '${local.day}/${local.month}';
-    if (item.tx.merchant?.isNotEmpty == true) {
-      return '${item.category.name} · $dateStr $timeStr';
-    }
-    return '$dateStr $timeStr';
   }
 }
