@@ -130,4 +130,63 @@ void main() {
     expect(find.text('Gs. 15.000'), findsOneWidget);
     expect(find.textContaining('tu día promedio'), findsNothing);
   });
+
+  testWidgets(
+      'el contenido de la hoja se funde al final de la apertura y se oculta al inicio del cierre',
+      (t) async {
+    final cats = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    await t.runAsync(() => txRepo.add(
+          type: TxType.expense,
+          amount: 50000,
+          categoryId: cats.first.id,
+          occurredAt: localToUtc(2026, 10, 17),
+        ));
+
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(testDb)],
+        child: MaterialApp(
+          theme: buildDarkTheme(),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showDayDetail(context, DateTime(2026, 10, 17)),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Abrir: a mitad de transición (150ms de 350ms, t < 0.7), el contenido tiene opacidad 0
+    await t.tap(find.text('abrir'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 150));
+
+    final opacityFinder = find.descendant(
+      of: find.byType(DayDetailSheet),
+      matching: find.byType(Opacity),
+    );
+    expect(opacityFinder, findsOneWidget);
+    final openOpacity = t.widget<Opacity>(opacityFinder).opacity;
+    expect(openOpacity, 0.0);
+
+    // Completar la apertura: opacidad 1.0
+    await t.pumpAndSettle();
+    final settledOpacity = t.widget<Opacity>(opacityFinder).opacity;
+    expect(settledOpacity, 1.0);
+    expect(find.text('Gs. 50.000'), findsOneWidget);
+
+    // Iniciar cierre: a 60ms (de 300ms, t < 0.85), el contenido ya se ocultó (opacidad 0)
+    await t.tapAt(const Offset(50, 50));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 60));
+
+    final closeOpacity = t.widget<Opacity>(opacityFinder).opacity;
+    expect(closeOpacity, 0.0);
+
+    await t.pumpAndSettle();
+    expect(find.byType(DayDetailSheet), findsNothing);
+  });
 }

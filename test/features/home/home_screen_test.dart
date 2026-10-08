@@ -161,7 +161,7 @@ void main() {
   });
 
   testWidgets(
-      'al cerrar la hoja de detalle el shuttle usa sheetSurface y no pinta área grande con color de intensidad',
+      'durante el vuelo (abrir y cerrar) no hay ningún Text descendiente del shuttle',
       (t) async {
     final categories =
         (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
@@ -178,37 +178,45 @@ void main() {
 
     await pumpHomeScreen(t);
 
-    // Abrir detalle del día 5
+    // 1. Abrir detalle del día 5 y verificar a mitad de vuelo
     await t.tap(find.text('5'));
+    await t.pump(); // Inicia el push
+    await t.pump(const Duration(milliseconds: 150)); // Mitad de vuelo al abrir (duration: 350ms)
+
+    final openShuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
+    expect(openShuttleFinder, findsOneWidget);
+
+    // Ningún Text descendiente del shuttle durante el vuelo de apertura (sin texto fantasma)
+    expect(find.descendant(of: openShuttleFinder, matching: find.byType(Text)), findsNothing);
+
+    // Completar la apertura: la hoja real muestra su contenido
     await t.pumpAndSettle();
     expect(find.byType(DayDetailSheet), findsOneWidget);
+    expect(find.text('Lunes 5 de octubre'), findsOneWidget);
 
-    // Cerrar tocando afuera de la hoja (parte superior de la pantalla)
+    // 2. Cerrar tocando afuera de la hoja y verificar a mitad de vuelo
     await t.tapAt(const Offset(50, 50));
     await t.pump(); // Inicia el pop
+    await t.pump(const Duration(milliseconds: 140)); // Mitad de vuelo al cerrar (reverseDuration: 300ms)
 
-    // Avanzar a mitad de vuelo (reverseDuration es 300ms)
-    await t.pump(const Duration(milliseconds: 140));
-
-    // El shuttle debe existir durante el vuelo de cierre
-    final shuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
-    expect(shuttleFinder, findsOneWidget);
+    final closeShuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
+    expect(closeShuttleFinder, findsOneWidget);
 
     // El shuttle tiene tamaño intermedio a mitad de vuelo (mucho mayor que la celda de ~40px)
-    final shuttleSize = t.getSize(shuttleFinder);
+    final shuttleSize = t.getSize(closeShuttleFinder);
     expect(shuttleSize.width, greaterThan(100));
     expect(shuttleSize.height, greaterThan(100));
 
     // La superficie del shuttle debe ser sheetSurface, NO el color de intensidad de la celda
-    final shuttleContainer = t.widget<Container>(shuttleFinder);
+    final shuttleContainer = t.widget<Container>(closeShuttleFinder);
     final boxDecoration = shuttleContainer.decoration as BoxDecoration;
     expect(
       boxDecoration.color,
       PocktColors.dark.sheetSurface.withValues(alpha: 0.96),
     );
 
-    // A mitad de vuelo (t ~= 0.5), la celda no se dibuja (cellOpacity es 0)
-    expect(find.descendant(of: shuttleFinder, matching: find.text('5')), findsNothing);
+    // Ningún Text descendiente del shuttle durante el vuelo de cierre (sin texto fantasma)
+    expect(find.descendant(of: closeShuttleFinder, matching: find.byType(Text)), findsNothing);
 
     // Completar el cierre
     await t.pumpAndSettle();
