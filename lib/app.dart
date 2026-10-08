@@ -1,9 +1,46 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 
-class PocktApp extends StatelessWidget {
+class PocktApp extends ConsumerStatefulWidget {
   const PocktApp({super.key});
+
+  @override
+  ConsumerState<PocktApp> createState() => _PocktAppState();
+}
+
+class _PocktAppState extends ConsumerState<PocktApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _runSuggestionGenerator();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _runSuggestionGenerator();
+    }
+  }
+
+  void _runSuggestionGenerator() {
+    unawaited(
+      ref.read(suggestionGeneratorProvider).run().catchError((_) => 0),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,3 +53,4 @@ class PocktApp extends StatelessWidget {
     );
   }
 }
+
