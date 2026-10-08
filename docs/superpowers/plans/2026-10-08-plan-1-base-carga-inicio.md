@@ -493,3 +493,37 @@ testWidgets('Movimientos agrupa por día y filtra por búsqueda', (t) async { /*
 - [ ] **Step 5b: Medición de rendimiento** — `integration_test/perf_test.dart` con `IntegrationTestWidgetsFlutterBinding.ensureInitialized()` y `binding.traceAction(..., reportKey: 'transiciones')` que recorre: abrir carga → tocar categoría (burbuja→teclado) → guardar; tocar un día del calendario (detalle); deslizar 3 meses. Driver `test_driver/perf_driver.dart` que escribe `TimelineSummary.summarize(...)`. Correr: `flutter drive --profile --driver=test_driver/perf_driver.dart --target=integration_test/perf_test.dart -d R5CW31LZ4WK`. Aceptación: `99th_percentile_frame_build_time_millis` y `99th_percentile_frame_rasterizer_time_millis` ≤ 8.
 - [ ] **Step 5c: Tamaño** — `flutter build apk --release --target-platform android-arm64 --analyze-size`; confirmar que las fuentes de Phosphor se recortan ("Font asset ... was tree-shaken") y reportar el tamaño final.
 - [ ] **Step 6:** Checkpoint. Mensaje sugerido: `feat: ícono adaptativo y splash de Pockt`.
+
+---
+
+### Task 7b: Texto natural que aprende (historial, palabras editables, errores de tipeo)
+
+Se ejecuta **después de la Task 10**. La app ya está instalada en el A54 con datos reales: el cambio de esquema necesita **migración v1 → v2**.
+
+**Files:**
+- Modify: `lib/core/db/tables.dart`, `lib/core/db/app_database.dart` (`schemaVersion` 2 + migración), `lib/features/transactions/data/transactions_repository.dart`, `lib/features/entry/domain/natural_parser.dart`, `lib/features/entry/ui/entry_flow.dart`, `lib/features/home/ui/home_screen.dart` (ícono de ajustes abre la pantalla nueva, provisorio hasta el plan 4)
+- Create: `lib/features/transactions/data/keywords_repository.dart`, `lib/features/settings/ui/category_keywords_screen.dart`
+- Test: `test/core/db/migration_v2_test.dart`, `test/features/transactions/keywords_repository_test.dart`, `test/features/entry/natural_parser_test.dart` (casos nuevos)
+
+**Interfaces:**
+- Tablas nuevas:
+  - `CategoryKeywords`: `id` (UUID), `categoryId` (FK), `keyword` (normalizado: minúsculas, sin tildes), `source` (`enum KeywordSource { seed, user }`). Único (`categoryId`, `keyword`).
+  - `MerchantMemory`: `merchantKey` (PK, normalizado), `categoryId`, `uses` (int), `lastUsedAt`.
+- Migración v2: crea las dos tablas y copia `kSeedCategoryKeywords` a `CategoryKeywords` **por id de categoría** (resolviendo el nombre una sola vez, en la migración). A partir de ahí el parser no usa más los nombres.
+- `KeywordsRepository(AppDatabase db)`:
+  - `Stream<List<CategoryKeyword>> watchFor(String categoryId)`
+  - `Future<void> addUserKeyword(String categoryId, String keyword)` (normaliza; ignora duplicados)
+  - `Future<void> remove(String id)`
+  - `Future<Map<String, String>> keywordMap()` — palabra → categoryId. Prioridad: `MerchantMemory` (la categoría con más `uses`) > `user` > `seed`.
+- `TransactionsRepository.add/update`: si `merchant` no es nulo, hace upsert en `MerchantMemory` (`uses + 1`, `lastUsedAt`) **en la misma transacción SQL**.
+- Parser: misma firma de `parseNaturalEntry`. Coincidencia: exacta primero; si no hay, tolerancia con `int damerauLevenshtein(String a, String b)` — distancia ≤ 1 para palabras de 4–6 letras, ≤ 2 para 7 o más; palabras de menos de 4 letras solo exactas. Ante empate gana la de mayor prioridad del mapa.
+- `CategoryKeywordsScreen`: lista de categorías; al entrar en una, sus palabras (chips, con origen visible), agregar y borrar. Lenguaje visual existente (GlassCard, tokens, íconos Phosphor).
+
+- [ ] **Step 1: Tests que fallan:**
+  - Migración: una base v1 con 2 movimientos → tras migrar, los movimientos siguen y `CategoryKeywords` tiene las palabras del seed con los ids correctos.
+  - Renombrar "Comida" a "Comidas" → `keywordMap()['pizza']` sigue apuntando a su id.
+  - Guardar un gasto con comercio "Superseis" en Hogar → `keywordMap()['superseis'] == hogar`; guardarlo 3 veces en Comida y 1 en Hogar → gana Comida.
+  - `addUserKeyword(salud, 'Farma')` → `parseNaturalEntry('farma 40000', ...)!.categoryId == salud`.
+  - Tipeo: `'suoer 230 mil'` → Hogar; `'cafr 15000'` → Comida; `'bar'` no matchea `'bat'` (palabra corta, solo exacta).
+- [ ] **Step 2:** FAIL. **Step 3:** Implementar. **Step 4:** PASS; `flutter analyze` en 0.
+- [ ] **Step 5:** Checkpoint. Mensaje sugerido: `feat: texto natural que aprende de tu historial`.

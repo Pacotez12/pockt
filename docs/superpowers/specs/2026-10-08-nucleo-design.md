@@ -119,7 +119,9 @@ De arriba a abajo:
 4. Fecha (hoy por defecto), nota y comercio son opcionales, a un toque.
 5. Guardar: haptic medio, la hoja se cierra y el total del Inicio cuenta animado hasta el nuevo valor.
 6. **Texto natural**: campo arriba de la grilla. Interpreta `"café 15000"`, `"super 230 mil ayer"`, `"bolt 28.500"`.
-   - Reglas locales, sin red: extrae el monto (con `mil`, puntos de miles, `k`), la fecha relativa (`hoy`, `ayer`, `anteayer`, día de la semana) y la categoría por palabras clave editables, más el historial de comercios.
+   - Reglas locales, sin red: extrae el monto (con `mil`, puntos de miles, `k`), la fecha relativa (`hoy`, `ayer`, `anteayer`, día de la semana) y la categoría.
+   - La categoría sale de: el **historial de comercios** (aprende de cada gasto guardado con comercio), **palabras clave editables** por categoría (atadas al id, no al nombre) y un set inicial. Tolera errores de tipeo (Damerau-Levenshtein).
+   - Sin IA en v1; una IA en la nube se evalúa junto con el motor de captura.
    - Siempre muestra la propuesta para confirmar; nunca guarda directo.
 
 Si la escritura falla, la hoja no se cierra, se muestra el error y el monto queda cargado.
