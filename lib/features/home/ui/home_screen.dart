@@ -332,22 +332,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          TweenAnimationBuilder<int>(
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            tween: IntTween(begin: _previousTotal, end: _monthTotal),
-            builder: (context, animatedValue, _) {
-              return Text(
-                formatGs(animatedValue),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 42,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -1.5,
-                  color: colors.textPrimary,
-                ),
-              );
-            },
+          RepaintBoundary(
+            child: TweenAnimationBuilder<int>(
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              tween: IntTween(begin: _previousTotal, end: _monthTotal),
+              builder: (context, animatedValue, _) {
+                return Text(
+                  formatGs(animatedValue),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 42,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -1.5,
+                    color: colors.textPrimary,
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),

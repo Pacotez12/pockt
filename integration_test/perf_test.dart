@@ -28,45 +28,50 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    Future<void> runSequence() async {
+      // 1. Abrir carga (+ en la barra de navegación)
+      final plusButton = find.byKey(const ValueKey('shell-plus-button'));
+      await tester.tap(plusButton);
+      await tester.pumpAndSettle();
+
+      // 2. Tocar categoría (burbuja -> teclado) y guardar
+      final categoryBubble = find.text('Comida');
+      await tester.tap(categoryBubble);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('2'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('000'));
+      await tester.pumpAndSettle();
+
+      final saveButton = find.text('Guardar');
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      // 3. Tocar un día del calendario (detalle)
+      final dayCell = find.text('1');
+      await tester.tap(dayCell);
+      await tester.pumpAndSettle();
+
+      // Cerrar la hoja de detalle tocando el fondo exterior
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      // 4. Deslizar 3 meses
+      final calendarArea = find.text('Tus días');
+      for (var i = 0; i < 3; i++) {
+        await tester.drag(calendarArea, const Offset(-300, 0));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    // Paso en caliente: calienta pipelines VK y glifos antes de medir
+    await runSequence();
+
     await binding.traceAction(
-      () async {
-        // 1. Abrir carga (+ en la barra de navegación)
-        final plusButton = find.byKey(const ValueKey('shell-plus-button'));
-        await tester.tap(plusButton);
-        await tester.pumpAndSettle();
-
-        // 2. Tocar categoría (burbuja -> teclado) y guardar
-        final categoryBubble = find.text('Comida');
-        await tester.tap(categoryBubble);
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('2'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('5'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('000'));
-        await tester.pumpAndSettle();
-
-        final saveButton = find.text('Guardar');
-        await tester.tap(saveButton);
-        await tester.pumpAndSettle();
-
-        // 3. Tocar un día del calendario (detalle)
-        final dayCell = find.text('1');
-        await tester.tap(dayCell);
-        await tester.pumpAndSettle();
-
-        // Cerrar la hoja de detalle tocando el fondo exterior
-        await tester.tapAt(const Offset(20, 20));
-        await tester.pumpAndSettle();
-
-        // 4. Deslizar 3 meses
-        final calendarArea = find.text('Tus días');
-        for (var i = 0; i < 3; i++) {
-          await tester.drag(calendarArea, const Offset(-300, 0));
-          await tester.pumpAndSettle();
-        }
-      },
+      runSequence,
       reportKey: 'transiciones',
     );
   });

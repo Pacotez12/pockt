@@ -32,15 +32,12 @@ Future<void> showDayDetail(BuildContext context, DateTime localDay) {
           curve: SpringCurve(spring: PocktSprings.soft),
           reverseCurve: Curves.easeInCubic,
         );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.05),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.05),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
         );
       },
     ),
@@ -83,6 +80,57 @@ class DayDetailSheet extends ConsumerWidget {
             child: Hero(
               tag: 'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
               createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
+              flightShuttleBuilder: (
+                flightContext,
+                animation,
+                flightDirection,
+                fromHeroContext,
+                toHeroContext,
+              ) {
+                return AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, _) {
+                    final progress = animation.value;
+                    if (progress < 0.66) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colors.sheetSurface.withValues(
+                              alpha: isDark ? 0.96 : 0.98,
+                            ),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(32),
+                            ),
+                            border: Border(
+                              top: BorderSide(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.08),
+                                width: 1.0,
+                              ),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35 * progress),
+                                blurRadius: 30 * progress,
+                                offset: Offset(0, -6 * progress),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    final contentOpacity = Curves.easeOut.transform(
+                      ((progress - 0.66) / 0.34).clamp(0.0, 1.0),
+                    );
+                    return Opacity(
+                      opacity: contentOpacity,
+                      child: toHeroContext.widget,
+                    );
+                  },
+                );
+              },
               child: Material(
                 color: Colors.transparent,
                 child: Container(

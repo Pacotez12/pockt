@@ -180,6 +180,41 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                   tag: 'cat-${_category.id}',
                   createRectTween: (begin, end) =>
                       SpringRectTween(begin: begin, end: end),
+                  flightShuttleBuilder: (
+                    flightContext,
+                    animation,
+                    flightDirection,
+                    fromHeroContext,
+                    toHeroContext,
+                  ) {
+                    return Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withValues(
+                            alpha: isDark ? 0.22 : 0.14,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: categoryColor.withValues(
+                              alpha: isDark ? 0.6 : 0.4,
+                            ),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: categoryIcon(
+                          _category.icon,
+                          size: 20,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    );
+                  },
                   child: Material(
                     type: MaterialType.transparency,
                     child: Container(

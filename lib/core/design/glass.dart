@@ -71,22 +71,24 @@ class GlassBar extends StatelessWidget {
     final colors = context.pockt;
     final radius = borderRadius ?? BorderRadius.zero;
 
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: colors.glassFill,
-            borderRadius: radius,
-            border: border ??
-                Border.all(
-                  color: colors.glassBorder,
-                  width: 1.0,
-                ),
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              color: colors.glassFill,
+              borderRadius: radius,
+              border: border ??
+                  Border.all(
+                    color: colors.glassBorder,
+                    width: 1.0,
+                  ),
+            ),
+            child: child,
           ),
-          child: child,
         ),
       ),
     );

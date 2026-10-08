@@ -11,30 +11,32 @@ class MonthGlow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return TweenAnimationBuilder<Color?>(
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOut,
-      tween: ColorTween(end: color),
-      builder: (context, animatedColor, _) {
-        final c = animatedColor ?? color;
-        return IgnorePointer(
-          child: Container(
-            width: 470,
-            height: 470,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  c.withValues(alpha: isDark ? 0.50 : 0.28),
-                  c.withValues(alpha: isDark ? 0.20 : 0.10),
-                  Colors.transparent,
-                ],
-                stops: const [0.0, 0.42, 0.70],
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<Color?>(
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOut,
+        tween: ColorTween(end: color),
+        builder: (context, animatedColor, _) {
+          final c = animatedColor ?? color;
+          return IgnorePointer(
+            child: Container(
+              width: 470,
+              height: 470,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    c.withValues(alpha: isDark ? 0.50 : 0.28),
+                    c.withValues(alpha: isDark ? 0.20 : 0.10),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.42, 0.70],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
