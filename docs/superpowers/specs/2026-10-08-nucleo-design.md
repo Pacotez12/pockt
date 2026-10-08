@@ -68,7 +68,7 @@ Reglas:
 
 Todas las claves primarias son UUID (texto), salvo `settings`.
 
-**`categories`**: `id`, `name`, `icon` (emoji), `colorDark`, `colorLight`, `kind` (`expense` | `income`), `sortOrder`, `archived`.
+**`categories`**: `id`, `name`, `icon` (clave de ícono Phosphor, por ejemplo `fork-knife`), `colorDark`, `colorLight`, `kind` (`expense` | `income`), `sortOrder`, `archived`.
 - Una categoría con movimientos no se borra: se archiva.
 - Set inicial de gastos: Comida, Transporte, Hogar, Salud, Ocio, Servicios, Educación, Regalos, Ropa, Otros. Ingresos: Sueldo, Extra, Otros ingresos. Todo editable (renombrar, crear, reordenar, archivar).
 
@@ -178,6 +178,12 @@ Tres pasos, todos salteables: esquema de cobro → presupuestos → conectar Goo
 - Acento de marca: degradado naranja→rosa (botón ＋).
 - El cambio entre claro y oscuro funde los colores con una transición, sin salto.
 
+### 6.1b Iconografía
+- Librería: **Phosphor** (`phosphor_flutter`). Nada de emojis en la interfaz.
+- Categorías: estilo **duotone** sobre la burbuja de color. Pestaña activa: estilo **fill**; inactivas y UI general: **regular**.
+- Un registro central (`lib/core/design/icons.dart`) traduce la clave guardada en la base al ícono. Es el único archivo que conoce la librería.
+- Al crear o editar una categoría se elige de un set curado de íconos, no de la librería completa.
+
 ### 6.2 Tipografía
 Inter (incluida en la app) con cifras tabulares. Montos grandes con letter-spacing negativo; "Gs." chico y atenuado. Separador de miles con punto (`4.212.000`).
 
@@ -260,4 +266,4 @@ Los tests se escriben antes de la implementación (TDD), con prioridad en fechas
 
 ## 11. Paquetes previstos
 
-`drift`, `drift_flutter`, `flutter_riverpod`, `riverpod_generator`, `flutter_local_notifications`, `timezone`, `workmanager`, `home_widget`, `local_auth`, `google_sign_in`, `googleapis`, `cryptography`, `flutter_secure_storage`, `intl`, `uuid`, `flutter_timezone`. Versiones a fijar en el plan, verificando la última estable de cada uno.
+`drift`, `drift_flutter`, `flutter_riverpod`, `riverpod_generator`, `flutter_local_notifications`, `timezone`, `workmanager`, `home_widget`, `local_auth`, `google_sign_in`, `googleapis`, `cryptography`, `flutter_secure_storage`, `intl`, `uuid`, `flutter_timezone`, `phosphor_flutter`. Versiones a fijar en el plan, verificando la última estable de cada uno.

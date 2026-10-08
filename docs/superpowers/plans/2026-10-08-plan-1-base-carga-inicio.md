@@ -350,6 +350,26 @@ testWidgets('edición precarga y actualiza', (t) async { /* editing: amount 2850
 
 ---
 
+### Task 6b: Íconos Phosphor en lugar de emojis
+
+**Files:**
+- Create: `lib/core/design/icons.dart`
+- Modify: `pubspec.yaml` (`phosphor_flutter: 2.1.0`), `lib/core/db/app_database.dart` (seed), `lib/features/entry/ui/*` (reemplazar emojis)
+- Test: `test/core/design/icons_test.dart`, `test/core/db/seed_test.dart`
+
+**Interfaces:**
+- Produces:
+  - `Widget categoryIcon(String key, {double size = 24, Color? color})` — Phosphor **duotone**; clave desconocida → ícono `package`.
+  - `IconData uiIcon(String key, {bool filled = false})` — Phosphor **regular** o **fill**.
+  - `const List<String> kCategoryIconKeys` — set curado para elegir al crear categorías (≥ 40 claves).
+- Seed (`icon`): Comida `fork-knife`, Transporte `car-profile`, Hogar `house-line`, Salud `heartbeat`, Ocio `popcorn`, Servicios `lightning`, Educación `graduation-cap`, Regalos `gift`, Ropa `t-shirt`, Otros `package`, Sueldo `briefcase`, Extra `sparkle`, Otros ingresos `arrow-circle-down`. La base no está instalada en ningún dispositivo todavía: se modifica el seed de la v1 sin migración.
+
+- [ ] **Step 1: Tests que fallan:** todas las claves del seed y de `kCategoryIconKeys` resuelven a un ícono real (no al de respaldo); una clave inexistente devuelve `package`; ningún `name`/`icon` del seed contiene emojis (regex de rango Unicode de emoji).
+- [ ] **Step 2:** FAIL. **Step 3:** Implementar y reemplazar todo emoji de la UI por `categoryIcon`/`uiIcon`. **Step 4:** PASS, `flutter analyze` limpio.
+- [ ] **Step 5:** Checkpoint. Mensaje sugerido: `feat: íconos Phosphor en lugar de emojis`.
+
+---
+
 ### Task 7: Texto natural en la carga
 
 **Files:**
