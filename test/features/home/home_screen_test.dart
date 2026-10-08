@@ -159,4 +159,100 @@ void main() {
     expect(find.byType(CategoryKeywordsScreen), findsOneWidget);
     expect(find.text('Palabras clave'), findsOneWidget);
   });
+
+  testWidgets(
+      'al cerrar la hoja de detalle el shuttle usa sheetSurface y no pinta área grande con color de intensidad',
+      (t) async {
+    final categories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final comida = categories.firstWhere((c) => c.name == 'Comida');
+
+    await t.runAsync(() async {
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 500000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+      );
+    });
+
+    await pumpHomeScreen(t);
+
+    // Abrir detalle del día 5
+    await t.tap(find.text('5'));
+    await t.pumpAndSettle();
+    expect(find.byType(DayDetailSheet), findsOneWidget);
+
+    // Cerrar tocando afuera de la hoja (parte superior de la pantalla)
+    await t.tapAt(const Offset(50, 50));
+    await t.pump(); // Inicia el pop
+
+    // Avanzar a mitad de vuelo (reverseDuration es 300ms)
+    await t.pump(const Duration(milliseconds: 140));
+
+    // El shuttle debe existir durante el vuelo de cierre
+    final shuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
+    expect(shuttleFinder, findsOneWidget);
+
+    // El shuttle tiene tamaño intermedio a mitad de vuelo (mucho mayor que la celda de ~40px)
+    final shuttleSize = t.getSize(shuttleFinder);
+    expect(shuttleSize.width, greaterThan(100));
+    expect(shuttleSize.height, greaterThan(100));
+
+    // La superficie del shuttle debe ser sheetSurface, NO el color de intensidad de la celda
+    final shuttleContainer = t.widget<Container>(shuttleFinder);
+    final boxDecoration = shuttleContainer.decoration as BoxDecoration;
+    expect(
+      boxDecoration.color,
+      PocktColors.dark.sheetSurface.withValues(alpha: 0.96),
+    );
+
+    // A mitad de vuelo (t ~= 0.5), la celda no se dibuja (cellOpacity es 0)
+    expect(find.descendant(of: shuttleFinder, matching: find.text('5')), findsNothing);
+
+    // Completar el cierre
+    await t.pumpAndSettle();
+    expect(find.byType(DayDetailSheet), findsNothing);
+    expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('con reduce motion al abrir y cerrar detalle no hay Hero en vuelo', (t) async {
+    t.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(() => t.platformDispatcher.clearAllTestValues());
+
+    final categories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final comida = categories.firstWhere((c) => c.name == 'Comida');
+
+    await t.runAsync(() async {
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 25000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+      );
+    });
+
+    await pumpHomeScreen(t);
+
+    await t.tap(find.text('5'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+
+    // Con reduce motion no hay Hero en vuelo
+    expect(find.byKey(const ValueKey('day-detail-flight-shuttle')), findsNothing);
+
+    await t.pumpAndSettle();
+    expect(find.byType(DayDetailSheet), findsOneWidget);
+
+    await t.tapAt(const Offset(50, 50));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const ValueKey('day-detail-flight-shuttle')), findsNothing);
+
+    await t.pumpAndSettle();
+    expect(find.byType(DayDetailSheet), findsNothing);
+  });
 }

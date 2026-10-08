@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 
 /// Calendario de calor mensual ("Tus días").
 /// Grilla lunes→domingo con niveles de intensidad 0..4 según gasto.
@@ -266,12 +267,31 @@ class HeatCalendarDayCell extends StatelessWidget {
 
     Widget cellWidget = cellContent;
     if (day != null && !isFuture && year != null && month != null) {
-      cellWidget = Hero(
-        tag: 'day-sheet-$year-$month-$day',
-        createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
-        child: Material(
-          color: Colors.transparent,
-          child: cellWidget,
+      cellWidget = HeroMode(
+        enabled: !MediaQuery.disableAnimationsOf(context),
+        child: Hero(
+          tag: 'day-sheet-$year-$month-$day',
+          createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
+          flightShuttleBuilder: (
+            flightContext,
+            animation,
+            flightDirection,
+            fromHeroContext,
+            toHeroContext,
+          ) =>
+              buildDayDetailFlightShuttle(
+            flightContext,
+            animation,
+            flightDirection,
+            fromHeroContext,
+            toHeroContext,
+            colors,
+            isDark,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: cellWidget,
+          ),
         ),
       );
     }

@@ -44,6 +44,120 @@ Future<void> showDayDetail(BuildContext context, DateTime localDay) {
   );
 }
 
+/// Builder del shuttle en vuelo para la transición Hero entre celda del
+/// calendario y la hoja de detalle del día.
+///
+/// Durante push y pop, dibuja la superficie de la hoja ([PocktColors.sheetSurface])
+/// con sus esquinas redondeadas y sombra, fundiendo el contenido de la hoja
+/// solo cerca del extremo superior (t > 0.66) y fundiendo la celda solo en el
+/// último tramo del vuelo cerca del calendario (t <= 0.15) para evitar pintar
+/// áreas grandes con el color de intensidad del día.
+Widget buildDayDetailFlightShuttle(
+  BuildContext flightContext,
+  Animation<double> animation,
+  HeroFlightDirection flightDirection,
+  BuildContext fromHeroContext,
+  BuildContext toHeroContext, [
+  PocktColors? colors,
+  bool? isDark,
+]) {
+  final resolvedColors = colors ?? flightContext.pockt;
+  final resolvedIsDark =
+      isDark ?? (Theme.of(flightContext).brightness == Brightness.dark);
+
+  Widget extractHeroChild(BuildContext heroContext) {
+    final widget = heroContext.widget;
+    if (widget is Hero) {
+      return widget.child;
+    }
+    return widget;
+  }
+
+  final cellChild = extractHeroChild(
+    flightDirection == HeroFlightDirection.push
+        ? fromHeroContext
+        : toHeroContext,
+  );
+  final sheetChild = extractHeroChild(
+    flightDirection == HeroFlightDirection.push
+        ? toHeroContext
+        : fromHeroContext,
+  );
+
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      final t = animation.value.clamp(0.0, 1.0);
+
+      // Interpolación de radio: 7 en la celda -> vertical 32 en la hoja
+      final borderRadius = BorderRadius.lerp(
+            BorderRadius.circular(7),
+            const BorderRadius.vertical(top: Radius.circular(32)),
+            (t / 0.25).clamp(0.0, 1.0),
+          ) ??
+          const BorderRadius.vertical(top: Radius.circular(32));
+
+      // Contenido de la hoja solo visible cerca de la hoja (t > 0.66)
+      final sheetOpacity = Curves.easeOut.transform(
+        ((t - 0.66) / 0.34).clamp(0.0, 1.0),
+      );
+
+      // Celda solo visible en el último tramo cerca del calendario (t <= 0.15)
+      final cellOpacity = Curves.easeIn.transform(
+        ((0.15 - t) / 0.15).clamp(0.0, 1.0),
+      );
+
+      return Material(
+        color: Colors.transparent,
+        child: Container(
+          key: const ValueKey('day-detail-flight-shuttle'),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: resolvedColors.sheetSurface.withValues(
+              alpha: resolvedIsDark ? 0.96 : 0.98,
+            ),
+            borderRadius: borderRadius,
+            border: Border(
+              top: BorderSide(
+                color: resolvedIsDark
+                    ? Colors.white.withValues(alpha: 0.12 * t)
+                    : Colors.black.withValues(alpha: 0.08 * t),
+                width: 1.0,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35 * t),
+                blurRadius: 30 * t,
+                offset: Offset(0, -6 * t),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (cellOpacity > 0)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: cellOpacity,
+                    child: cellChild,
+                  ),
+                ),
+              if (sheetOpacity > 0)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: sheetOpacity,
+                    child: sheetChild,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 /// Hoja de detalle de un día (spec §5.2.6 y mockup inicio-v1.html):
 /// Título con fecha larga en español, total gastado, comparación con el día
 /// promedio del mes, barras "En qué se fue" por categoría y lista de movimientos.
@@ -77,105 +191,73 @@ class DayDetailSheet extends ConsumerWidget {
           // Hoja inferior con Hero
           Align(
             alignment: Alignment.bottomCenter,
-            child: Hero(
-              tag: 'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
-              createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
-              flightShuttleBuilder: (
-                flightContext,
-                animation,
-                flightDirection,
-                fromHeroContext,
-                toHeroContext,
-              ) {
-                return AnimatedBuilder(
-                  animation: animation,
-                  builder: (context, _) {
-                    final progress = animation.value;
-                    if (progress < 0.66) {
-                      return Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: colors.sheetSurface.withValues(
-                              alpha: isDark ? 0.96 : 0.98,
-                            ),
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(32),
-                            ),
-                            border: Border(
-                              top: BorderSide(
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.12)
-                                    : Colors.black.withValues(alpha: 0.08),
-                                width: 1.0,
-                              ),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.35 * progress),
-                                blurRadius: 30 * progress,
-                                offset: Offset(0, -6 * progress),
-                              ),
-                            ],
-                          ),
+            child: HeroMode(
+              enabled: !MediaQuery.disableAnimationsOf(context),
+              child: Hero(
+                tag: 'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
+                createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
+                flightShuttleBuilder: (
+                  flightContext,
+                  animation,
+                  flightDirection,
+                  fromHeroContext,
+                  toHeroContext,
+                ) =>
+                    buildDayDetailFlightShuttle(
+                  flightContext,
+                  animation,
+                  flightDirection,
+                  fromHeroContext,
+                  toHeroContext,
+                  colors,
+                  isDark,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    height: sheetHeight,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: colors.sheetSurface.withValues(
+                        alpha: isDark ? 0.96 : 0.98,
+                      ),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.08),
+                          width: 1.0,
                         ),
-                      );
-                    }
-                    final contentOpacity = Curves.easeOut.transform(
-                      ((progress - 0.66) / 0.34).clamp(0.0, 1.0),
-                    );
-                    return Opacity(
-                      opacity: contentOpacity,
-                      child: toHeroContext.widget,
-                    );
-                  },
-                );
-              },
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  height: sheetHeight,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: colors.sheetSurface.withValues(
-                      alpha: isDark ? 0.96 : 0.98,
-                    ),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border(
-                      top: BorderSide(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.12)
-                            : Colors.black.withValues(alpha: 0.08),
-                        width: 1.0,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 30,
+                          offset: const Offset(0, -6),
+                        ),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 30,
-                        offset: const Offset(0, -6),
-                      ),
-                    ],
-                  ),
-                  child: StreamBuilder<List<TxView>>(
-                    stream: dayStream,
-                    builder: (context, daySnapshot) {
-                      final dayTxs = daySnapshot.data ?? const [];
+                    child: StreamBuilder<List<TxView>>(
+                      stream: dayStream,
+                      builder: (context, daySnapshot) {
+                        final dayTxs = daySnapshot.data ?? const [];
 
-                      return StreamBuilder<Map<int, int>>(
-                        stream: monthDailyStream,
-                        builder: (context, monthSnapshot) {
-                          final dailyTotals = monthSnapshot.data ?? const {};
-                          return _buildContent(
-                            context,
-                            dayTxs: dayTxs,
-                            monthDailyTotals: dailyTotals,
-                            colors: colors,
-                            isDark: isDark,
-                          );
-                        },
-                      );
-                    },
+                        return StreamBuilder<Map<int, int>>(
+                          stream: monthDailyStream,
+                          builder: (context, monthSnapshot) {
+                            final dailyTotals = monthSnapshot.data ?? const {};
+                            return _buildContent(
+                              context,
+                              dayTxs: dayTxs,
+                              monthDailyTotals: dailyTotals,
+                              colors: colors,
+                              isDark: isDark,
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
