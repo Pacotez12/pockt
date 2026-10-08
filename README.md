@@ -50,14 +50,39 @@ Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
 
 ## Stack
 
-| Pieza | Para qué |
-|---|---|
-| [Flutter](https://flutter.dev) / Dart | UI y lógica de la app |
-| [Drift](https://drift.simonbinder.eu) | Base de datos SQLite tipada y reactiva |
-| [Riverpod](https://riverpod.dev) | Estado y conexión entre datos y pantallas |
-| [timezone](https://pub.dev/packages/timezone) | Fechas por día local correcto |
-| [intl](https://pub.dev/packages/intl) | Formatos de fecha y número |
-| [Inter](https://rsms.me/inter/) | Tipografía, con cifras tabulares |
+**La app**
+
+- **[Flutter](https://flutter.dev) 3.47 + Dart 3.13** — el framework. Dibuja cada píxel con su propio motor (Impeller), lo que permite un diseño 100 % propio y animaciones a 120 fps.
+- **[Inter](https://rsms.me/inter/)** — la tipografía, incluida dentro de la app. Con cifras tabulares: todos los dígitos miden lo mismo, así los montos no "bailan" mientras escribís.
+
+**Datos**
+
+- **[Drift](https://drift.simonbinder.eu)** — base de datos SQLite tipada y reactiva. Guarda gastos, categorías y presupuestos, y avisa sola a cada pantalla cuando algo cambia.
+- **[uuid](https://pub.dev/packages/uuid)** — identificadores únicos para cada registro; facilitan backups y una futura sincronización.
+
+**Estado**
+
+- **[Riverpod](https://riverpod.dev)** — conecta los datos con las pantallas: el total del inicio "escucha" a la base y se actualiza solo al cargar un gasto.
+
+**Fechas y formatos**
+
+- **[timezone](https://pub.dev/packages/timezone) + [flutter_timezone](https://pub.dev/packages/flutter_timezone)** — toman la zona horaria del teléfono, para que un gasto de las 23:30 caiga en el día correcto aunque internamente se guarde en UTC.
+- **[intl](https://pub.dev/packages/intl)** — fechas en español ("Viernes 17 de octubre").
+
+**Desarrollo y calidad**
+
+- **[build_runner](https://pub.dev/packages/build_runner) + drift_dev + riverpod_generator** — generan el código repetitivo (consultas tipadas, providers) para no escribirlo a mano.
+- **[flutter_test](https://docs.flutter.dev/testing) + [mocktail](https://pub.dev/packages/mocktail)** — tests unitarios, de base de datos y de widgets. La lógica de fechas y montos se escribe con tests primero.
+- **`dumpsys gfxinfo`** — medición real de frames en el dispositivo para sostener los 120 fps.
+
+**Próximamente**
+
+- **flutter_local_notifications** — recordatorios y alertas de presupuesto.
+- **workmanager** — backup automático en segundo plano, solo con WiFi.
+- **home_widget** — widget de pantalla de inicio con tus categorías más usadas.
+- **local_auth** — bloqueo opcional con huella.
+- **google_sign_in + googleapis (Drive)** — backup en tu propio Google Drive.
+- **cryptography** — cifrado AES-256-GCM con clave derivada por Argon2id.
 
 ## Arquitectura
 
@@ -80,6 +105,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 3** | Reportes, recordatorios, widget y acceso rápido | ⏳ |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
+| **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
 ## Desarrollo
 

@@ -35,7 +35,8 @@ lib/
   core/
     design/      tokens de color (claro y oscuro), tipografía, radios, springs, haptics
     db/          base Drift, tablas, migraciones
-    format/      formato de guaraníes, fechas (America/Asuncion)
+    format/      formato de guaraníes
+    time/        zona horaria del teléfono (respaldo America/Asuncion), rangos de día y mes
   features/
     entry/       carga: grilla de categorías → teclado; texto natural
     home/        inicio: total, resplandor, quincena, calendario de calor, últimos movimientos
@@ -61,7 +62,7 @@ Reglas:
 - `core/design/` es la única fuente de colores, tipografía, radios, curvas y duraciones.
 - Las funcionalidades no se importan entre sí. Se comunican solo a través de la base de datos y de providers de `core`.
 - `entry/` queda aislado a propósito: el flujo de carga (categoría primero) puede reemplazarse sin tocar el resto.
-- Fechas: se guardan en UTC y se muestran en `America/Asuncion`.
+- Fechas: se guardan en UTC y se muestran en la zona horaria del teléfono (`flutter_timezone`); si no se puede leer, `America/Asuncion`.
 
 ## 4. Modelo de datos
 
@@ -253,6 +254,10 @@ Los tests se escriben antes de la implementación (TDD), con prioridad en fechas
 - Sincronización entre dispositivos y versión web.
 - Exportación a CSV/Excel.
 
+## 10b. Pendientes para la comunidad
+
+- Otras monedas (el campo `currency` ya existe) e idiomas (pasar los textos a archivos de traducción). Hoy la app asume guaraníes y español.
+
 ## 11. Paquetes previstos
 
-`drift`, `drift_flutter`, `flutter_riverpod`, `riverpod_generator`, `flutter_local_notifications`, `timezone`, `workmanager`, `home_widget`, `local_auth`, `google_sign_in`, `googleapis`, `cryptography`, `flutter_secure_storage`, `intl`, `uuid`. Versiones a fijar en el plan, verificando la última estable de cada uno.
+`drift`, `drift_flutter`, `flutter_riverpod`, `riverpod_generator`, `flutter_local_notifications`, `timezone`, `workmanager`, `home_widget`, `local_auth`, `google_sign_in`, `googleapis`, `cryptography`, `flutter_secure_storage`, `intl`, `uuid`, `flutter_timezone`. Versiones a fijar en el plan, verificando la última estable de cada uno.

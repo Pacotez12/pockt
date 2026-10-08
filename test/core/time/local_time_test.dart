@@ -8,12 +8,16 @@ void main() {
     tz.initializeTimeZones();
   });
 
-  test('kZone is America/Asuncion', () {
-    expect(kZone, 'America/Asuncion');
+  setUp(() {
+    setLocalZone('America/Asuncion');
   });
 
-  test('toLocal convierte UTC a hora local de Asunción', () {
-    final location = tz.getLocation(kZone);
+  test('kFallbackZone is America/Asuncion', () {
+    expect(kFallbackZone, 'America/Asuncion');
+  });
+
+  test('toLocal convierte UTC a hora local de Asunción por defecto', () {
+    final location = tz.getLocation(kFallbackZone);
     final localDt = tz.TZDateTime(location, 2026, 10, 31, 23, 30);
     final utc = localDt.toUtc();
     final converted = toLocal(utc);
@@ -53,5 +57,31 @@ void main() {
     expect(endLocal.month, 10);
     expect(endLocal.day, 16);
     expect(endLocal.hour, 0);
+  });
+
+  test('setLocalZone con nombre inválido cae a kFallbackZone', () {
+    setLocalZone('Zona/Invalida_Inexistente');
+    final utc = DateTime.utc(2026, 10, 31, 23, 30);
+    final local = toLocal(utc);
+    final asuncion = tz.TZDateTime.from(utc, tz.getLocation(kFallbackZone));
+    expect(local.hour, asuncion.hour);
+    expect(local.day, asuncion.day);
+  });
+
+  test('con setLocalZone Europe/Madrid un gasto a las 23:30 hora de Madrid cuenta en su día local de Madrid', () {
+    setLocalZone('Europe/Madrid');
+    final madridLocation = tz.getLocation('Europe/Madrid');
+    final madridLocal = tz.TZDateTime(madridLocation, 2026, 10, 31, 23, 30);
+    final utc = madridLocal.toUtc();
+    final converted = toLocal(utc);
+    expect(converted.year, 2026);
+    expect(converted.month, 10);
+    expect(converted.day, 31);
+    expect(converted.hour, 23);
+    expect(converted.minute, 30);
+
+    final range = dayRangeUtc(DateTime(2026, 10, 31));
+    expect(utc.isAfter(range.startUtc) || utc.isAtSameMomentAs(range.startUtc), isTrue);
+    expect(utc.isBefore(range.endUtc), isTrue);
   });
 }

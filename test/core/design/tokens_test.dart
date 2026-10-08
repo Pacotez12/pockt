@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/tokens.dart';
 
 void main() {
@@ -37,5 +38,19 @@ void main() {
       const Color(0xFFF2603F),
       const Color(0xFFE8306F),
     ]);
+  });
+
+  testWidgets('GlassCard usa radio por defecto de 24', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: [PocktColors.dark]),
+      home: const Scaffold(
+        body: GlassCard(child: SizedBox(width: 50, height: 50)),
+      ),
+    ));
+    final container = tester.widget<Container>(
+      find.descendant(of: find.byType(GlassCard), matching: find.byType(Container)),
+    );
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.borderRadius, BorderRadius.circular(24));
   });
 }

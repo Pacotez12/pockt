@@ -18,7 +18,7 @@
 - Repo **público**: nunca commitear keystores, `key.properties`, archivos de cliente OAuth ni datos personales. Sin archivo de licencia (decisión del autor).
 - Montos: `int` en guaraníes, sin decimales. `currency` siempre `'PYG'` en v1.
 - Formato de montos: punto como separador de miles (`4.212.000`), prefijo `Gs.`.
-- Fechas: se guardan en UTC; se muestran y agrupan por día en la zona `America/Asuncion` (vía paquete `timezone`, nunca un offset fijo).
+- Fechas: se guardan en UTC; se muestran y agrupan por día en la zona horaria del teléfono (`initLocalZone()` con `flutter_timezone`; respaldo `kFallbackZone = 'America/Asuncion'`), vía paquete `timezone`, nunca un offset fijo.
 - IDs: UUID v4 en texto para todas las tablas salvo `settings` y `day_marks`.
 - Borrado de movimientos: suave (`deletedAt`), con "Deshacer".
 - Tipografía: Inter incluida como asset (no descargada en runtime), cifras tabulares (`FontFeature.tabularFigures()`).
@@ -51,7 +51,7 @@ android/app/build.gradle(.kts)               (applicationId, minSdk)
 lib/main.dart                                (bootstrap: timezone, ProviderScope)
 lib/app.dart                                 (MaterialApp, themes, shell)
 lib/core/format/money.dart                   (formatGs, keypad input)
-lib/core/time/local_time.dart                (zona America/Asuncion, rangos de mes/día)
+lib/core/time/local_time.dart                (zona del teléfono con respaldo Asunción, rangos de mes/día)
 lib/core/design/tokens.dart                  (PocktColors ThemeExtension claro/oscuro)
 lib/core/design/theme.dart                   (ThemeData claro y oscuro, tipografía)
 lib/core/design/motion.dart                  (springs, Pressable, reduce-motion)
@@ -214,7 +214,7 @@ testWidgets('Pressable no escala con reduce motion', (tester) async {
 
 **Interfaces:**
 - Produces:
-  - `local_time.dart`: `const kZone = 'America/Asuncion'`; `DateTime toLocal(DateTime utc)`; `({DateTime startUtc, DateTime endUtc}) monthRangeUtc(int year, int month)` (fin exclusivo); `({DateTime startUtc, DateTime endUtc}) dayRangeUtc(DateTime localDay)`.
+  - `local_time.dart`: `const kFallbackZone = 'America/Asuncion'`; `Future<void> initLocalZone()`; `void setLocalZone(String name)` (tests); `DateTime toLocal(DateTime utc)`; `({DateTime startUtc, DateTime endUtc}) monthRangeUtc(int year, int month)` (fin exclusivo); `({DateTime startUtc, DateTime endUtc}) dayRangeUtc(DateTime localDay)`.
   - `tables.dart`: **todas** las tablas de la spec §4 (`Categories`, `Transactions`, `SuggestedTransactions`, `RecurringRules`, `IncomeSchedules`, `Budgets`, `DayMarks`, `Settings`), con los campos y nombres exactos de la spec. Enums Dart: `TxType { expense, income }`, `CategoryKind { expense, income }`, `TxSource { manual, recurring, incomeSchedule, capture }`.
   - `AppDatabase` (`schemaVersion => 1`), `AppDatabase.forTesting(QueryExecutor e)`; `onCreate` inserta las categorías iniciales de la spec §4 (10 de gasto, 3 de ingreso) con `icon` emoji, `colorDark`, `colorLight` y `sortOrder`.
   - `CategoriesRepository(AppDatabase db)`: `Stream<List<Category>> watchActive(CategoryKind kind)` (sin archivadas, por `sortOrder`); `Future<void> archive(String id)`.

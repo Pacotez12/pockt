@@ -20,7 +20,7 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = borderRadius ?? BorderRadius.circular(16);
+    final radius = borderRadius ?? BorderRadius.circular(24);
 
     return Container(
       margin: margin,

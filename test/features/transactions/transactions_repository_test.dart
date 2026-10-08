@@ -18,6 +18,7 @@ void main() {
   });
 
   setUp(() async {
+    setLocalZone('America/Asuncion');
     db = AppDatabase.forTesting(NativeDatabase.memory());
     catRepo = CategoriesRepository(db);
     txRepo = TransactionsRepository(db);
@@ -31,7 +32,7 @@ void main() {
     final expenses = await catRepo.watchActive(CategoryKind.expense).first;
     final comida = expenses.firstWhere((c) => c.name == 'Comida').id;
 
-    final local = tz.TZDateTime(tz.getLocation(kZone), 2026, 10, 31, 23, 30);
+    final local = tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 10, 31, 23, 30);
     await txRepo.add(
       type: TxType.expense,
       amount: 15000,
@@ -143,7 +144,7 @@ void main() {
     final expenses = await catRepo.watchActive(CategoryKind.expense).first;
     final comida = expenses.firstWhere((c) => c.name == 'Comida').id;
     final hogar = expenses.firstWhere((c) => c.name == 'Hogar').id;
-    final dt = tz.TZDateTime(tz.getLocation(kZone), 2026, 10, 15, 14, 0).toUtc();
+    final dt = tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 10, 15, 14, 0).toUtc();
 
     await txRepo.add(type: TxType.expense, amount: 20000, categoryId: comida, occurredAt: dt);
     await txRepo.add(type: TxType.expense, amount: 80000, categoryId: hogar, occurredAt: dt);
@@ -161,8 +162,8 @@ void main() {
     final expenses = await catRepo.watchActive(CategoryKind.expense).first;
     final comida = expenses.firstWhere((c) => c.name == 'Comida').id;
 
-    final day1 = tz.TZDateTime(tz.getLocation(kZone), 2026, 10, 15, 10, 0);
-    final day2 = tz.TZDateTime(tz.getLocation(kZone), 2026, 10, 16, 10, 0);
+    final day1 = tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 10, 15, 10, 0);
+    final day2 = tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 10, 16, 10, 0);
 
     await txRepo.add(type: TxType.expense, amount: 12000, categoryId: comida, occurredAt: day1.toUtc());
     await txRepo.add(type: TxType.expense, amount: 18000, categoryId: comida, occurredAt: day2.toUtc());
@@ -170,5 +171,23 @@ void main() {
     final day1Results = await txRepo.watchDay(DateTime(2026, 10, 15)).first;
     expect(day1Results, hasLength(1));
     expect(day1Results.single.tx.amount, 12000);
+  });
+
+  test('con setLocalZone Europe/Madrid un gasto a las 23:30 de Madrid cuenta en el día 31 de Madrid', () async {
+    setLocalZone('Europe/Madrid');
+    final expenses = await catRepo.watchActive(CategoryKind.expense).first;
+    final comida = expenses.firstWhere((c) => c.name == 'Comida').id;
+    final madridLoc = tz.getLocation('Europe/Madrid');
+    final local = tz.TZDateTime(madridLoc, 2026, 10, 31, 23, 30);
+
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 25000,
+      categoryId: comida,
+      occurredAt: local.toUtc(),
+    );
+
+    expect(await txRepo.watchDailyExpenseTotals(2026, 10).first, {31: 25000});
+    expect(await txRepo.watchMonthTotal(2026, 10, TxType.expense).first, 25000);
   });
 }
