@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:pockt/core/design/theme.dart';
 
 class PocktApp extends StatelessWidget {
   const PocktApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Pockt',
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
       themeMode: ThemeMode.system,
-      home: Scaffold(
+      home: const Scaffold(
         backgroundColor: Colors.black,
       ),
     );
