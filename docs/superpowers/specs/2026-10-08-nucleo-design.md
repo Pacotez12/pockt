@@ -215,8 +215,8 @@ Leve por tecla, medio al guardar, patrón distinto al cruzar 80 % y 100 % de un 
 - Login con Google (`google_sign_in`) con el scope mínimo `drive.file`. Proyecto de Google Cloud en modo "en pruebas" con el autor como único usuario de prueba.
 - La app crea la carpeta visible **"Gastos · Backups"** en el primer backup. Si se borra a mano, la recrea en el siguiente.
 - Proceso: `VACUUM INTO` (copia consistente) → compresión → cifrado → subida.
-- **Automático** una vez por día, solo con WiFi (`workmanager` con restricción de red), y después de confirmar una tanda de sugeridos.
-- Se conservan las últimas 7 copias.
+- **Automático** cada 2 días (día de por medio), solo con WiFi (`workmanager` con restricción de red), y después de confirmar una tanda de sugeridos.
+- Se conservan las últimas 7 copias (unas dos semanas de historia).
 - "Respaldar ahora" manual; la fecha del último backup exitoso queda visible.
 
 ### 7.2 Cifrado
@@ -236,7 +236,7 @@ Conectar Google → la app lista los backups de la carpeta → contraseña → s
 
 - Nada falla en silencio: todo error de escritura, backup o permisos se muestra en la UI.
 - Guardar un movimiento: ver §5.3.
-- Backup: reintento automático en la próxima ventana con WiFi. Si pasan 3 días sin backup exitoso, aviso visible en el Inicio.
+- Backup: reintento automático en la próxima ventana con WiFi. Si pasan 5 días sin backup exitoso (dos ciclos fallidos), aviso visible en el Inicio.
 - Restauración: copia local previa y vuelta atrás si falla.
 - Permiso de notificaciones denegado: Ajustes muestra el estado con un botón para activarlo.
 - Migraciones Drift: cada cambio de esquema lleva su migración y su test.
