@@ -200,7 +200,7 @@ Leve por tecla, medio al guardar, patrón distinto al cruzar 80 % y 100 % de un 
 ### 6.5 Rendimiento (A54)
 - Resplandor: degradado radial pintado, sin desenfoque en tiempo real.
 - `BackdropFilter` solo en la barra de navegación y en las hojas. Tarjetas en reposo con vidrio sin desenfoque.
-- **Meta**: 120 fps; ningún frame por encima de 8 ms en `dumpsys gfxinfo` durante las transiciones principales (carga, detalle del día, cambio de mes, cambio de pestaña).
+- **Meta**: 120 fps; ningún frame por encima de 8 ms (build + raster) durante las transiciones principales, medido con `integration_test` + `traceAction` en modo profile en el dispositivo (`dumpsys gfxinfo` no ve los frames de Flutter) (carga, detalle del día, cambio de mes, cambio de pestaña).
 
 ## 6.6 Marca
 
@@ -249,7 +249,7 @@ Los tests se escriben antes de la implementación (TDD), con prioridad en fechas
 - **Base de datos**: consultas de totales y reportes sobre SQLite en memoria; tests de migraciones.
 - **Widgets**: flujo de carga completo; bandeja de sugeridos; detalle del día.
 - **Integración en el A54**: cargar, editar, borrar con deshacer, backup y restauración completos.
-- **Rendimiento**: `dumpsys gfxinfo` sobre las transiciones de §6.5.
+- **Rendimiento**: `integration_test` + `traceAction` en modo profile sobre las transiciones de §6.5.
 
 ## 10. Fuera de alcance de v1
 

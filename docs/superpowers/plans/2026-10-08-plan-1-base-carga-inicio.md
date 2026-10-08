@@ -26,7 +26,7 @@
 - Springs: `firm` = sin rebote (respuestas al toque); `soft` = rebote mínimo (hojas y transiciones). Presión de botones: escala 0,96.
 - Haptics: leve por tecla, medio al guardar, tic al cambiar de mes.
 - `MediaQuery.disableAnimations == true` ⇒ transiciones pasan a fundidos simples.
-- Meta de rendimiento: ningún frame > 8 ms en `adb shell dumpsys gfxinfo io.github.pacotez12.pockt` durante carga, detalle del día y cambio de mes.
+- Meta de rendimiento: ningún frame > 8 ms (build + raster, percentil 99) durante carga, detalle del día y cambio de mes, medido con `integration_test` + `IntegrationTestWidgetsFlutterBinding.traceAction` en modo profile en el A54. `dumpsys gfxinfo` NO sirve: no ve los frames de Flutter.
 - Ningún error de escritura falla en silencio: se muestra en la UI.
 - Mensajes de commit: prefijo `feat:`/`fix:`/`chore:`/`test:`, en español, **sin ninguna atribución a IA**. Los commits los hace el autor tras revisar: el implementador deja los cambios sin commitear al final de cada tarea y sugiere el mensaje.
 
@@ -345,7 +345,7 @@ testWidgets('edición precarga y actualiza', (t) async { /* editing: amount 2850
 ```
 
 - [ ] **Step 2:** FAIL. **Step 3:** Implementar. **Step 4:** PASS; `flutter analyze` limpio.
-- [ ] **Step 5:** Verificación en el A54: cargar 3 gastos reales; la transición burbuja→teclado no muestra saltos. Medir `adb shell dumpsys gfxinfo io.github.pacotez12.pockt reset`, repetir la carga 5 veces, `dumpsys gfxinfo ... framestats`: ningún frame > 8 ms en la transición. Anotar el resultado en el checkpoint.
+- [ ] **Step 5:** Verificación en el A54 (lo hace el orquestador): cargar 3 gastos reales en release; la transición burbuja→teclado no muestra saltos. La medición de frames se automatiza en la Task 10.
 - [ ] **Step 6:** Checkpoint. Mensaje sugerido: `feat: flujo de carga con categoría primero y teclado`.
 
 ---
@@ -438,7 +438,7 @@ testWidgets('el ＋ abre la carga', (t) async { /* tap '+' → find.text('Comida
 ```
 
 - [ ] **Step 2:** FAIL. **Step 3:** Implementar. **Step 4:** PASS.
-- [ ] **Step 5:** Verificación en el A54 (oscuro y claro, cambiando el tema del sistema): resplandor visible, vidrio de la barra con desenfoque, nada recortado por el notch. `gfxinfo` al cambiar de mes 5 veces: ningún frame > 8 ms.
+- [ ] **Step 5:** Verificación en el A54 (oscuro y claro, cambiando el tema del sistema): resplandor visible, vidrio de la barra con desenfoque, nada recortado por el notch.
 - [ ] **Step 6:** Checkpoint. Mensaje sugerido: `feat: inicio con resplandor y calendario de calor`.
 
 ---
@@ -471,7 +471,7 @@ testWidgets('Movimientos agrupa por día y filtra por búsqueda', (t) async { /*
 ```
 
 - [ ] **Step 2:** FAIL. **Step 3:** Implementar. **Step 4:** PASS.
-- [ ] **Step 5:** A54: la celda del día se transforma en la hoja (Hero + `soft`), sin saltos; `gfxinfo` sin frames > 8 ms.
+- [ ] **Step 5:** A54: la celda del día se transforma en la hoja (Hero + `soft`), sin saltos.
 - [ ] **Step 6:** Checkpoint. Mensaje sugerido: `feat: detalle del día, movimientos y deshacer`.
 
 ---
@@ -489,5 +489,7 @@ testWidgets('Movimientos agrupa por día y filtra por búsqueda', (t) async { /*
 - [ ] **Step 2:** Configurar `mipmap-anydpi-v26/ic_launcher.xml` con `<adaptive-icon>` (`foreground`, `background`, `monochrome`) y los mipmaps por densidad; splash con `windowSplashScreenAnimatedIcon` y fondo `#000000`.
 - [ ] **Step 3:** `flutter build apk --release` (firma debug por ahora) e instalar en el A54: `adb -s R5CW31LZ4WK install -r build/app/outputs/flutter-apk/app-release.apk`.
 - [ ] **Step 4:** Verificar en el teléfono y documentar con capturas (`adb exec-out screencap -p`): ícono en pantalla de inicio con fondo oscuro y claro, ícono temático activado, splash al abrir.
-- [ ] **Step 5:** Prueba completa en release: cargar gastos e ingresos, texto natural, editar, borrar y deshacer, detalle del día, cambio de mes, oscuro y claro. Medición final de `gfxinfo` (carga, detalle, cambio de mes): reportar frames > 8 ms.
+- [ ] **Step 5:** Prueba completa en release: cargar gastos e ingresos, texto natural, editar, borrar y deshacer, detalle del día, cambio de mes, oscuro y claro.
+- [ ] **Step 5b: Medición de rendimiento** — `integration_test/perf_test.dart` con `IntegrationTestWidgetsFlutterBinding.ensureInitialized()` y `binding.traceAction(..., reportKey: 'transiciones')` que recorre: abrir carga → tocar categoría (burbuja→teclado) → guardar; tocar un día del calendario (detalle); deslizar 3 meses. Driver `test_driver/perf_driver.dart` que escribe `TimelineSummary.summarize(...)`. Correr: `flutter drive --profile --driver=test_driver/perf_driver.dart --target=integration_test/perf_test.dart -d R5CW31LZ4WK`. Aceptación: `99th_percentile_frame_build_time_millis` y `99th_percentile_frame_rasterizer_time_millis` ≤ 8.
+- [ ] **Step 5c: Tamaño** — `flutter build apk --release --target-platform android-arm64 --analyze-size`; confirmar que las fuentes de Phosphor se recortan ("Font asset ... was tree-shaken") y reportar el tamaño final.
 - [ ] **Step 6:** Checkpoint. Mensaje sugerido: `feat: ícono adaptativo y splash de Pockt`.
