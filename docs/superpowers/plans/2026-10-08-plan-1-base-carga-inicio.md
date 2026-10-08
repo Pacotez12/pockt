@@ -456,6 +456,8 @@ testWidgets('el ＋ abre la carga', (t) async { /* tap '+' → find.text('Comida
 
 Detalle del día (spec §5.2.6): título con fecha larga en español ("Viernes 17 de octubre"), total del día, "N,N× tu día promedio" (promedio = total del mes ÷ días con gasto; se omite si es el único día con gasto), "tu día más caro del mes" si corresponde, barras "En qué se fue" por categoría y lista de movimientos.
 
+Fecha en "Últimos movimientos" del Inicio (pedido del autor): cada fila muestra categoría o comercio y debajo la fecha relativa con hora: `Hoy · 14:32`, `Ayer · 09:03`; otros días, `Lun 6 oct · 19:40` (español, zona local). Función pura `String formatTxWhen(DateTime occurredLocal, DateTime nowLocal)` en `lib/core/format/dates.dart`, con tests para hoy, ayer, otro día de la misma semana y otro mes.
+
 Movimientos (spec §5.4): lista agrupada por día local (encabezados "Hoy", "Ayer", luego fecha), búsqueda (nota y comercio) y filtros por categoría, tipo y rango de fechas.
 
 - [ ] **Step 1: Tests que fallan:**
