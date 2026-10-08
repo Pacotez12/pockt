@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="432" height="432">
+  <!-- Adaptive icon MONOCHROME layer (Android 13+ themed icons): one color, slit cut out. -->
+  <defs><mask id="m"><rect width="108" height="108" fill="#fff"/><path d="M40 50a16 16 0 0 0 28 0" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/></mask></defs>
+  <circle cx="54" cy="54" r="26" fill="#fff" mask="url(#m)"/>
+</svg>
