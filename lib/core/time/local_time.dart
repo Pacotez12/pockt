@@ -11,7 +11,11 @@ tz.Location get _localLocation {
   try {
     return tz.getLocation(_currentZoneName);
   } catch (_) {
-    return tz.getLocation(kFallbackZone);
+    try {
+      return tz.getLocation(kFallbackZone);
+    } catch (_) {
+      return tz.UTC;
+    }
   }
 }
 
