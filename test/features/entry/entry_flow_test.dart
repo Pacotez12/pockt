@@ -208,4 +208,23 @@ void main() {
     expect(find.text('Transporte'), findsOneWidget);
     expect(find.text('Guardar'), findsOneWidget);
   });
+
+  testWidgets('con texto bolt 60000 el movimiento guardado no tiene hora 00:00', (t) async {
+    await openEntry(t);
+    final textField = find.byType(TextField);
+    await t.enterText(textField, 'bolt 60000');
+    await t.pumpAndSettle();
+
+    final proposal = find.byKey(const ValueKey('natural-proposal-card'));
+    await t.tap(proposal);
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('Guardar'));
+    await t.pumpAndSettle();
+
+    final txs = (await t.runAsync(() => txRepo.watchRecent().first))!;
+    final tx = txs.first.tx;
+    final local = toLocal(tx.occurredAt);
+    expect(local.hour == 0 && local.minute == 0 && local.second == 0, isFalse);
+  });
 }

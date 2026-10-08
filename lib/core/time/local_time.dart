@@ -52,7 +52,40 @@ DateTime toLocal(DateTime utc) {
 
 ({DateTime startUtc, DateTime endUtc}) dayRangeUtc(DateTime localDay) {
   final loc = _localLocation;
-  final startLocal = tz.TZDateTime(loc, localDay.year, localDay.month, localDay.day, 0, 0);
-  final endLocal = tz.TZDateTime(loc, localDay.year, localDay.month, localDay.day + 1, 0, 0);
+  final startLocal = tz.TZDateTime(
+    loc,
+    localDay.year,
+    localDay.month,
+    localDay.day,
+    0,
+    0,
+  );
+  final endLocal = tz.TZDateTime(
+    loc,
+    localDay.year,
+    localDay.month,
+    localDay.day + 1,
+    0,
+    0,
+  );
   return (startUtc: startLocal.toUtc(), endUtc: endLocal.toUtc());
+}
+
+/// Combina un día local con la hora de [nowLocal]: si es hoy devuelve
+/// [nowLocal]; si es otro día, ese día a la misma hora. Evita guardar
+/// movimientos a las 00:00 cuando solo se eligió una fecha.
+DateTime combineDayWithNow(DateTime localDay, DateTime nowLocal) {
+  if (localDay.year == nowLocal.year &&
+      localDay.month == nowLocal.month &&
+      localDay.day == nowLocal.day) {
+    return nowLocal;
+  }
+  return DateTime(
+    localDay.year,
+    localDay.month,
+    localDay.day,
+    nowLocal.hour,
+    nowLocal.minute,
+    nowLocal.second,
+  );
 }

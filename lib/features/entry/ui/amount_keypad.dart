@@ -114,7 +114,9 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categoryColor = Color(isDark ? _category.colorDark : _category.colorLight);
+    final categoryColor = Color(
+      isDark ? _category.colorDark : _category.colorLight,
+    );
     final amount = keypadValue(_digits);
     final canSave = amount > 0 && !_isSaving;
 
@@ -148,7 +150,10 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
               children: [
                 // Top bar: Close/back and Date Selector
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -159,7 +164,12 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                       ),
                       _DateSelector(
                         date: _occurredAt,
-                        onDateSelected: (d) => setState(() => _occurredAt = d),
+                        onDateSelected: (d) => setState(
+                          () => _occurredAt = combineDayWithNow(
+                            d,
+                            DateTime.now(),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -168,16 +178,24 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 // Category Pill with shared Hero
                 Hero(
                   tag: 'cat-${_category.id}',
-                  createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
+                  createRectTween: (begin, end) =>
+                      SpringRectTween(begin: begin, end: end),
                   child: Material(
                     type: MaterialType.transparency,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: categoryColor.withValues(alpha: isDark ? 0.22 : 0.14),
+                        color: categoryColor.withValues(
+                          alpha: isDark ? 0.22 : 0.14,
+                        ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: categoryColor.withValues(alpha: isDark ? 0.6 : 0.4),
+                          color: categoryColor.withValues(
+                            alpha: isDark ? 0.6 : 0.4,
+                          ),
                           width: 1,
                         ),
                       ),
@@ -186,7 +204,11 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            categoryIcon(_category.icon, size: 20, color: colors.textPrimary),
+                            categoryIcon(
+                              _category.icon,
+                              size: 20,
+                              color: colors.textPrimary,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               _category.name,
@@ -239,7 +261,10 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 const SizedBox(height: 16),
                 // Save Button (FilledButton)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
                   child: FilledButton(
                     onPressed: canSave ? _onSave : null,
                     style: FilledButton.styleFrom(
@@ -280,10 +305,18 @@ class _AmountKeypadGrid extends StatelessWidget {
   const _AmountKeypadGrid({required this.onKey});
 
   static const List<String> _keys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-    '000', '0', '⌫',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '000',
+    '0',
+    '⌫',
   ];
 
   @override
@@ -352,10 +385,7 @@ class _DateSelector extends StatelessWidget {
   final DateTime date;
   final ValueChanged<DateTime> onDateSelected;
 
-  const _DateSelector({
-    required this.date,
-    required this.onDateSelected,
-  });
+  const _DateSelector({required this.date, required this.onDateSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -363,7 +393,8 @@ class _DateSelector extends StatelessWidget {
     final now = DateTime.now();
     final isToday =
         date.year == now.year && date.month == now.month && date.day == now.day;
-    final isYesterday = date.year == now.year &&
+    final isYesterday =
+        date.year == now.year &&
         date.month == now.month &&
         date.day == now.day - 1;
 
@@ -387,13 +418,15 @@ class _DateSelector extends StatelessWidget {
           lastDate: DateTime(2100),
         );
         if (picked != null) {
-          onDateSelected(DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            date.hour,
-            date.minute,
-          ));
+          onDateSelected(
+            DateTime(
+              picked.year,
+              picked.month,
+              picked.day,
+              date.hour,
+              date.minute,
+            ),
+          );
         }
       },
       child: Container(

@@ -84,4 +84,23 @@ void main() {
     expect(utc.isAfter(range.startUtc) || utc.isAtSameMomentAs(range.startUtc), isTrue);
     expect(utc.isBefore(range.endUtc), isTrue);
   });
+
+  test('combineDayWithNow con hoy devuelve hora actual', () {
+    final now = DateTime(2026, 10, 8, 15, 30, 45);
+    final todayMidnight = DateTime(2026, 10, 8);
+    final combined = combineDayWithNow(todayMidnight, now);
+    expect(combined, equals(now));
+  });
+
+  test('combineDayWithNow con ayer devuelve ayer con la hora actual', () {
+    final now = DateTime(2026, 10, 8, 15, 30, 45);
+    final yesterdayMidnight = DateTime(2026, 10, 7);
+    final combined = combineDayWithNow(yesterdayMidnight, now);
+    expect(combined.year, 2026);
+    expect(combined.month, 10);
+    expect(combined.day, 7);
+    expect(combined.hour, 15);
+    expect(combined.minute, 30);
+    expect(combined.second, 45);
+  });
 }

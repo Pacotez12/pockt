@@ -176,7 +176,7 @@ class _EntryCategoryPickerScreenState
           category: category,
           type: _currentType,
           initialAmount: proposal.amount,
-          initialDate: proposal.occurredLocalDay,
+          initialDate: combineDayWithNow(proposal.occurredLocalDay, DateTime.now()),
           initialMerchant: proposal.merchant,
         ),
         transitionsBuilder: (context, animation, _, child) {
