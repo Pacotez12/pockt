@@ -105,3 +105,34 @@ class _PressableState extends State<Pressable>
     );
   }
 }
+
+/// Curve that maps normalized time [0.0, 1.0] to a SpringSimulation.
+class SpringCurve extends Curve {
+  final SpringDescription spring;
+  final double durationSeconds;
+
+  const SpringCurve({
+    required this.spring,
+    this.durationSeconds = 0.35,
+  });
+
+  @override
+  double transformInternal(double t) {
+    if (t <= 0.0) return 0.0;
+    if (t >= 1.0) return 1.0;
+    final sim = SpringSimulation(spring, 0.0, 1.0, 0.0);
+    return sim.x(t * durationSeconds);
+  }
+}
+
+/// RectTween that interpolates between two Rects using PocktSprings.soft.
+class SpringRectTween extends Tween<Rect?> {
+  SpringRectTween({super.begin, super.end});
+
+  static final _curve = SpringCurve(spring: PocktSprings.soft);
+
+  @override
+  Rect? lerp(double t) {
+    return Rect.lerp(begin, end, _curve.transform(t));
+  }
+}
