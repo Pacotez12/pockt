@@ -529,3 +529,19 @@ Se ejecuta **después de la Task 10**. La app ya está instalada en el A54 con d
   - Tipeo: `'suoer 230 mil'` → Hogar; `'cafr 15000'` → Comida; `'bar'` no matchea `'bat'` (palabra corta, solo exacta).
 - [ ] **Step 2:** FAIL. **Step 3:** Implementar. **Step 4:** PASS; `flutter analyze` en 0.
 - [ ] **Step 5:** Checkpoint. Mensaje sugerido: `feat: texto natural que aprende de tu historial`.
+
+---
+
+### Task 10b: Rendimiento de dibujo a 120 fps
+
+Primera medición en el A54 (2026-10-08, en frío): build promedio 4,05 ms (bien); raster promedio 9,45 ms, p90 16,45 ms, p99 35 ms (no alcanza 8,3 ms). En el timeline: `PipelineVK::Create` 6× (27 ms máx, compilación de pipelines en el primer uso), `CreateGlyphAtlas` en 43 de 43 frames (el atlas de glifos se rehace en cada frame), 82 `Canvas::saveLayer` en 42 frames, `SurfaceFrame::Encode` 6,7 ms promedio. Única fuente explícita de saveLayer en el código: `BackdropFilter` de `GlassBar`.
+
+**Files:**
+- Modify: `integration_test/perf_test.dart`, `test_driver/perf_driver.dart`, y los widgets que causen el costo (a determinar por la medición)
+
+- [ ] **Step 1: Medición en caliente.** `perf_test.dart` recorre la secuencia una vez sin medir (calienta pipelines y glifos) y la repite dentro de `traceAction`. El driver además imprime los 5 eventos de raster con más tiempo total (agrupando `ph` X y B/E por `name`).
+- [ ] **Step 2: Atlas de glifos.** Encontrar qué texto cambia de tamaño o de glifos en cada frame (sospechosos: total que cuenta animado, Hero de la burbuja con texto, montos que escalan). Animar con `Transform.scale` sobre texto de tamaño fijo en lugar de interpolar `fontSize`; el conteo animado no debe crear tamaños nuevos.
+- [ ] **Step 3: Vidrio.** Medir `GlassBar` con y sin `BackdropFilter`. Si es la causa, aislarlo con `RepaintBoundary` y bajar `sigma` (24 → 16) solo si visualmente es indistinguible; si no alcanza, compartir el backdrop (`BackdropGroup` / `BackdropFilter.grouped`).
+- [ ] **Step 4: Transiciones.** Revisar `saveLayer` de las rutas (`FadeTransition` sobre pantallas completas): preferir transiciones de `Transform` + opacidad en hojas chicas.
+- [ ] **Step 5: Aceptación** (corre el orquestador en el A54 con `-P pocktPerf=true`): en caliente, `99th_percentile_frame_rasterizer_time_millis` ≤ 8,3 y `99th_percentile_frame_build_time_millis` ≤ 8,3. Reportar antes/después.
+- [ ] **Step 6:** Checkpoint. Mensaje sugerido: `fix: rendimiento de dibujo a 120 fps`.
