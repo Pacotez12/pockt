@@ -28,7 +28,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme/gallery-light.png">
-  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: carga, movimientos, presupuestos y bandeja de sugeridos" width="100%">
+  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con calendario de calor, detalle del día, presupuestos y bandeja de sugeridos" width="100%">
 </picture>
 
 ---
@@ -111,7 +111,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | Etapa | Contenido | |
 |---|---|---|
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
-| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos, Ajustes | 🚧 casi listo |
+| **Plan 2** | Presupuestos, recurrentes, cobro quincenal con días hábiles y feriados, bandeja de sugeridos, Ajustes | ✅ v0.2 |
 | **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ⏳ |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
