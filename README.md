@@ -18,7 +18,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 
 <br>
 
-<img src="docs/brand/readme/carga.gif" alt="Cargar un gasto en Pockt: elegir categoría, escribir el monto y guardar" width="300">
+<img src="docs/brand/readme/carga-v2.gif" alt="Cargar un gasto en Pockt: elegir categoría, escribir el monto y guardar" width="300">
 
 <sub><i>Cargar un gasto: categoría, monto, listo.</i></sub>
 
