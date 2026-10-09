@@ -1,6 +1,7 @@
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
+import 'package:pockt/features/income/domain/pay_split.dart';
 
 /// Representa el resumen de período (quincena / mes) mostrado en el Inicio.
 class PeriodLine {
@@ -22,6 +23,10 @@ class PeriodLine {
   /// Fecha en la que arrancó este período para computar ingresos y gastos.
   final DateTime periodStartDate;
 
+  /// Indica si el restante es un estimado calculado con el sueldo esperado
+  /// en vez de ingresos reales confirmados.
+  final bool isEstimate;
+
   const PeriodLine({
     required this.label,
     required this.remaining,
@@ -29,6 +34,7 @@ class PeriodLine {
     required this.nextPayDate,
     this.nextPayWindow,
     required this.periodStartDate,
+    this.isEstimate = false,
   });
 
   /// Mensaje del próximo cobro según los días restantes o rango.
@@ -48,9 +54,50 @@ class PeriodLine {
 
   /// Texto completo según la spec §5.2.4:
   /// "2ª quincena · quedan Gs. 820.000 · cobrás en 6 días".
-  String get fullText => '$label · quedan ${formatGs(remaining)} · $payDayText';
+  String get fullText => isEstimate
+      ? '$label · quedan ~${formatGs(remaining)} (estimado) · $payDayText'
+      : '$label · quedan ${formatGs(remaining)} · $payDayText';
 }
 
+/// Obtiene el monto esperado correspondiente al cobro que abrió el período actual.
+int? expectedAmountForPeriod(IncomeSchedule schedule, DateTime todayLocal) {
+  if (schedule.monthlyAmount == null) return null;
+  final payDays = parsePayDays(schedule.payDays);
+  if (payDays.isEmpty) return null;
+  final rules = parsePayDayRules(schedule.payDayRules, payDays);
+  final splits = parsePaySplitPercents(
+    schedule.paySplitPercents,
+    count: payDays.length,
+  );
+  final splitList = splitAmounts(schedule.monthlyAmount!, splits);
+  final prevWindow = previousPayWindow(todayLocal, payDays, rules);
+  if (prevWindow == null) return null;
+
+  final year = prevWindow.earliest.year;
+  final month = prevWindow.earliest.month;
+  final daysInMonth = DateTime(year, month + 1, 0).day;
+
+  for (var i = 0; i < payDays.length; i++) {
+    final rawDay = payDays[i];
+    final rule = (i < rules.length)
+        ? rules[i]
+        : (rawDay == -1 ? PayDayRule.previous : PayDayRule.either);
+    final int day;
+    if (rawDay == -1 || rawDay > daysInMonth) {
+      day = daysInMonth;
+    } else if (rawDay <= 0) {
+      day = 1;
+    } else {
+      day = rawDay;
+    }
+    final targetDate = DateTime(year, month, day);
+    final w = resolvePayWindow(targetDate, rule);
+    if (w.earliest == prevWindow.earliest && w.latest == prevWindow.latest) {
+      return i < splitList.length ? splitList[i] : null;
+    }
+  }
+  return null;
+}
 
 /// Calcula la línea de período para el Inicio según el esquema de cobro vigente.
 /// Devuelve `null` si no hay esquema configurado o si no se puede determinar la fecha de cobro.
@@ -60,6 +107,7 @@ PeriodLine? periodLine({
   required int incomeSincePay,
   required int expenseSincePay,
   DateTime? lastConfirmedSalaryDate,
+  int? expectedForPeriod,
 }) {
   if (schedule == null) return null;
 
@@ -109,7 +157,20 @@ PeriodLine? periodLine({
     }
   }
 
-  final remaining = incomeSincePay - expenseSincePay;
+  final effectiveExpected =
+      expectedForPeriod ?? expectedAmountForPeriod(schedule, todayLocal);
+  final bool isEstimate;
+  final int remaining;
+
+  if (incomeSincePay <= 0 &&
+      effectiveExpected != null &&
+      effectiveExpected > 0) {
+    remaining = effectiveExpected - expenseSincePay;
+    isEstimate = true;
+  } else {
+    remaining = incomeSincePay - expenseSincePay;
+    isEstimate = false;
+  }
 
   return PeriodLine(
     label: label,
@@ -118,5 +179,7 @@ PeriodLine? periodLine({
     nextPayDate: nextWindow.earliest,
     nextPayWindow: nextWindow,
     periodStartDate: periodStart,
+    isEstimate: isEstimate,
   );
 }
+

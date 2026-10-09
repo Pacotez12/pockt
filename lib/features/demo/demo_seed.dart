@@ -50,6 +50,12 @@ Future<void> seedDemoData(
     paySplitPercents: const [50, 50],
     categoryId: sueldo.id,
   );
+  // En la demo los sueldos ya vienen registrados directamente como movimientos,
+  // por lo que no queda una sugerencia pendiente de cobro en la bandeja:
+  await (db.delete(db.suggestedTransactions)
+        ..where((t) => t.source.equalsValue(TxSource.incomeSchedule)))
+      .go();
+
 
   // 3. Sueldos registrados:
   // - Los dos sueldos del mes anterior (día 15 y fin de mes / 30/09)

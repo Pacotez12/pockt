@@ -231,5 +231,104 @@ void main() {
       expect(line.daysToNextPay, 22); // 30/10 es el último día hábil de octubre (31 sábado)
       expect(line.remaining, 4000000);
     });
+
+    test('sin ingresos confirmados y gastos 820.000 con 4.900.000 esperados -> remaining 4.080.000 e isEstimate == true', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[30, 70]',
+        monthlyAmount: 7000000,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 9),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 10, 9),
+        schedule: schedule,
+        incomeSincePay: 0,
+        expenseSincePay: 820000,
+        expectedForPeriod: 4900000,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.remaining, 4080000);
+      expect(line.isEstimate, isTrue);
+      expect(line.fullText, contains('quedan ~Gs. 4.080.000 (estimado)'));
+    });
+
+    test('con ingreso confirmado y gastos 820.000 -> remaining 4.080.000 e isEstimate == false', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[30, 70]',
+        monthlyAmount: 7000000,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 9),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 10, 9),
+        schedule: schedule,
+        incomeSincePay: 4900000,
+        expenseSincePay: 820000,
+        expectedForPeriod: 4900000,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.remaining, 4080000);
+      expect(line.isEstimate, isFalse);
+      expect(line.fullText, contains('quedan Gs. 4.080.000 ·'));
+      expect(line.fullText, isNot(contains('(estimado)')));
+    });
+
+    test('sin monthlyAmount y sin ingresos confirmados funciona como antes (isEstimate == false)', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
+        monthlyAmount: null,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 9),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 10, 9),
+        schedule: schedule,
+        incomeSincePay: 0,
+        expenseSincePay: 820000,
+        expectedForPeriod: null,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.remaining, -820000);
+      expect(line.isEstimate, isFalse);
+      expect(line.fullText, contains('quedan −Gs. 820.000 ·'));
+      expect(line.fullText, isNot(contains('(estimado)')));
+    });
+
+    test('expectedAmountForPeriod obtiene el monto del cobro que abrió el período', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[30, 70]',
+        monthlyAmount: 7000000,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+
+      // El 9/10, el cobro que abrió el período fue el 30/09 (70% = 4.900.000)
+      expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 9)), 4900000);
+      // El 16/10, el cobro que abrió el período fue el 15/10 (30% = 2.100.000)
+      expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 16)), 2100000);
+    });
   });
 }
+

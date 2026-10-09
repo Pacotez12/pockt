@@ -491,4 +491,59 @@ void main() {
     final remainingSpan = span.children!.first as TextSpan;
     expect(remainingSpan.style?.color, PocktColors.dark.danger);
   });
+
+  testWidgets('sin ingreso confirmado muestra ~Gs. X (estimado); al confirmar sugerencia pasa a real', (t) async {
+    final expenseCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final incomeCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+
+    await t.runAsync(() async {
+      final schedRepoWithClock = IncomeScheduleRepository(
+        testDb,
+        clock: () => DateTime(2026, 10, 9, 10, 0),
+      );
+      await schedRepoWithClock.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        payDayRules: [PayDayRule.either, PayDayRule.previous],
+        monthlyAmount: 7000000,
+        paySplitPercents: [30, 70],
+        categoryId: sueldo.id,
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 820000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 12, 0),
+      );
+    });
+
+    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 14, 0));
+
+    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+    expect(find.textContaining('~Gs. 4.080.000'), findsOneWidget);
+    expect(find.textContaining('(estimado)'), findsOneWidget);
+
+    final textWidget = t.widget<Text>(find.byKey(const ValueKey('period-line-remaining')));
+    final span = textWidget.textSpan as TextSpan;
+    final estimadoSpan = span.children!.firstWhere((s) => (s as TextSpan).text == '(estimado)') as TextSpan;
+    expect(estimadoSpan.style?.color, PocktColors.dark.textSecondary);
+
+    // Confirmar la sugerencia pendiente
+    await t.runAsync(() async {
+      final pending = await sugRepo.watchPending().first;
+      expect(pending, hasLength(1));
+      await sugRepo.confirm(pending.first.suggestion.id);
+    });
+
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Gs. 4.080.000'), findsOneWidget);
+    expect(find.textContaining('~'), findsNothing);
+    expect(find.textContaining('(estimado)'), findsNothing);
+  });
 }
+

@@ -311,6 +311,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       incomeSincePay: _incomeSincePay,
       expenseSincePay: _expenseSincePay,
       lastConfirmedSalaryDate: _lastSalaryDate,
+      expectedForPeriod: _schedule != null
+          ? expectedAmountForPeriod(_schedule!, _getNow())
+          : null,
     );
 
     return Scaffold(
@@ -701,7 +704,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 children: [
                   TextSpan(
-                    text: formatGs(line.remaining),
+                    text: line.isEstimate
+                        ? '~${formatGs(line.remaining)} '
+                        : formatGs(line.remaining),
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: line.remaining < 0
@@ -709,6 +714,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           : colors.textPrimary,
                     ),
                   ),
+                  if (line.isEstimate)
+                    TextSpan(
+                      text: '(estimado)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                 ],
               ),
               key: const ValueKey('period-line-remaining'),
@@ -729,3 +742,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
+
