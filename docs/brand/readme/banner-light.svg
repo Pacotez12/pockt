@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 560" width="1280" height="560">
+  <defs>
+    <radialGradient id="bg" cx=".28" cy=".38" r=".7">
+      <stop offset="0" stop-color="#ff9f6e" stop-opacity=".35"/>
+      <stop offset=".35" stop-color="#ff7aa5" stop-opacity=".14"/>
+      <stop offset=".75" stop-color="#ff3d7f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#ffb07a"/><stop offset=".5" stop-color="#ff6a52"/><stop offset="1" stop-color="#e8306f"/>
+    </radialGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ff7a45" stop-opacity=".65"/><stop offset=".55" stop-color="#ff3d7f" stop-opacity=".2"/><stop offset="1" stop-color="#ff3d7f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="560" rx="36" fill="#F7F7F8"/>
+  <rect width="1280" height="560" rx="36" fill="url(#bg)"/>
+  <circle cx="300" cy="280" r="190" fill="url(#halo)"/>
+  <circle cx="300" cy="280" r="128" fill="url(#orb)"/>
+  <path d="M231 260a69 69 0 0 0 138 0" fill="none" stroke="#000" stroke-width="24" stroke-linecap="round"/>
+  <text x="540" y="268" font-family="Inter" font-weight="700" font-size="124" letter-spacing="-5" fill="#000">Pockt</text>
+  <text x="546" y="332" font-family="Inter" font-weight="500" font-size="34" fill="#000" fill-opacity=".6">Tus gastos, en el bolsillo.</text>
+  <g font-family="Inter" font-weight="600" font-size="20" fill="#000">
+    <rect x="546" y="378" width="150" height="44" rx="22" fill="#fff" fill-opacity=".8" stroke="#000" stroke-opacity=".08"/>
+    <text x="621" y="406" text-anchor="middle" fill-opacity=".75">Local-first</text>
+    <rect x="708" y="378" width="196" height="44" rx="22" fill="#fff" fill-opacity=".8" stroke="#000" stroke-opacity=".08"/>
+    <text x="806" y="406" text-anchor="middle" fill-opacity=".75">Hecho en Flutter</text>
+  </g>
+</svg>
