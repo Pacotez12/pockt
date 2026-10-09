@@ -6,8 +6,10 @@ import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
+import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 
 /// Hub principal de Ajustes (spec §5.10):
@@ -137,6 +139,34 @@ class SettingsScreen extends ConsumerWidget {
                         MaterialPageRoute(
                           builder: (_) => const RecurringScreen(),
                         ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final appearanceAsync = ref.watch(appearanceProvider);
+                      final mode = appearanceAsync.value ?? ThemeMode.system;
+                      final subtitle = switch (mode) {
+                        ThemeMode.dark => 'Oscuro',
+                        ThemeMode.light => 'Claro',
+                        ThemeMode.system => 'Sistema',
+                      };
+
+                      return _SettingsTile(
+                        key: const ValueKey('settings-appearance-tile'),
+                        icon: 'paint-brush',
+                        title: 'Apariencia',
+                        subtitle: subtitle,
+                        iconColor: colors.brandStart,
+                        onTap: () {
+                          Haptics.tick();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AppearanceScreen(),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),

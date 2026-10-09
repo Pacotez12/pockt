@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 
@@ -44,11 +45,15 @@ class _PocktAppState extends ConsumerState<PocktApp>
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(appearanceProvider).value ?? ThemeMode.system;
+
     return MaterialApp(
       title: 'Pockt',
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
+      themeAnimationDuration: const Duration(milliseconds: 400),
+      themeAnimationCurve: Curves.easeInOut,
       home: const AppShell(),
     );
   }

@@ -8,8 +8,10 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
+import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
 
@@ -49,13 +51,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('SettingsScreen lista Categorías, Esquema de cobro y Recurrentes', (tester) async {
+  testWidgets('SettingsScreen lista Categorías, Esquema de cobro, Recurrentes y Apariencia', (tester) async {
     await pumpSettingsScreen(tester);
 
     expect(find.text('Ajustes'), findsOneWidget);
     expect(find.text('Categorías'), findsOneWidget);
     expect(find.text('Esquema de cobro'), findsOneWidget);
     expect(find.text('Recurrentes'), findsOneWidget);
+    expect(find.text('Apariencia'), findsOneWidget);
   });
 
   testWidgets('tocar Categorías navega a CategoryKeywordsScreen', (tester) async {
@@ -83,5 +86,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RecurringScreen), findsOneWidget);
+  });
+
+  testWidgets('tocar Apariencia navega a AppearanceScreen', (tester) async {
+    await pumpSettingsScreen(tester);
+
+    await tester.tap(find.text('Apariencia'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppearanceScreen), findsOneWidget);
+  });
+
+  testWidgets('todas las claves de íconos que usa settings_screen.dart resuelven a un ícono real', (tester) async {
+    await pumpSettingsScreen(tester);
+
+    final iconWidgets = tester.widgetList<Icon>(find.byType(Icon));
+    expect(iconWidgets, isNotEmpty);
+    for (final iconWidget in iconWidgets) {
+      expect(
+        iconWidget.icon,
+        isNot(equals(PhosphorIconsRegular.question)),
+        reason: 'Un ícono en settings_screen cayó al fallback question mark',
+      );
+      expect(
+        iconWidget.icon,
+        isNot(equals(PhosphorIconsFill.question)),
+        reason: 'Un ícono en settings_screen cayó al fallback question mark',
+      );
+    }
   });
 }
