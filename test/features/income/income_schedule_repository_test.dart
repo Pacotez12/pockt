@@ -51,6 +51,29 @@ void main() {
     expect(current.effectiveFrom, DateTime(2026, 10, 15));
   });
 
+  test('guardar dos veces el mismo día actualiza el esquema de hoy (gana el último)', () async {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    await repo.setSchedule(
+      mode: PayMode.biweekly,
+      payDays: [15, -1],
+      monthlyAmount: 7000000,
+      paySplitPercents: [50, 50],
+      categoryId: sueldoCatId,
+    );
+    await repo.setSchedule(
+      mode: PayMode.biweekly,
+      payDays: [15, -1],
+      monthlyAmount: 5000000,
+      paySplitPercents: [30, 70],
+      categoryId: sueldoCatId,
+    );
+
+    final current = await repo.watchCurrent().first;
+    expect(current!.monthlyAmount, 5000000);
+    expect(current.paySplitPercents, '[30,70]');
+    expect(await db.select(db.incomeSchedules).get(), hasLength(1));
+  });
+
   test('cambiar de modo inserta nueva fila y watchCurrent toma la más reciente sin borrar la anterior', () async {
     const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
 
