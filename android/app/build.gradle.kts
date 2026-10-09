@@ -31,6 +31,9 @@ android {
         if (project.hasProperty("pocktPerf")) {
             applicationIdSuffix = ".perf"
             manifestPlaceholders["appName"] = "Pockt Perf"
+        } else if (project.hasProperty("pocktDemo")) {
+            applicationIdSuffix = ".demo"
+            manifestPlaceholders["appName"] = "Pockt Demo"
         } else {
             manifestPlaceholders["appName"] = "Pockt"
         }
