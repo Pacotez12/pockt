@@ -15,6 +15,8 @@ import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/recurring/data/suggestions_repository.dart';
+import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/transactions/ui/tx_row.dart';
@@ -61,12 +63,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
   StreamSubscription<Map<int, int>>? _dailyTotalsSub;
   StreamSubscription<List<TxView>>? _recentSub;
+  StreamSubscription<List<SuggestionView>>? _suggestionsSub;
 
   int _monthTotal = 0;
   int _previousTotal = 0;
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
   List<TxView> _recentTxs = const [];
+  List<SuggestionView> _pendingSuggestions = const [];
 
   DateTime _getNow() => widget.nowLocal ?? toLocal(DateTime.now());
 
@@ -97,6 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
+    _suggestionsSub?.cancel();
     super.dispose();
   }
 
@@ -105,8 +110,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
+    _suggestionsSub?.cancel();
 
     final repo = ref.read(transactionsRepositoryProvider);
+    final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
+
+    _suggestionsSub = suggestionsRepo.watchPending().listen((items) {
+      if (mounted) {
+        setState(() {
+          _pendingSuggestions = items;
+        });
+      }
+    });
 
     _monthTotalSub = repo.watchMonthTotal(_year, _month, TxType.expense).listen((total) {
       if (mounted) {
@@ -209,6 +224,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _buildSpendingTotal(context),
                   const SizedBox(height: 16),
                   _buildSegmentedBar(context),
+                  if (_pendingSuggestions.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildPendingCard(context),
+                  ],
                   const SizedBox(height: 16),
                   GestureDetector(
                     onHorizontalDragEnd: _handleHorizontalSwipe,
@@ -460,6 +479,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPendingCard(BuildContext context) {
+    final colors = context.pockt;
+    final count = _pendingSuggestions.length;
+    final names = _pendingSuggestions
+        .map((s) => (s.suggestion.merchant?.isNotEmpty == true)
+            ? s.suggestion.merchant!
+            : (s.category?.name ?? ''))
+        .where((name) => name.isNotEmpty)
+        .take(2)
+        .join(', ');
+
+    final countText = count == 1 ? '1 por confirmar' : '$count por confirmar';
+
+    return Pressable(
+      key: const ValueKey('pending-suggestions-card'),
+      onTap: () {
+        Haptics.tick();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const InboxScreen(),
+          ),
+        );
+      },
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        borderRadius: BorderRadius.circular(18),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: colors.brandStart,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.brandStart.withValues(alpha: 0.8),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: countText,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textPrimary,
+                  ),
+                  children: [
+                    if (names.isNotEmpty)
+                      TextSpan(
+                        text: ' · $names',
+                        style: TextStyle(
+                          color: colors.textSecondary.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                  ],
+                ),
+                key: const ValueKey('pending-suggestions-text'),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              uiIcon('chevron-right'),
+              size: 16,
+              color: colors.textTertiary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

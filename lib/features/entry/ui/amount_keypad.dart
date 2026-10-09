@@ -18,6 +18,13 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
   final int? initialAmount;
   final DateTime? initialDate;
   final String? initialMerchant;
+  final Future<void> Function({
+    required int amount,
+    required Category category,
+    required DateTime occurredAt,
+    String? merchant,
+    String? note,
+  })? onSaveOverride;
 
   const AmountKeypadScreen({
     super.key,
@@ -27,6 +34,7 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
     this.initialAmount,
     this.initialDate,
     this.initialMerchant,
+    this.onSaveOverride,
   });
 
   @override
@@ -73,25 +81,35 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
 
     setState(() => _isSaving = true);
     try {
-      final txRepo = ref.read(transactionsRepositoryProvider);
-      if (widget.editing != null) {
-        await txRepo.update(
-          widget.editing!.tx.id,
+      if (widget.onSaveOverride != null) {
+        await widget.onSaveOverride!(
           amount: amount,
-          categoryId: _category.id,
+          category: _category,
           occurredAt: _occurredAt.toUtc(),
           merchant: _merchant,
           note: _note,
         );
       } else {
-        await txRepo.add(
-          type: widget.type,
-          amount: amount,
-          categoryId: _category.id,
-          occurredAt: _occurredAt.toUtc(),
-          merchant: _merchant,
-          note: _note,
-        );
+        final txRepo = ref.read(transactionsRepositoryProvider);
+        if (widget.editing != null) {
+          await txRepo.update(
+            widget.editing!.tx.id,
+            amount: amount,
+            categoryId: _category.id,
+            occurredAt: _occurredAt.toUtc(),
+            merchant: _merchant,
+            note: _note,
+          );
+        } else {
+          await txRepo.add(
+            type: widget.type,
+            amount: amount,
+            categoryId: _category.id,
+            occurredAt: _occurredAt.toUtc(),
+            merchant: _merchant,
+            note: _note,
+          );
+        }
       }
       Haptics.save();
       if (mounted) {

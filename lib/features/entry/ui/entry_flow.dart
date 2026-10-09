@@ -41,6 +41,40 @@ Widget entrySpringTransitionsBuilder(
   );
 }
 
+Future<bool?> showAmountKeypad(
+  BuildContext context, {
+  required Category category,
+  required TxType type,
+  TxView? editing,
+  int? initialAmount,
+  DateTime? initialDate,
+  String? initialMerchant,
+  Future<void> Function({
+    required int amount,
+    required Category category,
+    required DateTime occurredAt,
+    String? merchant,
+    String? note,
+  })? onSaveOverride,
+}) {
+  return Navigator.of(context).push<bool>(
+    PageRouteBuilder<bool>(
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, _, _) => AmountKeypadScreen(
+        category: category,
+        type: type,
+        editing: editing,
+        initialAmount: initialAmount,
+        initialDate: initialDate,
+        initialMerchant: initialMerchant,
+        onSaveOverride: onSaveOverride,
+      ),
+      transitionsBuilder: entrySpringTransitionsBuilder,
+    ),
+  );
+}
+
 Future<void> showEntryFlow(
   BuildContext context, {
   TxType initialType = TxType.expense,

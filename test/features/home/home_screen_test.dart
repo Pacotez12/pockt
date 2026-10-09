@@ -12,6 +12,8 @@ import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/recurring/data/suggestions_repository.dart';
+import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 import 'package:pockt/features/transactions/data/categories_repository.dart';
@@ -22,6 +24,7 @@ void main() {
   late AppDatabase testDb;
   late CategoriesRepository catRepo;
   late TransactionsRepository txRepo;
+  late SuggestionsRepository sugRepo;
 
   setUpAll(() {
     tz.initializeTimeZones();
@@ -34,6 +37,7 @@ void main() {
     );
     catRepo = CategoriesRepository(testDb);
     txRepo = TransactionsRepository(testDb);
+    sugRepo = SuggestionsRepository(testDb);
   });
 
   tearDown(() async {
@@ -262,5 +266,47 @@ void main() {
 
     await t.pumpAndSettle();
     expect(find.byType(DayDetailSheet), findsNothing);
+  });
+
+  testWidgets('tarjeta de sugerencias oculta cuando hay 0 pendientes', (t) async {
+    await pumpHomeScreen(t);
+    expect(find.byKey(const ValueKey('pending-suggestions-card')), findsNothing);
+  });
+
+  testWidgets('tarjeta de sugerencias visible con 2 y texto correcto, tapping abre InboxScreen', (t) async {
+    final categories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final comida = categories.firstWhere((c) => c.name == 'Comida');
+
+    await t.runAsync(() async {
+      await sugRepo.createIfAbsent(
+        type: TxType.expense,
+        amount: 55000,
+        categoryId: comida.id,
+        merchant: 'Netflix',
+        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+        source: TxSource.recurring,
+        sourceRef: 'netflix-1',
+      );
+      await sugRepo.createIfAbsent(
+        type: TxType.expense,
+        amount: 120000,
+        categoryId: comida.id,
+        merchant: 'ANDE',
+        occurredAt: DateTime.utc(2026, 10, 6, 10, 0),
+        source: TxSource.recurring,
+        sourceRef: 'ande-1',
+      );
+    });
+
+    await pumpHomeScreen(t);
+
+    expect(find.byKey(const ValueKey('pending-suggestions-card')), findsOneWidget);
+    expect(find.text('2 por confirmar · Netflix, ANDE'), findsOneWidget);
+
+    await t.tap(find.byKey(const ValueKey('pending-suggestions-card')));
+    await t.pumpAndSettle();
+
+    expect(find.byType(InboxScreen), findsOneWidget);
   });
 }
