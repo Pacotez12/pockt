@@ -80,7 +80,11 @@ Todas las claves primarias son UUID (texto), salvo `settings`.
 
 **`recurring_rules`**: `id`, `name`, `type`, `amount`, `categoryId`, `frequency` (`monthly` | `weekly` | `yearly`), `dayOfMonth?`, `dayOfWeek?`, `monthOfYear?`, `nextDueDate`, `active`.
 
-**`income_schedules`**: `id`, `mode` (`biweekly` | `monthly`), `payDays` (lista, por ejemplo `[15, -1]`, donde `-1` = último día del mes), `shiftToPreviousBusinessDay` (bool), `expectedAmount?`, `categoryId`, `effectiveFrom`.
+**`income_schedules`**: `id`, `mode` (`biweekly` | `monthly`), `payDays` (lista, por ejemplo `[15, -1]`, donde `-1` = último día del mes), `payDayRules` (una regla por día de cobro: `previous` | `next` | `either`), `expectedAmount?`, `categoryId`, `effectiveFrom`.
+- Regla cuando el día de cobro **no es hábil** (fin de semana o feriado nacional de Paraguay): `previous` = día hábil anterior; `next` = día hábil siguiente; `either` = puede ser cualquiera de los dos (la empresa no es fija). Por defecto: el 15 con `either`, el último día con `previous` (último día hábil).
+- Con `either`, el cobro es un **rango** [hábil anterior, hábil siguiente]: la sugerencia "¿Ya cobraste?" aparece desde el primer día del rango y queda en la bandeja hasta confirmarla; el Inicio dice "cobrás entre el vie 13 y el lun 16".
+- **El período de "quedan" arranca en la fecha real del último ingreso confirmado del esquema** (el sueldo registrado), no en la fecha teórica. Si todavía no hay ninguno, se usa la fecha teórica.
+- Feriados: tabla local de feriados nacionales de Paraguay (fijos + Jueves y Viernes Santo calculados desde la Pascua). Sin red.
 - Cambiar de esquema crea una fila nueva con su `effectiveFrom`. Las anteriores no se editan, así los meses pasados se interpretan con el esquema que regía.
 
 **`budgets`**: `id`, `categoryId`, `monthlyLimit` (int), `alert80SentFor?` (`YYYY-MM`), `alert100SentFor?` (`YYYY-MM`).
@@ -103,7 +107,7 @@ De arriba a abajo:
 1. Selector de mes e ícono de ajustes.
 2. Total gastado del mes, grande, con el **resplandor** detrás. Su color sale de la categoría con más gasto del mes y cambia con una transición lenta.
 3. Barra segmentada por categoría.
-4. Línea de quincena: "2ª quincena · quedan Gs. X · cobrás en N días". "Quedan" = ingresos registrados del mes − gastos del mes. Los días se cuentan hasta el próximo día de cobro según el `income_schedule` vigente.
+4. Línea de quincena: "2ª quincena · quedan Gs. X · cobrás en N días". "Quedan" = ingresos registrados desde el último día de cobro − gastos desde el último día de cobro (lo que queda hasta volver a cobrar). Con esquema mensual, lo mismo con su único día de cobro. Los días se cuentan hasta el próximo día de cobro según el `income_schedule` vigente.
 5. Tarjeta "N por confirmar" cuando hay sugeridos pendientes. Abre la bandeja.
 6. **Calendario de calor del mes** ("Tus días"): grilla lunes→domingo con un cuadro por día.
    - Intensidad en 5 niveles: nivel 0 = sin gasto. Los días con gasto se reparten en 4 niveles por cuartiles del gasto diario **de ese mes**.
