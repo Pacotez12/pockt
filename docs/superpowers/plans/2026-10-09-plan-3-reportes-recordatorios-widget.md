@@ -171,6 +171,13 @@ Cuatro vistas deslizables (`PageView` con indicador): 1) **Mes por categoría** 
 - Tests: con `disableAnimations` no hay animación y el Inicio aparece directo; tocar saltea; al terminar, el Inicio queda visible y el `MonthGlow` con su color normal.
 - Checkpoint. `feat: logotipo y animación de apertura`.
 
+### Task 7c: Arreglos de interfaz reportados en el A54
+
+1. **Deslizar un movimiento (editar / borrar) se ve cortado** en Inicio y en Movimientos: el fondo de la acción no ocupa la fila completa, no respeta el radio de la tarjeta de vidrio y el contenido se ve recortado detrás. Esperado: el fondo de la acción ocupa exactamente la fila (mismo alto, esquinas que siguen a la tarjeta en la primera y la última fila), con el ícono centrado verticalmente, y la fila se desliza entera por encima, sin recortes de texto ni del ícono de categoría. Aplicar el mismo componente en Inicio y Movimientos (`tx_row.dart`).
+2. **Selectores de fecha en inglés** ("Select date", "Fri, Oct 9", "Cancel/OK", semana empezando en domingo): agregar `flutter_localizations` (SDK), `localizationsDelegates` (Global Material/Widgets/Cupertino), `supportedLocales: [Locale('es', 'PY'), Locale('es')]` y `locale: Locale('es', 'PY')` en `MaterialApp`. Además, tema del `DatePicker` con los tokens (fondo de la hoja, color de selección = acento de marca, tipografía Inter), y la semana empezando en lunes.
+- Tests: el selector de fecha muestra "Cancelar" y nombres de mes en español; una fila deslizada mantiene el fondo de la acción del alto de la fila (golden o medición de tamaño).
+- Checkpoint. `fix: deslizar movimientos sin recortes y calendario en español`.
+
 ### Task 8: Verificación en el A54 y v0.3.0
 
 - [ ] **Step 1** (orquestador): instalar release sobre la app real (`adb install -r`, nunca desinstalar); datos intactos.
