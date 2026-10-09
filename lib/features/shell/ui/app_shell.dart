@@ -6,6 +6,7 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/features/budgets/ui/budgets_screen.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
+import 'package:pockt/features/reports/ui/reports_screen.dart';
 import 'package:pockt/features/transactions/ui/transactions_screen.dart';
 
 /// Shell principal con barra flotante de vidrio y selector de pestañas:
@@ -36,7 +37,7 @@ class _AppShellState extends State<AppShell> {
               HomeScreen(),
               TransactionsScreen(),
               BudgetsScreen(),
-              _PlaceholderTab(title: 'Reportes', subtitle: 'Próximamente'),
+              ReportsScreen(),
             ],
           ),
           // Fade inferior para que el scroll pase suavemente detrás de la barra
@@ -181,44 +182,6 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _PlaceholderTab({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: colors.textTertiary,
-            ),
-          ),
-        ],
       ),
     );
   }
