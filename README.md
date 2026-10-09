@@ -24,8 +24,8 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Categoría primero.** Tocás la burbuja de la categoría, se transforma en el teclado con su color, ponés el monto y listo.
 - **Texto natural que aprende.** Escribís `super 230 mil ayer` o `bolt 28.500` y Pockt lo entiende. Cada comercio que guardás queda en una libreta local: la próxima vez ya sabe su categoría, y tolera errores de tipeo.
 - **Tus días, a la vista.** Un calendario de calor del mes, al estilo de las contribuciones de GitHub, que muestra en qué días gastaste más. Tocás un día y ves en qué se fue.
-- **Presupuestos por categoría** con avisos al 80 % y al 100 %.
-- **Recurrentes y cobros** (quincenales o mensuales) que te esperan en una bandeja para confirmar, sin cargarse a ciegas.
+- **Presupuestos por categoría** con anillos de progreso y notificaciones al 80 % y al 100 % (una sola vez por mes).
+- **Recurrentes y cobros** (quincenales o mensuales, con corrimiento a día hábil) que te esperan en una bandeja para confirmar, sin cargarse a ciegas.
 - **Recordatorios con intensidad**: de "suave" a "insistente", y solo si ese día no anotaste nada.
 - **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura y ranking por comercio.
 
@@ -101,7 +101,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | Etapa | Contenido | |
 |---|---|---|
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
-| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos | 🚧 en curso |
+| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos, Ajustes | 🚧 7 de 9 tareas |
 | **Plan 3** | Reportes, recordatorios, widget y acceso rápido | ⏳ |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |

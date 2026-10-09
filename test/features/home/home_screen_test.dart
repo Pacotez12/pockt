@@ -14,7 +14,7 @@ import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
-import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
+import 'package:pockt/features/settings/ui/settings_screen.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 import 'package:pockt/features/transactions/data/categories_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
@@ -151,7 +151,7 @@ void main() {
     expect(find.text('Lunes 5 de octubre'), findsOneWidget);
   });
 
-  testWidgets('el engranaje abre CategoryKeywordsScreen', (t) async {
+  testWidgets('el engranaje abre el hub de Ajustes', (t) async {
     await pumpHomeScreen(t);
 
     final settingsButton = find.byKey(const ValueKey('home-settings-button'));
@@ -160,8 +160,8 @@ void main() {
     await t.tap(settingsButton);
     await t.pumpAndSettle();
 
-    expect(find.byType(CategoryKeywordsScreen), findsOneWidget);
-    expect(find.text('Palabras clave'), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
   });
 
   testWidgets(

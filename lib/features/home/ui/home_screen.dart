@@ -17,7 +17,7 @@ import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
-import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
+import 'package:pockt/features/settings/ui/settings_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/transactions/ui/tx_row.dart';
 
@@ -308,7 +308,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Haptics.tick();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const CategoryKeywordsScreen(),
+                builder: (_) => const SettingsScreen(),
               ),
             );
           },

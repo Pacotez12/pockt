@@ -298,6 +298,19 @@ class _CategoryKeywordsDetailScreenState
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Reconocer también como…',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             // Campo para agregar nueva palabra
             Padding(
