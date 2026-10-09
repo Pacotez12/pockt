@@ -9,8 +9,8 @@ void main() {
   late File dbFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pockt_mig_v4_');
-    dbFile = File('${tempDir.path}/pockt_v3.db');
+    tempDir = await Directory.systemTemp.createTemp('pockt_mig_v5_');
+    dbFile = File('${tempDir.path}/pockt_v4.db');
   });
 
   tearDown(() async {
@@ -19,11 +19,11 @@ void main() {
     }
   });
 
-  void createV3DatabaseWithData(File file) {
+  void createV4DatabaseWithData(File file) {
     final rawDb = sqlite.sqlite3.open(file.path);
 
     rawDb.execute('''
-      PRAGMA user_version = 3;
+      PRAGMA user_version = 4;
 
       CREATE TABLE categories (
         id TEXT NOT NULL PRIMARY KEY,
@@ -91,7 +91,7 @@ void main() {
         id TEXT NOT NULL PRIMARY KEY,
         mode TEXT NOT NULL,
         pay_days TEXT NOT NULL,
-        shift_to_previous_business_day INTEGER NOT NULL,
+        pay_day_rules TEXT NOT NULL,
         expected_amount INTEGER,
         category_id TEXT NOT NULL REFERENCES categories(id),
         effective_from INTEGER NOT NULL
@@ -131,7 +131,7 @@ void main() {
       );
     ''');
 
-    // Datos v3 preexistentes del usuario
+    // Datos v4 preexistentes del usuario
     rawDb.execute('''
       INSERT INTO categories (id, name, icon, color_dark, color_light, kind, sort_order)
       VALUES ('cat-comida', 'Comida', 'fork-knife', 1, 2, 'expense', 0),
@@ -140,9 +140,10 @@ void main() {
       INSERT INTO transactions (id, type, amount, currency, category_id, merchant, occurred_at, created_at, updated_at, source)
       VALUES ('tx-1', 'expense', 15000, 'PYG', 'cat-comida', 'Superseis', 1728000000000, 1728000000000, 1728000000000, 'manual');
 
-      INSERT INTO income_schedules (id, mode, pay_days, shift_to_previous_business_day, expected_amount, category_id, effective_from)
-      VALUES ('sched-1', 'biweekly', '[15, -1]', 1, 3500000, 'cat-sueldo', 1727740800000),
-             ('sched-2', 'monthly', '[-1]', 1, 4000000, 'cat-sueldo', 1725148800000);
+      INSERT INTO income_schedules (id, mode, pay_days, pay_day_rules, expected_amount, category_id, effective_from)
+      VALUES ('sched-1', 'biweekly', '[15, -1]', '["either","previous"]', 3500000, 'cat-sueldo', 1727740800000),
+             ('sched-2', 'monthly', '[-1]', '["previous"]', 4000000, 'cat-sueldo', 1725148800000),
+             ('sched-3', 'biweekly', '[15, -1]', '["either","previous"]', NULL, 'cat-sueldo', 1727740800000);
 
       INSERT INTO budgets (id, category_id, monthly_limit)
       VALUES ('b-1', 'cat-comida', 1500000);
@@ -154,8 +155,8 @@ void main() {
     rawDb.close();
   }
 
-  test('migración v3 a v4 conserva datos y convierte payDayRules', () async {
-    createV3DatabaseWithData(dbFile);
+  test('migración v4 a v5 conserva datos y convierte expectedAmount a monthlyAmount con paySplitPercents', () async {
+    createV4DatabaseWithData(dbFile);
 
     final db = AppDatabase.forTesting(
       NativeDatabase(dbFile),
@@ -177,35 +178,41 @@ void main() {
     expect(rules.length, equals(1));
     expect(rules.first.name, equals('Netflix'));
 
-    // 3. Esquemas de cobro migrados con payDayRules (-1 -> previous, cualquier otro -> either)
+    // 3. Esquemas de cobro migrados con monthlyAmount y paySplitPercents
     final schedules = await db.select(db.incomeSchedules).get();
-    expect(schedules.length, equals(2));
+    expect(schedules.length, equals(3));
 
+    // sched-1: biweekly [15, -1] con expectedAmount 3500000 -> monthlyAmount = 3500000 * 2 = 7000000, [50, 50]
     final sched1 = schedules.firstWhere((s) => s.id == 'sched-1');
     expect(sched1.payDays, equals('[15, -1]'));
     expect(sched1.payDayRules, equals('["either","previous"]'));
     expect(sched1.monthlyAmount, equals(7000000));
     expect(sched1.paySplitPercents, equals('[50,50]'));
 
+    // sched-2: monthly [-1] con expectedAmount 4000000 -> monthlyAmount = 4000000 * 1 = 4000000, [100]
     final sched2 = schedules.firstWhere((s) => s.id == 'sched-2');
     expect(sched2.payDays, equals('[-1]'));
     expect(sched2.payDayRules, equals('["previous"]'));
     expect(sched2.monthlyAmount, equals(4000000));
     expect(sched2.paySplitPercents, equals('[100]'));
 
+    // sched-3: expectedAmount null -> monthlyAmount null, [50, 50]
+    final sched3 = schedules.firstWhere((s) => s.id == 'sched-3');
+    expect(sched3.monthlyAmount, isNull);
+    expect(sched3.paySplitPercents, equals('[50,50]'));
+
     await db.close();
 
-    // 4. Verificar a nivel de SQLite raw que la columna shift_to_previous_business_day no existe
+    // 4. Verificar a nivel de SQLite raw que expected_amount ya no existe y existen monthly_amount y pay_split_percents
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
     expect(userVersionResult.first['user_version'], equals(5));
 
     final tableInfo = rawDb.select('PRAGMA table_info(income_schedules);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();
-    expect(columnNames, contains('pay_day_rules'));
     expect(columnNames, contains('monthly_amount'));
     expect(columnNames, contains('pay_split_percents'));
-    expect(columnNames, isNot(contains('shift_to_previous_business_day')));
+    expect(columnNames, isNot(contains('expected_amount')));
 
     rawDb.close();
   });

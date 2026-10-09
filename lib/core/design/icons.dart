@@ -164,6 +164,7 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'moon': PhosphorIconsRegular.moon,
   'device-mobile': PhosphorIconsRegular.deviceMobile,
   'paint-brush': PhosphorIconsRegular.paintBrush,
+  'coins': PhosphorIconsRegular.coins,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -196,6 +197,7 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'moon': PhosphorIconsFill.moon,
   'device-mobile': PhosphorIconsFill.deviceMobile,
   'paint-brush': PhosphorIconsFill.paintBrush,
+  'coins': PhosphorIconsFill.coins,
 };
 
 /// Devuelve el [IconData] de Phosphor en estilo Regular o Fill según [filled].

@@ -41,7 +41,9 @@ class IncomeScheduleRepository {
     required List<int> payDays,
     List<PayDayRule>? payDayRules,
     @Deprecated('Usar payDayRules') bool? shiftToPreviousBusinessDay,
-    int? expectedAmount,
+    int? monthlyAmount,
+    @Deprecated('Usar monthlyAmount') int? expectedAmount,
+    List<int>? paySplitPercents,
     required String categoryId,
   }) async {
     final today = _todayLocal();
@@ -51,13 +53,24 @@ class IncomeScheduleRepository {
           return d == -1 ? PayDayRule.previous : PayDayRule.either;
         }).toList();
 
+    final actualMonthlyAmount = monthlyAmount ??
+        (expectedAmount != null ? expectedAmount * payDays.length : null);
+
+    final splits = paySplitPercents ??
+        (payDays.length == 2
+            ? const [50, 50]
+            : (payDays.length == 1
+                ? const [100]
+                : List.filled(payDays.length, 100 ~/ payDays.length)));
+
     await _db.into(_db.incomeSchedules).insert(
           IncomeSchedulesCompanion.insert(
             id: _uuid.v4(),
             mode: mode.name,
             payDays: jsonEncode(payDays),
             payDayRules: jsonEncode(rules.map((r) => r.name).toList()),
-            expectedAmount: Value(expectedAmount),
+            monthlyAmount: Value(actualMonthlyAmount),
+            paySplitPercents: jsonEncode(splits),
             categoryId: categoryId,
             effectiveFrom: today,
           ),

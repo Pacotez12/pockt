@@ -6,6 +6,7 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
+import 'package:pockt/features/income/domain/pay_split.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/domain/recurrence.dart';
 
@@ -131,27 +132,48 @@ class SuggestionGenerator {
 
       if (!startDate.isAfter(today)) {
         final rules = parsePayDayRules(currentSchedule.payDayRules, payDaysList);
-        final payDaysToCreate = <DateTime>[];
+        final splits = parsePaySplitPercents(
+          currentSchedule.paySplitPercents,
+          count: payDaysList.length,
+        );
+        final splitAmountsList = currentSchedule.monthlyAmount != null
+            ? splitAmounts(currentSchedule.monthlyAmount!, splits)
+            : List.filled(payDaysList.length, 0);
+
+        final payDaysToCreate = <({DateTime date, int amount})>[];
         var curYear = startDate.year;
         var curMonth = startDate.month;
         final endYear = today.year;
         final endMonth = today.month;
 
         while (curYear < endYear || (curYear == endYear && curMonth <= endMonth)) {
-          final windows = payWindowsInMonth(
-            curYear,
-            curMonth,
-            payDaysList,
-            rules,
-          );
-          for (final window in windows) {
+          final daysInMonth = DateTime(curYear, curMonth + 1, 0).day;
+          for (var i = 0; i < payDaysList.length; i++) {
+            final rawDay = payDaysList[i];
+            final rule = (i < rules.length)
+                ? rules[i]
+                : (rawDay == -1 ? PayDayRule.previous : PayDayRule.either);
+
+            final int day;
+            if (rawDay == -1 || rawDay > daysInMonth) {
+              day = daysInMonth;
+            } else if (rawDay <= 0) {
+              day = 1;
+            } else {
+              day = rawDay;
+            }
+
+            final targetDate = DateTime(curYear, curMonth, day);
+            final window = resolvePayWindow(targetDate, rule);
             final dayDate = DateTime(
               window.earliest.year,
               window.earliest.month,
               window.earliest.day,
             );
             if (!dayDate.isBefore(startDate) && !dayDate.isAfter(today)) {
-              payDaysToCreate.add(dayDate);
+              final amount =
+                  i < splitAmountsList.length ? splitAmountsList[i] : 0;
+              payDaysToCreate.add((date: dayDate, amount: amount));
             }
           }
           curMonth++;
@@ -161,16 +183,16 @@ class SuggestionGenerator {
           }
         }
 
-        payDaysToCreate.sort();
+        payDaysToCreate.sort((a, b) => a.date.compareTo(b.date));
 
-        for (final dayDate in payDaysToCreate) {
+        for (final item in payDaysToCreate) {
           final created = await _suggestionsRepo.createIfAbsent(
             type: TxType.income,
-            amount: currentSchedule.expectedAmount ?? 0,
+            amount: item.amount,
             categoryId: currentSchedule.categoryId,
             merchant: 'Cobro',
             rawText: 'Cobro programado',
-            occurredAt: dayDate,
+            occurredAt: item.date,
             source: TxSource.incomeSchedule,
             sourceRef: currentSchedule.id,
           );

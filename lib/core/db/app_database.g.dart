@@ -2906,16 +2906,27 @@ class $IncomeSchedulesTable extends IncomeSchedules
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _expectedAmountMeta = const VerificationMeta(
-    'expectedAmount',
+  static const VerificationMeta _monthlyAmountMeta = const VerificationMeta(
+    'monthlyAmount',
   );
   @override
-  late final GeneratedColumn<int> expectedAmount = GeneratedColumn<int>(
-    'expected_amount',
+  late final GeneratedColumn<int> monthlyAmount = GeneratedColumn<int>(
+    'monthly_amount',
     aliasedName,
     true,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
+  );
+  static const VerificationMeta _paySplitPercentsMeta = const VerificationMeta(
+    'paySplitPercents',
+  );
+  @override
+  late final GeneratedColumn<String> paySplitPercents = GeneratedColumn<String>(
+    'pay_split_percents',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
@@ -2949,7 +2960,8 @@ class $IncomeSchedulesTable extends IncomeSchedules
     mode,
     payDays,
     payDayRules,
-    expectedAmount,
+    monthlyAmount,
+    paySplitPercents,
     categoryId,
     effectiveFrom,
   ];
@@ -2997,14 +3009,25 @@ class $IncomeSchedulesTable extends IncomeSchedules
     } else if (isInserting) {
       context.missing(_payDayRulesMeta);
     }
-    if (data.containsKey('expected_amount')) {
+    if (data.containsKey('monthly_amount')) {
       context.handle(
-        _expectedAmountMeta,
-        expectedAmount.isAcceptableOrUnknown(
-          data['expected_amount']!,
-          _expectedAmountMeta,
+        _monthlyAmountMeta,
+        monthlyAmount.isAcceptableOrUnknown(
+          data['monthly_amount']!,
+          _monthlyAmountMeta,
         ),
       );
+    }
+    if (data.containsKey('pay_split_percents')) {
+      context.handle(
+        _paySplitPercentsMeta,
+        paySplitPercents.isAcceptableOrUnknown(
+          data['pay_split_percents']!,
+          _paySplitPercentsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_paySplitPercentsMeta);
     }
     if (data.containsKey('category_id')) {
       context.handle(
@@ -3050,10 +3073,14 @@ class $IncomeSchedulesTable extends IncomeSchedules
         DriftSqlType.string,
         data['${effectivePrefix}pay_day_rules'],
       )!,
-      expectedAmount: attachedDatabase.typeMapping.read(
+      monthlyAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}expected_amount'],
+        data['${effectivePrefix}monthly_amount'],
       ),
+      paySplitPercents: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pay_split_percents'],
+      )!,
       categoryId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
@@ -3076,7 +3103,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
   final String mode;
   final String payDays;
   final String payDayRules;
-  final int? expectedAmount;
+  final int? monthlyAmount;
+  final String paySplitPercents;
   final String categoryId;
   final DateTime effectiveFrom;
   const IncomeSchedule({
@@ -3084,7 +3112,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     required this.mode,
     required this.payDays,
     required this.payDayRules,
-    this.expectedAmount,
+    this.monthlyAmount,
+    required this.paySplitPercents,
     required this.categoryId,
     required this.effectiveFrom,
   });
@@ -3095,9 +3124,10 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     map['mode'] = Variable<String>(mode);
     map['pay_days'] = Variable<String>(payDays);
     map['pay_day_rules'] = Variable<String>(payDayRules);
-    if (!nullToAbsent || expectedAmount != null) {
-      map['expected_amount'] = Variable<int>(expectedAmount);
+    if (!nullToAbsent || monthlyAmount != null) {
+      map['monthly_amount'] = Variable<int>(monthlyAmount);
     }
+    map['pay_split_percents'] = Variable<String>(paySplitPercents);
     map['category_id'] = Variable<String>(categoryId);
     map['effective_from'] = Variable<DateTime>(effectiveFrom);
     return map;
@@ -3109,9 +3139,10 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       mode: Value(mode),
       payDays: Value(payDays),
       payDayRules: Value(payDayRules),
-      expectedAmount: expectedAmount == null && nullToAbsent
+      monthlyAmount: monthlyAmount == null && nullToAbsent
           ? const Value.absent()
-          : Value(expectedAmount),
+          : Value(monthlyAmount),
+      paySplitPercents: Value(paySplitPercents),
       categoryId: Value(categoryId),
       effectiveFrom: Value(effectiveFrom),
     );
@@ -3127,7 +3158,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       mode: serializer.fromJson<String>(json['mode']),
       payDays: serializer.fromJson<String>(json['payDays']),
       payDayRules: serializer.fromJson<String>(json['payDayRules']),
-      expectedAmount: serializer.fromJson<int?>(json['expectedAmount']),
+      monthlyAmount: serializer.fromJson<int?>(json['monthlyAmount']),
+      paySplitPercents: serializer.fromJson<String>(json['paySplitPercents']),
       categoryId: serializer.fromJson<String>(json['categoryId']),
       effectiveFrom: serializer.fromJson<DateTime>(json['effectiveFrom']),
     );
@@ -3140,7 +3172,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       'mode': serializer.toJson<String>(mode),
       'payDays': serializer.toJson<String>(payDays),
       'payDayRules': serializer.toJson<String>(payDayRules),
-      'expectedAmount': serializer.toJson<int?>(expectedAmount),
+      'monthlyAmount': serializer.toJson<int?>(monthlyAmount),
+      'paySplitPercents': serializer.toJson<String>(paySplitPercents),
       'categoryId': serializer.toJson<String>(categoryId),
       'effectiveFrom': serializer.toJson<DateTime>(effectiveFrom),
     };
@@ -3151,7 +3184,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     String? mode,
     String? payDays,
     String? payDayRules,
-    Value<int?> expectedAmount = const Value.absent(),
+    Value<int?> monthlyAmount = const Value.absent(),
+    String? paySplitPercents,
     String? categoryId,
     DateTime? effectiveFrom,
   }) => IncomeSchedule(
@@ -3159,9 +3193,10 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     mode: mode ?? this.mode,
     payDays: payDays ?? this.payDays,
     payDayRules: payDayRules ?? this.payDayRules,
-    expectedAmount: expectedAmount.present
-        ? expectedAmount.value
-        : this.expectedAmount,
+    monthlyAmount: monthlyAmount.present
+        ? monthlyAmount.value
+        : this.monthlyAmount,
+    paySplitPercents: paySplitPercents ?? this.paySplitPercents,
     categoryId: categoryId ?? this.categoryId,
     effectiveFrom: effectiveFrom ?? this.effectiveFrom,
   );
@@ -3173,9 +3208,12 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       payDayRules: data.payDayRules.present
           ? data.payDayRules.value
           : this.payDayRules,
-      expectedAmount: data.expectedAmount.present
-          ? data.expectedAmount.value
-          : this.expectedAmount,
+      monthlyAmount: data.monthlyAmount.present
+          ? data.monthlyAmount.value
+          : this.monthlyAmount,
+      paySplitPercents: data.paySplitPercents.present
+          ? data.paySplitPercents.value
+          : this.paySplitPercents,
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
@@ -3192,7 +3230,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
           ..write('mode: $mode, ')
           ..write('payDays: $payDays, ')
           ..write('payDayRules: $payDayRules, ')
-          ..write('expectedAmount: $expectedAmount, ')
+          ..write('monthlyAmount: $monthlyAmount, ')
+          ..write('paySplitPercents: $paySplitPercents, ')
           ..write('categoryId: $categoryId, ')
           ..write('effectiveFrom: $effectiveFrom')
           ..write(')'))
@@ -3205,7 +3244,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     mode,
     payDays,
     payDayRules,
-    expectedAmount,
+    monthlyAmount,
+    paySplitPercents,
     categoryId,
     effectiveFrom,
   );
@@ -3217,7 +3257,8 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
           other.mode == this.mode &&
           other.payDays == this.payDays &&
           other.payDayRules == this.payDayRules &&
-          other.expectedAmount == this.expectedAmount &&
+          other.monthlyAmount == this.monthlyAmount &&
+          other.paySplitPercents == this.paySplitPercents &&
           other.categoryId == this.categoryId &&
           other.effectiveFrom == this.effectiveFrom);
 }
@@ -3227,7 +3268,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
   final Value<String> mode;
   final Value<String> payDays;
   final Value<String> payDayRules;
-  final Value<int?> expectedAmount;
+  final Value<int?> monthlyAmount;
+  final Value<String> paySplitPercents;
   final Value<String> categoryId;
   final Value<DateTime> effectiveFrom;
   final Value<int> rowid;
@@ -3236,7 +3278,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     this.mode = const Value.absent(),
     this.payDays = const Value.absent(),
     this.payDayRules = const Value.absent(),
-    this.expectedAmount = const Value.absent(),
+    this.monthlyAmount = const Value.absent(),
+    this.paySplitPercents = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.effectiveFrom = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3246,7 +3289,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     required String mode,
     required String payDays,
     required String payDayRules,
-    this.expectedAmount = const Value.absent(),
+    this.monthlyAmount = const Value.absent(),
+    required String paySplitPercents,
     required String categoryId,
     required DateTime effectiveFrom,
     this.rowid = const Value.absent(),
@@ -3254,6 +3298,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
        mode = Value(mode),
        payDays = Value(payDays),
        payDayRules = Value(payDayRules),
+       paySplitPercents = Value(paySplitPercents),
        categoryId = Value(categoryId),
        effectiveFrom = Value(effectiveFrom);
   static Insertable<IncomeSchedule> custom({
@@ -3261,7 +3306,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     Expression<String>? mode,
     Expression<String>? payDays,
     Expression<String>? payDayRules,
-    Expression<int>? expectedAmount,
+    Expression<int>? monthlyAmount,
+    Expression<String>? paySplitPercents,
     Expression<String>? categoryId,
     Expression<DateTime>? effectiveFrom,
     Expression<int>? rowid,
@@ -3271,7 +3317,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
       if (mode != null) 'mode': mode,
       if (payDays != null) 'pay_days': payDays,
       if (payDayRules != null) 'pay_day_rules': payDayRules,
-      if (expectedAmount != null) 'expected_amount': expectedAmount,
+      if (monthlyAmount != null) 'monthly_amount': monthlyAmount,
+      if (paySplitPercents != null) 'pay_split_percents': paySplitPercents,
       if (categoryId != null) 'category_id': categoryId,
       if (effectiveFrom != null) 'effective_from': effectiveFrom,
       if (rowid != null) 'rowid': rowid,
@@ -3283,7 +3330,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     Value<String>? mode,
     Value<String>? payDays,
     Value<String>? payDayRules,
-    Value<int?>? expectedAmount,
+    Value<int?>? monthlyAmount,
+    Value<String>? paySplitPercents,
     Value<String>? categoryId,
     Value<DateTime>? effectiveFrom,
     Value<int>? rowid,
@@ -3293,7 +3341,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
       mode: mode ?? this.mode,
       payDays: payDays ?? this.payDays,
       payDayRules: payDayRules ?? this.payDayRules,
-      expectedAmount: expectedAmount ?? this.expectedAmount,
+      monthlyAmount: monthlyAmount ?? this.monthlyAmount,
+      paySplitPercents: paySplitPercents ?? this.paySplitPercents,
       categoryId: categoryId ?? this.categoryId,
       effectiveFrom: effectiveFrom ?? this.effectiveFrom,
       rowid: rowid ?? this.rowid,
@@ -3315,8 +3364,11 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     if (payDayRules.present) {
       map['pay_day_rules'] = Variable<String>(payDayRules.value);
     }
-    if (expectedAmount.present) {
-      map['expected_amount'] = Variable<int>(expectedAmount.value);
+    if (monthlyAmount.present) {
+      map['monthly_amount'] = Variable<int>(monthlyAmount.value);
+    }
+    if (paySplitPercents.present) {
+      map['pay_split_percents'] = Variable<String>(paySplitPercents.value);
     }
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
@@ -3337,7 +3389,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
           ..write('mode: $mode, ')
           ..write('payDays: $payDays, ')
           ..write('payDayRules: $payDayRules, ')
-          ..write('expectedAmount: $expectedAmount, ')
+          ..write('monthlyAmount: $monthlyAmount, ')
+          ..write('paySplitPercents: $paySplitPercents, ')
           ..write('categoryId: $categoryId, ')
           ..write('effectiveFrom: $effectiveFrom, ')
           ..write('rowid: $rowid')
@@ -7439,7 +7492,8 @@ typedef $$IncomeSchedulesTableCreateCompanionBuilder =
       required String mode,
       required String payDays,
       required String payDayRules,
-      Value<int?> expectedAmount,
+      Value<int?> monthlyAmount,
+      required String paySplitPercents,
       required String categoryId,
       required DateTime effectiveFrom,
       Value<int> rowid,
@@ -7450,7 +7504,8 @@ typedef $$IncomeSchedulesTableUpdateCompanionBuilder =
       Value<String> mode,
       Value<String> payDays,
       Value<String> payDayRules,
-      Value<int?> expectedAmount,
+      Value<int?> monthlyAmount,
+      Value<String> paySplitPercents,
       Value<String> categoryId,
       Value<DateTime> effectiveFrom,
       Value<int> rowid,
@@ -7512,8 +7567,13 @@ class $$IncomeSchedulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get expectedAmount => $composableBuilder(
-    column: $table.expectedAmount,
+  ColumnFilters<int> get monthlyAmount => $composableBuilder(
+    column: $table.monthlyAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paySplitPercents => $composableBuilder(
+    column: $table.paySplitPercents,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7575,8 +7635,13 @@ class $$IncomeSchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get expectedAmount => $composableBuilder(
-    column: $table.expectedAmount,
+  ColumnOrderings<int> get monthlyAmount => $composableBuilder(
+    column: $table.monthlyAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paySplitPercents => $composableBuilder(
+    column: $table.paySplitPercents,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7632,8 +7697,13 @@ class $$IncomeSchedulesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get expectedAmount => $composableBuilder(
-    column: $table.expectedAmount,
+  GeneratedColumn<int> get monthlyAmount => $composableBuilder(
+    column: $table.monthlyAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paySplitPercents => $composableBuilder(
+    column: $table.paySplitPercents,
     builder: (column) => column,
   );
 
@@ -7700,7 +7770,8 @@ class $$IncomeSchedulesTableTableManager
                 Value<String> mode = const Value.absent(),
                 Value<String> payDays = const Value.absent(),
                 Value<String> payDayRules = const Value.absent(),
-                Value<int?> expectedAmount = const Value.absent(),
+                Value<int?> monthlyAmount = const Value.absent(),
+                Value<String> paySplitPercents = const Value.absent(),
                 Value<String> categoryId = const Value.absent(),
                 Value<DateTime> effectiveFrom = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7709,7 +7780,8 @@ class $$IncomeSchedulesTableTableManager
                 mode: mode,
                 payDays: payDays,
                 payDayRules: payDayRules,
-                expectedAmount: expectedAmount,
+                monthlyAmount: monthlyAmount,
+                paySplitPercents: paySplitPercents,
                 categoryId: categoryId,
                 effectiveFrom: effectiveFrom,
                 rowid: rowid,
@@ -7720,7 +7792,8 @@ class $$IncomeSchedulesTableTableManager
                 required String mode,
                 required String payDays,
                 required String payDayRules,
-                Value<int?> expectedAmount = const Value.absent(),
+                Value<int?> monthlyAmount = const Value.absent(),
+                required String paySplitPercents,
                 required String categoryId,
                 required DateTime effectiveFrom,
                 Value<int> rowid = const Value.absent(),
@@ -7729,7 +7802,8 @@ class $$IncomeSchedulesTableTableManager
                 mode: mode,
                 payDays: payDays,
                 payDayRules: payDayRules,
-                expectedAmount: expectedAmount,
+                monthlyAmount: monthlyAmount,
+                paySplitPercents: paySplitPercents,
                 categoryId: categoryId,
                 effectiveFrom: effectiveFrom,
                 rowid: rowid,

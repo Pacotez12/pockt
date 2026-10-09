@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -94,6 +94,75 @@ class AppDatabase extends _$AppDatabase {
                 payDaysStr,
                 rulesStr,
                 expectedAmount,
+                categoryId,
+                effectiveFromRaw,
+              ],
+            );
+          }
+
+          await customStatement('DROP TABLE income_schedules;');
+          await customStatement('ALTER TABLE income_schedules_new RENAME TO income_schedules;');
+        }
+        if (from < 5) {
+          await customStatement('''
+            CREATE TABLE income_schedules_new (
+              id TEXT NOT NULL PRIMARY KEY,
+              mode TEXT NOT NULL,
+              pay_days TEXT NOT NULL,
+              pay_day_rules TEXT NOT NULL,
+              monthly_amount INTEGER,
+              pay_split_percents TEXT NOT NULL,
+              category_id TEXT NOT NULL REFERENCES categories(id),
+              effective_from INTEGER NOT NULL
+            );
+          ''');
+
+          final rows = await customSelect(
+            'SELECT id, mode, pay_days, pay_day_rules, expected_amount, category_id, effective_from FROM income_schedules;',
+          ).get();
+
+          for (final row in rows) {
+            final id = row.read<String>('id');
+            final mode = row.read<String>('mode');
+            final payDaysStr = row.read<String>('pay_days');
+            final payDayRulesStr = row.read<String>('pay_day_rules');
+            final expectedAmount = row.readNullable<int>('expected_amount');
+            final categoryId = row.read<String>('category_id');
+            final effectiveFromRaw = row.data['effective_from'];
+
+            final payDaysList = (jsonDecode(payDaysStr) as List)
+                .map((e) => (e as num).toInt())
+                .toList();
+            final count = payDaysList.length;
+
+            final int? monthlyAmount = (expectedAmount != null)
+                ? expectedAmount * count
+                : null;
+
+            final List<int> splits;
+            if (count == 2) {
+              splits = const [50, 50];
+            } else if (count == 1) {
+              splits = const [100];
+            } else if (count > 2) {
+              final each = 100 ~/ count;
+              splits = List.filled(count, each);
+              splits[count - 1] = 100 - (each * (count - 1));
+            } else {
+              splits = const [100];
+            }
+            final paySplitPercentsStr = jsonEncode(splits);
+
+            await customStatement(
+              'INSERT INTO income_schedules_new (id, mode, pay_days, pay_day_rules, monthly_amount, pay_split_percents, category_id, effective_from) '
+              'VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+              [
+                id,
+                mode,
+                payDaysStr,
+                payDayRulesStr,
+                monthlyAmount,
+                paySplitPercentsStr,
                 categoryId,
                 effectiveFromRaw,
               ],

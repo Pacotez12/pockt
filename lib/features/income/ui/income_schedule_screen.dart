@@ -13,6 +13,7 @@ import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
+import 'package:pockt/features/income/domain/pay_split.dart';
 
 const List<String> _kWeekdaysSpanish = [
   'lunes',
@@ -57,7 +58,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   PayDayRule _day1Rule = PayDayRule.either;
   PayDayRule _day2Rule = PayDayRule.previous;
   PayDayRule _monthlyRule = PayDayRule.previous;
-  int? _expectedAmount;
+  int? _monthlyAmount;
+  int _splitPercent1 = 50;
   String _incomeCategoryId = '018f0000-0000-7000-8000-000000000011';
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
 
@@ -87,6 +89,18 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     );
   }
 
+  String get _splitPreviewText {
+    final d1 = _day1 == -1 ? 'A fin de mes' : 'El $_day1';
+    final day2Label = _day2 == -1 ? 'a fin de mes' : 'el $_day2';
+
+    if (_monthlyAmount != null && _monthlyAmount! > 0) {
+      final splits = splitAmounts(_monthlyAmount!, [_splitPercent1, 100 - _splitPercent1]);
+      return '$d1 cobrás ~${formatGs(splits[0])} · $day2Label ~${formatGs(splits[1])}';
+    } else {
+      return '$d1: $_splitPercent1 % · $day2Label: ${100 - _splitPercent1} %';
+    }
+  }
+
   String get _nextPayDateText {
     final window = _nextPayWindow;
     if (window == null) return 'Sin fecha de cobro';
@@ -114,10 +128,14 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       try {
         final parsedDays = parsePayDays(schedule.payDays);
         final parsedRules = parsePayDayRules(schedule.payDayRules, parsedDays);
+        final parsedSplits = parsePaySplitPercents(schedule.paySplitPercents, count: parsedDays.length);
         setState(() {
           _mode = schedule.mode == 'monthly' ? PayMode.monthly : PayMode.biweekly;
-          _expectedAmount = schedule.expectedAmount;
+          _monthlyAmount = schedule.monthlyAmount;
           _incomeCategoryId = schedule.categoryId;
+          if (parsedSplits.isNotEmpty) {
+            _splitPercent1 = parsedSplits[0];
+          }
           if (_mode == PayMode.biweekly && parsedDays.length >= 2) {
             _day1 = parsedDays[0];
             _day2 = parsedDays[1];
@@ -144,11 +162,16 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
 
   Future<void> _save() async {
     final repo = ref.read(incomeScheduleRepositoryProvider);
+    final List<int> splits = _mode == PayMode.biweekly
+        ? [_splitPercent1, 100 - _splitPercent1]
+        : const [100];
+
     await repo.setSchedule(
       mode: _mode,
       payDays: _payDays,
       payDayRules: _payDayRules,
-      expectedAmount: _expectedAmount,
+      monthlyAmount: _monthlyAmount,
+      paySplitPercents: splits,
       categoryId: _incomeCategoryId,
     );
 
@@ -158,7 +181,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     }
   }
 
-  Future<void> _editExpectedAmount() async {
+  Future<void> _editMonthlyAmount() async {
     final db = ref.read(databaseProvider);
     var cat = await (db.select(db.categories)
           ..where((c) => c.id.equals(_incomeCategoryId)))
@@ -176,7 +199,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       context,
       category: cat,
       type: TxType.income,
-      initialAmount: _expectedAmount,
+      initialAmount: _monthlyAmount,
       onSaveOverride: ({
         required int amount,
         required Category category,
@@ -185,7 +208,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
         String? note,
       }) async {
         setState(() {
-          _expectedAmount = amount;
+          _monthlyAmount = amount;
           _incomeCategoryId = category.id;
         });
       },
@@ -262,7 +285,11 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   const SizedBox(height: 16),
                   _buildDaysSelector(context),
                   const SizedBox(height: 16),
-                  _buildExpectedAmountTile(context),
+                  _buildMonthlyAmountTile(context),
+                  if (_mode == PayMode.biweekly) ...[
+                    const SizedBox(height: 16),
+                    _buildSplitSelector(context),
+                  ],
                   const SizedBox(height: 20),
                   _buildLivePreviewCard(context),
                   const SizedBox(height: 24),
@@ -468,12 +495,12 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     }
   }
 
-  Widget _buildExpectedAmountTile(BuildContext context) {
+  Widget _buildMonthlyAmountTile(BuildContext context) {
     final colors = context.pockt;
 
     return Pressable(
-      key: const ValueKey('schedule-expected-amount-tile'),
-      onTap: _editExpectedAmount,
+      key: const ValueKey('schedule-monthly-amount-tile'),
+      onTap: _editMonthlyAmount,
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         borderRadius: BorderRadius.circular(20),
@@ -484,7 +511,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Monto esperado',
+                    'Sueldo mensual',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 14,
@@ -494,8 +521,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _expectedAmount != null && _expectedAmount! > 0
-                        ? formatGs(_expectedAmount!)
+                    _monthlyAmount != null && _monthlyAmount! > 0
+                        ? formatGs(_monthlyAmount!)
                         : 'Opcional (se sugerirá al cobrar)',
                     style: TextStyle(
                       fontFamily: 'Inter',
@@ -513,6 +540,127 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSplitSelector(BuildContext context) {
+    final colors = context.pockt;
+
+    return GlassCard(
+      key: const ValueKey('schedule-split-section'),
+      padding: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Reparto',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                '$_splitPercent1 % / ${100 - _splitPercent1} %',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.brandStart,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: colors.brandStart,
+              inactiveTrackColor: colors.glassBorder,
+              thumbColor: colors.brandStart,
+              overlayColor: colors.brandStart.withValues(alpha: 0.16),
+              trackHeight: 6,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+            ),
+            child: Slider(
+              key: const ValueKey('schedule-split-slider'),
+              value: _splitPercent1.toDouble(),
+              min: 5,
+              max: 95,
+              divisions: 18,
+              onChanged: (value) {
+                final stepped = (value / 5).round() * 5;
+                if (stepped != _splitPercent1) {
+                  Haptics.tick();
+                  setState(() {
+                    _splitPercent1 = stepped;
+                  });
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_day1 == -1 ? "Fin de mes" : "Día $_day1"}: $_splitPercent1 %',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: colors.textTertiary,
+                  ),
+                ),
+                Text(
+                  '${_day2 == -1 ? "Fin de mes" : "Día $_day2"}: ${100 - _splitPercent1} %',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.glassFill,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.glassBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  uiIcon('coins'),
+                  size: 16,
+                  color: colors.brandStart,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _splitPreviewText,
+                    key: const ValueKey('schedule-split-preview-text'),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

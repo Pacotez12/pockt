@@ -111,7 +111,8 @@ void main() {
             mode: 'biweekly',
             payDays: jsonEncode([15, -1]),
             payDayRules: jsonEncode(['either', 'previous']),
-            expectedAmount: const Value(4000000),
+            monthlyAmount: const Value(8000000),
+            paySplitPercents: jsonEncode([50, 50]),
             categoryId: sueldoId,
             effectiveFrom: DateTime(2026, 10, 1),
           ),
@@ -142,6 +143,40 @@ void main() {
     // Idempotencia: segunda corrida el mismo día devuelve 0
     final second = await generator.run();
     expect(second, 0);
+  });
+
+  test('el generador crea 2100000 el 15 y 4900000 el último día con [30, 70]', () async {
+    await db.into(db.incomeSchedules).insert(
+          IncomeSchedulesCompanion.insert(
+            id: 'sched-split',
+            mode: 'biweekly',
+            payDays: jsonEncode([15, -1]),
+            payDayRules: jsonEncode(['previous', 'previous']),
+            monthlyAmount: const Value(7000000),
+            paySplitPercents: jsonEncode([30, 70]),
+            categoryId: sueldoId,
+            effectiveFrom: DateTime(2026, 10, 1),
+          ),
+        );
+
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 31, 10, 0),
+    );
+
+    final count = await generator.run();
+    expect(count, 2);
+
+    final sugs = await db.select(db.suggestedTransactions).get();
+    expect(sugs, hasLength(2));
+
+    final sug15 = sugs.firstWhere((s) => s.occurredAt.day == 15);
+    expect(sug15.amount, equals(2100000));
+
+    // El 31/10/2026 es sábado; con regla 'previous' se corrió al viernes 30/10
+    final sugLast = sugs.firstWhere((s) => s.occurredAt.day == 30);
+    expect(sugLast.amount, equals(4900000));
   });
 
   test('si no hay nuevas sugerencias no se envía notificación', () async {
@@ -203,7 +238,8 @@ void main() {
             mode: 'monthly',
             payDays: jsonEncode([-1]),
             payDayRules: jsonEncode(['previous']),
-            expectedAmount: const Value(null),
+            monthlyAmount: const Value(null),
+            paySplitPercents: jsonEncode([100]),
             categoryId: sueldoId,
             effectiveFrom: DateTime(2026, 10, 1),
           ),

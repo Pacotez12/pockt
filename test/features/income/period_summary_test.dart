@@ -21,6 +21,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -46,6 +47,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -71,6 +73,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 11, 1),
       );
@@ -94,6 +97,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 11, 1),
       );
@@ -118,6 +122,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 11, 1),
       );
@@ -140,6 +145,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 11, 1),
       );
@@ -162,6 +168,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -183,6 +190,7 @@ void main() {
         mode: 'biweekly',
         payDays: '[15, -1]',
         payDayRules: '["previous", "previous"]',
+        paySplitPercents: '[50, 50]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -206,6 +214,7 @@ void main() {
         mode: 'monthly',
         payDays: '[-1]',
         payDayRules: '["previous"]',
+        paySplitPercents: '[100]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );

@@ -80,11 +80,12 @@ void main() {
     final ocioTotal = catTotals['Ocio'] ?? 0;
     expect(ocioTotal, greaterThan(400000));
 
-    // 4. Esquema de cobro quincenal [15, -1] con expectedAmount 3.500.000
+    // 4. Esquema de cobro quincenal [15, -1] con monthlyAmount 7.000.000 y reparto [50, 50]
     final schedule = await incomeRepo.watchCurrent().first;
     expect(schedule, isNotNull);
     expect(schedule!.mode, equals('biweekly'));
-    expect(schedule.expectedAmount, equals(3500000));
+    expect(schedule.monthlyAmount, equals(7000000));
+    expect(schedule.paySplitPercents, equals('[50,50]'));
 
     // 5. Sueldos registrados (mes anterior: 15/09 y 30/09)
     final allTxs = await testDb.select(testDb.transactions).get();

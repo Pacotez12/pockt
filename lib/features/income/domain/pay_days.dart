@@ -90,7 +90,7 @@ DateTime _findNextBusinessDay(DateTime date) {
   return DateTime(d.year, d.month, d.day);
 }
 
-PayWindow _resolvePayWindow(DateTime target, PayDayRule rule) {
+PayWindow resolvePayWindow(DateTime target, PayDayRule rule) {
   final clean = DateTime(target.year, target.month, target.day);
   if (isBusinessDay(clean)) {
     return PayWindow(earliest: clean, latest: clean);
@@ -139,7 +139,7 @@ List<PayWindow> payWindowsInMonth(
     }
 
     final targetDate = DateTime(year, month, day);
-    windows.add(_resolvePayWindow(targetDate, rule));
+    windows.add(resolvePayWindow(targetDate, rule));
   }
 
   windows.sort((a, b) => a.earliest.compareTo(b.earliest));

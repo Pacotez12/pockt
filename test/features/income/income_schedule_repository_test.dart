@@ -35,7 +35,8 @@ void main() {
       mode: PayMode.biweekly,
       payDays: [15, -1],
       payDayRules: [PayDayRule.either, PayDayRule.previous],
-      expectedAmount: 4500000,
+      monthlyAmount: 7000000,
+      paySplitPercents: [30, 70],
       categoryId: sueldoCatId,
     );
 
@@ -44,7 +45,8 @@ void main() {
     expect(current!.mode, 'biweekly');
     expect(current.payDays, '[15,-1]');
     expect(current.payDayRules, '["either","previous"]');
-    expect(current.expectedAmount, 4500000);
+    expect(current.monthlyAmount, 7000000);
+    expect(current.paySplitPercents, '[30,70]');
     expect(current.categoryId, sueldoCatId);
     expect(current.effectiveFrom, DateTime(2026, 10, 15));
   });

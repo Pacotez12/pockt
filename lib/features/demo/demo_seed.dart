@@ -41,12 +41,13 @@ Future<void> seedDemoData(
   final recurringRepo = RecurringRepository(db, clock: () => nowLocal);
   final suggestionsRepo = SuggestionsRepository(db, clock: () => nowLocal);
 
-  // 2. Esquema de cobro quincenal [15, -1] con expectedAmount 3.500.000
+  // 2. Esquema de cobro quincenal [15, -1] con monthlyAmount 7.000.000 (3.500.000 por quincena)
   await incomeRepo.setSchedule(
     mode: PayMode.biweekly,
     payDays: const [15, -1],
     payDayRules: const [PayDayRule.either, PayDayRule.previous],
-    expectedAmount: 3500000,
+    monthlyAmount: 7000000,
+    paySplitPercents: const [50, 50],
     categoryId: sueldo.id,
   );
 

@@ -9,6 +9,7 @@ import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
+import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 
 void main() {
@@ -128,5 +129,42 @@ void main() {
     final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
     expect(current, isNotNull);
     expect(current!.payDayRules, equals('["previous","previous"]'));
+  });
+
+  testWidgets('la pantalla muestra la vista previa con sueldo mensual y reparto, y en mensual se oculta el reparto', (tester) async {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    await scheduleRepo.setSchedule(
+      mode: PayMode.biweekly,
+      payDays: [15, -1],
+      payDayRules: [PayDayRule.either, PayDayRule.previous],
+      monthlyAmount: 7000000,
+      paySplitPercents: [30, 70],
+      categoryId: sueldoCatId,
+    );
+
+    await pumpIncomeScheduleScreen(tester);
+
+    // Sueldo mensual se muestra
+    expect(find.text('Sueldo mensual'), findsOneWidget);
+    expect(find.text('Gs. 7.000.000'), findsOneWidget);
+
+    // Reparto visible con vista previa de 30% / 70%
+    expect(find.byKey(const ValueKey('schedule-split-section')), findsOneWidget);
+    expect(find.byKey(const ValueKey('schedule-split-slider')), findsOneWidget);
+    expect(find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'), findsOneWidget);
+
+    // Mover control deslizante hacia la derecha
+    final slider = find.byKey(const ValueKey('schedule-split-slider'));
+    await tester.drag(slider, const Offset(60, 0));
+    await tester.pumpAndSettle();
+
+    // La vista previa cambió (ya no es 2.100.000)
+    expect(find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'), findsNothing);
+
+    // Cambiar a Mensual: el reparto ya no se muestra
+    await tester.tap(find.text('Mensual'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('schedule-split-section')), findsNothing);
+    expect(find.byKey(const ValueKey('schedule-split-slider')), findsNothing);
   });
 }
