@@ -12,6 +12,8 @@ import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/income/data/income_schedule_repository.dart';
+import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
@@ -25,6 +27,7 @@ void main() {
   late CategoriesRepository catRepo;
   late TransactionsRepository txRepo;
   late SuggestionsRepository sugRepo;
+  late IncomeScheduleRepository scheduleRepo;
 
   setUpAll(() {
     tz.initializeTimeZones();
@@ -38,6 +41,7 @@ void main() {
     catRepo = CategoriesRepository(testDb);
     txRepo = TransactionsRepository(testDb);
     sugRepo = SuggestionsRepository(testDb);
+    scheduleRepo = IncomeScheduleRepository(testDb);
   });
 
   tearDown(() async {
@@ -48,6 +52,7 @@ void main() {
     WidgetTester tester, {
     int year = 2026,
     int month = 10,
+    DateTime? nowLocal,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -59,7 +64,7 @@ void main() {
           home: HomeScreen(
             initialYear: year,
             initialMonth: month,
-            nowLocal: DateTime(year, month, 8, 12, 0),
+            nowLocal: nowLocal ?? DateTime(year, month, 8, 12, 0),
           ),
         ),
       ),
@@ -308,5 +313,87 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.byType(InboxScreen), findsOneWidget);
+  });
+
+  testWidgets('sin esquema de cobro la línea de quincena no se muestra', (t) async {
+    await pumpHomeScreen(t);
+    expect(find.byKey(const ValueKey('period-line')), findsNothing);
+  });
+
+  testWidgets('con esquema quincenal y movimientos muestra quincena, restante y cobro', (t) async {
+    final expenseCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final incomeCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+
+    await t.runAsync(() async {
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        shiftToPreviousBusinessDay: true,
+        categoryId: sueldo.id,
+      );
+      await txRepo.add(
+        type: TxType.income,
+        amount: 5000000,
+        categoryId: sueldo.id,
+        occurredAt: DateTime.utc(2026, 10, 1, 10, 0),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 4180000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+      );
+    });
+
+    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 16, 12, 0));
+
+    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+    expect(find.textContaining('2ª quincena'), findsOneWidget);
+    expect(find.textContaining('Gs. 820.000'), findsOneWidget);
+    expect(find.textContaining('cobrás en 14 días'), findsOneWidget);
+  });
+
+  testWidgets('restante negativo usa el token danger', (t) async {
+    final expenseCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final incomeCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+
+    await t.runAsync(() async {
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        shiftToPreviousBusinessDay: false,
+        categoryId: sueldo.id,
+      );
+      await txRepo.add(
+        type: TxType.income,
+        amount: 1000000,
+        categoryId: sueldo.id,
+        occurredAt: DateTime.utc(2026, 10, 1, 10, 0),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 1820000,
+        categoryId: comida.id,
+        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+      );
+    });
+
+    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 16, 12, 0));
+
+    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+    expect(find.textContaining('−Gs. 820.000'), findsOneWidget);
+
+    final textWidget = t.widget<Text>(find.byKey(const ValueKey('period-line-remaining')));
+    final span = textWidget.textSpan as TextSpan;
+    final remainingSpan = span.children!.first as TextSpan;
+    expect(remainingSpan.style?.color, PocktColors.dark.danger);
   });
 }

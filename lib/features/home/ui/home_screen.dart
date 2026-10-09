@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/glass.dart';
@@ -15,6 +16,7 @@ import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/income/domain/period_summary.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
@@ -60,13 +62,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   late int _month;
 
   StreamSubscription<int>? _monthTotalSub;
+  StreamSubscription<int>? _monthIncomeSub;
   StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
   StreamSubscription<Map<int, int>>? _dailyTotalsSub;
   StreamSubscription<List<TxView>>? _recentSub;
   StreamSubscription<List<SuggestionView>>? _suggestionsSub;
+  StreamSubscription<IncomeSchedule?>? _scheduleSub;
 
   int _monthTotal = 0;
   int _previousTotal = 0;
+  int _monthIncome = 0;
+  IncomeSchedule? _schedule;
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
   List<TxView> _recentTxs = const [];
@@ -98,22 +104,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _monthTotalSub?.cancel();
+    _monthIncomeSub?.cancel();
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
+    _scheduleSub?.cancel();
     super.dispose();
   }
 
   void _initSubscriptions() {
     _monthTotalSub?.cancel();
+    _monthIncomeSub?.cancel();
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
+    _scheduleSub?.cancel();
 
     final repo = ref.read(transactionsRepositoryProvider);
     final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
+    final scheduleRepo = ref.read(incomeScheduleRepositoryProvider);
+
+    _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
+      if (mounted) {
+        setState(() {
+          _schedule = sched;
+        });
+      }
+    });
 
     _suggestionsSub = suggestionsRepo.watchPending().listen((items) {
       if (mounted) {
@@ -128,6 +147,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() {
           _previousTotal = _monthTotal;
           _monthTotal = total;
+        });
+      }
+    });
+
+    _monthIncomeSub = repo.watchMonthTotal(_year, _month, TxType.income).listen((income) {
+      if (mounted) {
+        setState(() {
+          _monthIncome = income;
         });
       }
     });
@@ -199,6 +226,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final screenWidth = MediaQuery.of(context).size.width;
 
+    final pLine = periodLine(
+      todayLocal: _getNow(),
+      schedule: _schedule,
+      monthIncome: _monthIncome,
+      monthExpense: _monthTotal,
+    );
+
     return Scaffold(
       backgroundColor: colors.background,
       body: Stack(
@@ -224,6 +258,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _buildSpendingTotal(context),
                   const SizedBox(height: 16),
                   _buildSegmentedBar(context),
+                  if (pLine != null) ...[
+                    const SizedBox(height: 10),
+                    _buildPeriodLine(context, pLine),
+                  ],
                   if (_pendingSuggestions.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     _buildPendingCard(context),
@@ -559,6 +597,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodLine(BuildContext context, PeriodLine line) {
+    final colors = context.pockt;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        key: const ValueKey('period-line'),
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: '${line.label} · quedan ',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: colors.textSecondary.withValues(alpha: 0.75),
+              ),
+              children: [
+                TextSpan(
+                  text: formatGs(line.remaining),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: line.remaining < 0
+                        ? colors.danger
+                        : colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            key: const ValueKey('period-line-remaining'),
+          ),
+          Text(
+            line.payDayText,
+            key: const ValueKey('period-line-payday'),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: colors.textSecondary.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
       ),
     );
   }
