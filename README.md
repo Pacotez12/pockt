@@ -45,18 +45,9 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Recordatorios con intensidad**: de "suave" a "insistente", y solo si ese día no anotaste nada.
 - **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura y ranking por comercio.
 
-## Diseño: "Profundidad y luz"
+## Diseño
 
-Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
-
-| | |
-|---|---|
-| **Negro puro** | Pensado para pantallas AMOLED: los píxeles negros se apagan. También tiene modo claro, y sigue al del sistema. |
-| **Resplandor** | Una luz de color detrás del total del mes, que toma el color de la categoría donde más gastaste. |
-| **Vidrio** | Superficies translúcidas, con desenfoque real solo donde rinde (barra de navegación y hojas). |
-| **Motion con física** | Springs interrumpibles y transiciones compartidas: nada aparece de la nada. |
-| **Haptics** | Un toque leve por tecla, uno firme al guardar. Confirman sin interrumpir. |
-| **Medido, no a ojo** | La fluidez de las transiciones se mide en un teléfono real con las herramientas de Flutter. |
+Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y modo claro), un resplandor que toma el color de la categoría donde más gastaste, superficies de vidrio y animaciones con física.
 
 ## Privacidad
 
@@ -138,5 +129,3 @@ dart run build_runner build --delete-conflicting-outputs   # código generado de
 flutter test
 flutter run
 ```
-
-Los archivos sensibles (keystores, credenciales de Google) están excluidos por `.gitignore` y nunca forman parte del repositorio.
