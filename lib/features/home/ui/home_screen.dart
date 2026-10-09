@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
@@ -62,16 +64,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   late int _month;
 
   StreamSubscription<int>? _monthTotalSub;
-  StreamSubscription<int>? _monthIncomeSub;
   StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
   StreamSubscription<Map<int, int>>? _dailyTotalsSub;
   StreamSubscription<List<TxView>>? _recentSub;
   StreamSubscription<List<SuggestionView>>? _suggestionsSub;
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
+  StreamSubscription<int>? _payIncomeSub;
+  StreamSubscription<int>? _payExpenseSub;
 
   int _monthTotal = 0;
   int _previousTotal = 0;
-  int _monthIncome = 0;
+  int _incomeSincePay = 0;
+  int _expenseSincePay = 0;
   IncomeSchedule? _schedule;
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
@@ -93,7 +97,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void didUpdateWidget(HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialYear != oldWidget.initialYear ||
-        widget.initialMonth != oldWidget.initialMonth) {
+        widget.initialMonth != oldWidget.initialMonth ||
+        widget.nowLocal != oldWidget.nowLocal) {
       final now = _getNow();
       _year = widget.initialYear ?? now.year;
       _month = widget.initialMonth ?? now.month;
@@ -104,23 +109,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _monthTotalSub?.cancel();
-    _monthIncomeSub?.cancel();
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
+    _payIncomeSub?.cancel();
+    _payExpenseSub?.cancel();
     super.dispose();
+  }
+
+  void _updatePaySubscriptions(IncomeSchedule? sched) {
+    _payIncomeSub?.cancel();
+    _payExpenseSub?.cancel();
+    _payIncomeSub = null;
+    _payExpenseSub = null;
+
+    if (sched == null) {
+      if (mounted) {
+        setState(() {
+          _incomeSincePay = 0;
+          _expenseSincePay = 0;
+        });
+      }
+      return;
+    }
+
+    List<int> payDays;
+    try {
+      payDays = (jsonDecode(sched.payDays) as List)
+          .map((e) => (e as num).toInt())
+          .toList();
+    } catch (_) {
+      payDays = const [];
+    }
+
+    final prevPay = previousPayDay(
+      _getNow(),
+      payDays,
+      shiftToPreviousBusinessDay: sched.shiftToPreviousBusinessDay,
+    );
+
+    if (prevPay == null) {
+      if (mounted) {
+        setState(() {
+          _incomeSincePay = 0;
+          _expenseSincePay = 0;
+        });
+      }
+      return;
+    }
+
+    final repo = ref.read(transactionsRepositoryProvider);
+    _payIncomeSub = repo.watchTotalSince(prevPay, TxType.income).listen((income) {
+      if (mounted) {
+        setState(() {
+          _incomeSincePay = income;
+        });
+      }
+    });
+
+    _payExpenseSub = repo.watchTotalSince(prevPay, TxType.expense).listen((expense) {
+      if (mounted) {
+        setState(() {
+          _expenseSincePay = expense;
+        });
+      }
+    });
   }
 
   void _initSubscriptions() {
     _monthTotalSub?.cancel();
-    _monthIncomeSub?.cancel();
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
+    _payIncomeSub?.cancel();
+    _payExpenseSub?.cancel();
 
     final repo = ref.read(transactionsRepositoryProvider);
     final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
@@ -131,6 +197,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() {
           _schedule = sched;
         });
+        _updatePaySubscriptions(sched);
       }
     });
 
@@ -147,14 +214,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() {
           _previousTotal = _monthTotal;
           _monthTotal = total;
-        });
-      }
-    });
-
-    _monthIncomeSub = repo.watchMonthTotal(_year, _month, TxType.income).listen((income) {
-      if (mounted) {
-        setState(() {
-          _monthIncome = income;
         });
       }
     });
@@ -229,8 +288,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final pLine = periodLine(
       todayLocal: _getNow(),
       schedule: _schedule,
-      monthIncome: _monthIncome,
-      monthExpense: _monthTotal,
+      incomeSincePay: _incomeSincePay,
+      expenseSincePay: _expenseSincePay,
     );
 
     return Scaffold(

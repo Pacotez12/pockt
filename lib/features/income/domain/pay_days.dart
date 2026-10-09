@@ -93,3 +93,46 @@ DateTime? nextPayDay(
 
   return null;
 }
+
+/// Devuelve el último día de cobro menor o igual a [fromLocalDay].
+///
+/// Si [payDays] está vacío, devuelve `null`.
+/// Busca en el mes actual y meses anteriores hasta encontrar el último cobro.
+DateTime? previousPayDay(
+  DateTime fromLocalDay,
+  List<int> payDays, {
+  required bool shiftToPreviousBusinessDay,
+}) {
+  if (payDays.isEmpty) {
+    return null;
+  }
+
+  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  var y = from.year;
+  var m = from.month;
+
+  // Buscamos hasta 24 meses hacia atrás
+  for (var i = 0; i < 24; i++) {
+    final daysInM = payDaysInMonth(
+      y,
+      m,
+      payDays,
+      shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
+    );
+
+    for (final payDay in daysInM.reversed) {
+      if (!payDay.isAfter(from)) {
+        return payDay;
+      }
+    }
+
+    m--;
+    if (m < 1) {
+      y--;
+      m = 12;
+    }
+  }
+
+  return null;
+}
+

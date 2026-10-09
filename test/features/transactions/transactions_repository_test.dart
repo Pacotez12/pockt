@@ -190,4 +190,43 @@ void main() {
     expect(await txRepo.watchDailyExpenseTotals(2026, 10).first, {31: 25000});
     expect(await txRepo.watchMonthTotal(2026, 10, TxType.expense).first, 25000);
   });
+
+  test('watchTotalSince suma movimientos desde el inicio del día local dado', () async {
+    final expenses = await catRepo.watchActive(CategoryKind.expense).first;
+    final incomes = await catRepo.watchActive(CategoryKind.income).first;
+    final comida = expenses.firstWhere((c) => c.name == 'Comida').id;
+    final sueldo = incomes.firstWhere((c) => c.name == 'Sueldo').id;
+
+    // Movimiento anterior al día de corte (29/09)
+    await txRepo.add(
+      type: TxType.income,
+      amount: 1000000,
+      categoryId: sueldo,
+      occurredAt: tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 9, 29, 12, 0).toUtc(),
+    );
+    // Movimiento en el día de corte (30/09)
+    await txRepo.add(
+      type: TxType.income,
+      amount: 3500000,
+      categoryId: sueldo,
+      occurredAt: tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 9, 30, 8, 30).toUtc(),
+    );
+    // Gastos entre el día de corte y hoy
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 455000,
+      categoryId: comida,
+      occurredAt: tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 9, 30, 20, 0).toUtc(),
+    );
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 2000000,
+      categoryId: comida,
+      occurredAt: tz.TZDateTime(tz.getLocation(kFallbackZone), 2026, 10, 5, 14, 0).toUtc(),
+    );
+
+    final cutDay = DateTime(2026, 9, 30);
+    expect(await txRepo.watchTotalSince(cutDay, TxType.income).first, 3500000);
+    expect(await txRepo.watchTotalSince(cutDay, TxType.expense).first, 2455000);
+  });
 }

@@ -8,8 +8,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 14),
         schedule: null,
-        monthIncome: 5000000,
-        monthExpense: 2000000,
+        incomeSincePay: 5000000,
+        expenseSincePay: 2000000,
       );
 
       expect(line, isNull);
@@ -28,8 +28,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 14),
         schedule: schedule,
-        monthIncome: 5000000,
-        monthExpense: 1000000,
+        incomeSincePay: 5000000,
+        expenseSincePay: 1000000,
       );
 
       expect(line, isNotNull);
@@ -53,8 +53,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 16),
         schedule: schedule,
-        monthIncome: 5000000,
-        monthExpense: 4180000,
+        incomeSincePay: 5000000,
+        expenseSincePay: 4180000,
       );
 
       expect(line, isNotNull);
@@ -78,8 +78,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 16),
         schedule: schedule,
-        monthIncome: 5000000,
-        monthExpense: 4180000,
+        incomeSincePay: 5000000,
+        expenseSincePay: 4180000,
       );
 
       expect(line, isNotNull);
@@ -103,8 +103,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 16),
         schedule: schedule,
-        monthIncome: 1000000,
-        monthExpense: 1820000,
+        incomeSincePay: 1000000,
+        expenseSincePay: 1820000,
       );
 
       expect(line, isNotNull);
@@ -124,8 +124,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 15),
         schedule: schedule,
-        monthIncome: 5000000,
-        monthExpense: 1000000,
+        incomeSincePay: 5000000,
+        expenseSincePay: 1000000,
       );
 
       expect(line, isNotNull);
@@ -147,8 +147,8 @@ void main() {
       final line = periodLine(
         todayLocal: DateTime(2026, 10, 8),
         schedule: schedule,
-        monthIncome: 6000000,
-        monthExpense: 2000000,
+        incomeSincePay: 6000000,
+        expenseSincePay: 2000000,
       );
 
       expect(line, isNotNull);

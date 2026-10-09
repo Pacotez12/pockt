@@ -320,6 +320,101 @@ void main() {
     expect(find.byKey(const ValueKey('period-line')), findsNothing);
   });
 
+  testWidgets('esquema [15,-1] sin corrimiento, hoy 9/10, sueldo 30/09 y gastos entre 30/09 y 9/10 -> quedan 1.045.000', (t) async {
+    final expenseCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final incomeCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+
+    await t.runAsync(() async {
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        shiftToPreviousBusinessDay: false,
+        categoryId: sueldo.id,
+      );
+      // Sueldo el 30/09
+      await txRepo.add(
+        type: TxType.income,
+        amount: 3500000,
+        categoryId: sueldo.id,
+        occurredAt: DateTime(2026, 9, 30, 8, 30),
+      );
+      // Gastos entre 30/09 y 9/10 (2.455.000 total)
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 455000,
+        categoryId: comida.id,
+        occurredAt: DateTime(2026, 9, 30, 19, 0),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 2000000,
+        categoryId: comida.id,
+        occurredAt: DateTime(2026, 10, 5, 12, 0),
+      );
+    });
+
+    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 12, 0));
+
+    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+    expect(find.textContaining('1ª quincena'), findsOneWidget);
+    expect(find.textContaining('Gs. 1.045.000'), findsOneWidget);
+    expect(find.textContaining('cobrás en 6 días'), findsOneWidget);
+  });
+
+  testWidgets('hoy 15/10 (día de cobro) cuenta desde el 15', (t) async {
+    final expenseCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final incomeCategories =
+        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+
+    await t.runAsync(() async {
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        shiftToPreviousBusinessDay: false,
+        categoryId: sueldo.id,
+      );
+      // Movimientos del período anterior (30/09 - 14/10)
+      await txRepo.add(
+        type: TxType.income,
+        amount: 3500000,
+        categoryId: sueldo.id,
+        occurredAt: DateTime(2026, 9, 30, 8, 30),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 2000000,
+        categoryId: comida.id,
+        occurredAt: DateTime(2026, 10, 10, 12, 0),
+      );
+      // Movimientos del 15/10
+      await txRepo.add(
+        type: TxType.income,
+        amount: 3500000,
+        categoryId: sueldo.id,
+        occurredAt: DateTime(2026, 10, 15, 8, 0),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 100000,
+        categoryId: comida.id,
+        occurredAt: DateTime(2026, 10, 15, 12, 0),
+      );
+    });
+
+    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 15, 14, 0));
+
+    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+    expect(find.textContaining('Gs. 3.400.000'), findsOneWidget);
+    expect(find.textContaining('cobrás hoy'), findsOneWidget);
+  });
+
   testWidgets('con esquema quincenal y movimientos muestra quincena, restante y cobro', (t) async {
     final expenseCategories =
         (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
@@ -339,13 +434,13 @@ void main() {
         type: TxType.income,
         amount: 5000000,
         categoryId: sueldo.id,
-        occurredAt: DateTime.utc(2026, 10, 1, 10, 0),
+        occurredAt: DateTime.utc(2026, 10, 15, 10, 0),
       );
       await txRepo.add(
         type: TxType.expense,
         amount: 4180000,
         categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+        occurredAt: DateTime.utc(2026, 10, 15, 14, 0),
       );
     });
 
@@ -376,13 +471,13 @@ void main() {
         type: TxType.income,
         amount: 1000000,
         categoryId: sueldo.id,
-        occurredAt: DateTime.utc(2026, 10, 1, 10, 0),
+        occurredAt: DateTime.utc(2026, 10, 15, 10, 0),
       );
       await txRepo.add(
         type: TxType.expense,
         amount: 1820000,
         categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+        occurredAt: DateTime.utc(2026, 10, 15, 14, 0),
       );
     });
 

@@ -41,8 +41,8 @@ class PeriodLine {
 PeriodLine? periodLine({
   required DateTime todayLocal,
   required IncomeSchedule? schedule,
-  required int monthIncome,
-  required int monthExpense,
+  required int incomeSincePay,
+  required int expenseSincePay,
 }) {
   if (schedule == null) return null;
 
@@ -84,7 +84,7 @@ PeriodLine? periodLine({
     }
   }
 
-  final remaining = monthIncome - monthExpense;
+  final remaining = incomeSincePay - expenseSincePay;
 
   return PeriodLine(
     label: label,

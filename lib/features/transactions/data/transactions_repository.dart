@@ -211,6 +211,20 @@ class TransactionsRepository {
     return query.watchSingle().map((row) => row.read(sumAmount) ?? 0);
   }
 
+  Stream<int> watchTotalSince(DateTime startLocalDay, TxType type) {
+    final startUtc = dayRangeUtc(startLocalDay).startUtc;
+    final sumAmount = db.transactions.amount.sum();
+    final query = db.selectOnly(db.transactions)
+      ..addColumns([sumAmount])
+      ..where(
+        db.transactions.deletedAt.isNull() &
+            db.transactions.type.equalsValue(type) &
+            db.transactions.occurredAt.isBiggerOrEqualValue(startUtc),
+      );
+
+    return query.watchSingle().map((row) => row.read(sumAmount) ?? 0);
+  }
+
   Stream<List<CategoryTotal>> watchMonthCategoryTotals(int year, int month) {
     final range = monthRangeUtc(year, month);
     final sumAmount = db.transactions.amount.sum();

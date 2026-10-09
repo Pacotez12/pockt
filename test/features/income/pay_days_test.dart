@@ -177,6 +177,62 @@ void main() {
     });
   });
 
+  group('previousPayDay', () {
+    test('payDays vacío devuelve null', () {
+      final prev = previousPayDay(
+        DateTime(2026, 10, 14),
+        [],
+        shiftToPreviousBusinessDay: false,
+      );
+      expect(prev, isNull);
+    });
+
+    test('el mismo día de cobro devuelve hoy: 15/10 -> 15/10', () {
+      final prev = previousPayDay(
+        DateTime(2026, 10, 15),
+        [15, -1],
+        shiftToPreviousBusinessDay: false,
+      );
+      expect(prev, DateTime(2026, 10, 15));
+    });
+
+    test('después del primer cobro del mes: 16/10 con [15, -1] -> 15/10', () {
+      final prev = previousPayDay(
+        DateTime(2026, 10, 16),
+        [15, -1],
+        shiftToPreviousBusinessDay: false,
+      );
+      expect(prev, DateTime(2026, 10, 15));
+    });
+
+    test('antes del primer cobro del mes mira el mes anterior: 9/10 con [15, -1] -> 30/09', () {
+      final prev = previousPayDay(
+        DateTime(2026, 10, 9),
+        [15, -1],
+        shiftToPreviousBusinessDay: false,
+      );
+      expect(prev, DateTime(2026, 9, 30));
+    });
+
+    test('con corrimiento: 31/10/2026 sábado -> viernes 30/10/2026', () {
+      final prev = previousPayDay(
+        DateTime(2026, 10, 31),
+        [15, -1],
+        shiftToPreviousBusinessDay: true,
+      );
+      expect(prev, DateTime(2026, 10, 30));
+    });
+
+    test('en enero mirando diciembre: 5/1/2027 con [15, -1] -> 31/12/2026', () {
+      final prev = previousPayDay(
+        DateTime(2027, 1, 5),
+        [15, -1],
+        shiftToPreviousBusinessDay: false,
+      );
+      expect(prev, DateTime(2026, 12, 31));
+    });
+  });
+
   group('PayMode enum', () {
     test('define biweekly y monthly', () {
       expect(PayMode.values, contains(PayMode.biweekly));
