@@ -78,6 +78,15 @@ Pedido del autor (cobra 30 % el 15 y 70 % a fin de mes). Spec §4 `income_schedu
 - [ ] **Step 1: Tests que fallan:** `splitAmounts(7000000, [30, 70]) == [2100000, 4900000]`; `splitAmounts(1000001, [50, 50])` suma 1000001; migración v4 → v5 con `expectedAmount` 3500000 y 2 cobros → `monthlyAmount` 7000000, `[50, 50]`; el generador crea 2100000 el 15 y 4900000 el último día con `[30, 70]`; la pantalla muestra la vista previa al mover el control.
 - [ ] **Step 2–4.** **Step 5:** Checkpoint. `feat: sueldo mensual con reparto por cobro`.
 
+### Task 1c: Cobro inicial y "quedan" estimado
+
+Pedido del autor: con el esquema recién guardado, "quedan" daba negativo porque el cobro con el que está viviendo (por ejemplo el del 30/09) nunca se registró y el generador arranca en `effectiveFrom`.
+
+- **Cobro inicial:** al guardar un esquema **cuando no hay ninguno anterior**, se crea una sugerencia para el **cobro más reciente ya pasado** (`previousPayWindow(hoy)`), con su monto del reparto (`splitAmounts`), fecha = `earliest` de esa ventana y `source = incomeSchedule`. Aparece en la bandeja como cualquier otra ("¿Ya cobraste el fin de mes (30/09)?"). Idempotente (índice único de sugerencias).
+- **"Quedan" estimado:** `periodLine` recibe además `expectedForPeriod` (monto del reparto del cobro que abrió el período). Si en el período **no hay ningún ingreso confirmado**, `remaining = expectedForPeriod − expenseSincePay` y `isEstimate = true`; el Inicio lo muestra como "quedan **~Gs. X** (estimado)" en el color de texto secundario. Con un ingreso confirmado se usa el real y `isEstimate = false`. Sin `monthlyAmount` y sin ingresos: como hoy.
+- Tests: guardar el primer esquema el 9/10 crea la sugerencia del 30/09 por el 70 %; guardar otra vez no la duplica; sin ingresos confirmados y gastos 820.000 con 4.900.000 esperados → `remaining` 4.080.000 e `isEstimate`; confirmar la sugerencia → `isEstimate == false`.
+- Checkpoint. `feat: cobro inicial sugerido y "quedan" estimado`.
+
 ### Task 2: Datos de reportes
 
 **Files:** Create `lib/features/reports/data/reports_repository.dart`, `lib/features/reports/domain/compare.dart`; Test `test/features/reports/reports_repository_test.dart`, `test/features/reports/compare_test.dart`.
