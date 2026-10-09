@@ -9,6 +9,7 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
+import 'package:pockt/features/reminders/ui/reminders_screen.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 
@@ -165,6 +166,40 @@ class SettingsScreen extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (_) => const AppearanceScreen(),
                             ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final repo = ref.watch(settingsRepositoryProvider);
+                      return StreamBuilder<String?>(
+                        stream: repo.watch(SettingsKeys.remindersIntensity),
+                        builder: (context, snapshot) {
+                          final intensity = snapshot.data ?? 'normal';
+                          final subtitle = switch (intensity) {
+                            'off' => 'Apagado',
+                            'soft' => 'Suave (21:00)',
+                            'insistent' => 'Insistente',
+                            _ => 'Normal (13:00 y 21:00)',
+                          };
+
+                          return _SettingsTile(
+                            key: const ValueKey('settings-reminders-tile'),
+                            icon: 'bell',
+                            title: 'Recordatorios',
+                            subtitle: subtitle,
+                            iconColor: colors.warning,
+                            onTap: () {
+                              Haptics.tick();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RemindersScreen(),
+                                ),
+                              );
+                            },
                           );
                         },
                       );

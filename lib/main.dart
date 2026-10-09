@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/app.dart';
+import 'package:pockt/core/background/background_tasks.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/time/local_time.dart';
@@ -11,6 +12,7 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
   await initLocalZone();
+  await initBackgroundTasks();
 
   AppDatabase? demoDb;
   if (const bool.fromEnvironment('POCKT_DEMO')) {

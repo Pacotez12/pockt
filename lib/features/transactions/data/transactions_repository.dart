@@ -106,6 +106,13 @@ class TransactionsRepository {
 
     final notif = notifier;
     if (type == TxType.expense && notif != null) {
+      final loc = toLocal(occurredAt);
+      final datePrefix = (loc.year * 10000 + loc.month * 100 + loc.day) * 100;
+      for (var i = 0; i < 4; i++) {
+        try {
+          await notif.cancel(datePrefix + i);
+        } catch (_) {}
+      }
       try {
         await evaluateBudgetAlerts(
           categoryId,
@@ -384,5 +391,28 @@ class TransactionsRepository {
         );
       }).toList();
     });
+  }
+
+  /// Devuelve el conjunto de días locales que tienen al menos un gasto no borrado
+  /// en el rango [[fromLocal], [toLocal]].
+  Future<Set<DateTime>> daysWithExpense(
+    DateTime fromLocal,
+    DateTime untilLocal,
+  ) async {
+    final startUtc = dayRangeUtc(fromLocal).startUtc;
+    final endUtc = dayRangeUtc(untilLocal).endUtc;
+
+    final query = db.select(db.transactions)
+      ..where((t) =>
+          t.deletedAt.isNull() &
+          t.type.equalsValue(TxType.expense) &
+          t.occurredAt.isBiggerOrEqualValue(startUtc) &
+          t.occurredAt.isSmallerOrEqualValue(endUtc));
+
+    final rows = await query.get();
+    return rows.map((r) {
+      final loc = toLocal(r.occurredAt);
+      return DateTime(loc.year, loc.month, loc.day);
+    }).toSet();
   }
 }
