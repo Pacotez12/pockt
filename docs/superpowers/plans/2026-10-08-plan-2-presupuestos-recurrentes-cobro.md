@@ -194,6 +194,24 @@ Texto (spec §5.2.4): "2ª quincena · quedan **Gs. 820.000** · cobrás en 6 d�
 
 ---
 
+### Task 8b: Reglas de día de cobro por fecha, feriados y período anclado al cobro real
+
+Pedido del autor (spec §4 `income_schedules`, actualizada). La app está instalada con datos: **migración v3 → v4** con test.
+
+**Files:** Modify `lib/core/db/tables.dart`, `app_database.dart`, `lib/features/income/domain/pay_days.dart`, `lib/features/income/domain/period_summary.dart`, `lib/features/income/ui/income_schedule_screen.dart`, `lib/features/recurring/domain/suggestion_generator.dart`, `lib/features/home/ui/home_screen.dart`; Create `lib/features/income/domain/py_holidays.dart`; Test `test/core/db/migration_v4_test.dart`, `test/features/income/pay_days_test.dart`, `test/features/income/py_holidays_test.dart`, `test/features/income/period_summary_test.dart`.
+
+**Interfaces:**
+- `enum PayDayRule { previous, next, either }`; columna `payDayRules` (texto, lista paralela a `payDays`); se elimina `shiftToPreviousBusinessDay`. Migración: `-1` → `previous`, cualquier otro día → `either`.
+- `bool isPyHoliday(DateTime day)` — 1/1, 1/3, Jueves y Viernes Santo (Pascua por algoritmo de Meeus), 1/5, 14/5, 15/5, 12/6, 15/8, 29/9, 8/12, 25/12. `bool isBusinessDay(DateTime d)` = lunes a viernes y no feriado.
+- `class PayWindow { DateTime earliest; DateTime latest; }` (iguales si la fecha es hábil o la regla no es `either`).
+- `List<PayWindow> payWindowsInMonth(int y, int m, List<int> payDays, List<PayDayRule> rules)`; `nextPayWindow(...)`, `previousPayWindow(...)` reemplazan a `nextPayDay`/`previousPayDay`.
+- Generador de sugerencias: crea la sugerencia de cobro en `earliest`.
+- `periodLine`: el inicio del período es la fecha local del **último ingreso confirmado con `source == incomeSchedule` o de la categoría del esquema**, si existe y es ≥ `previousPayWindow.earliest`; si no, `previousPayWindow.earliest`. Texto de próximo cobro: con rango "cobrás entre el vie 13 y el lun 16"; sin rango "cobrás en N días" / "cobrás hoy".
+- Pantalla de esquema: por cada día de cobro, selector "Si no es día hábil: el anterior / el siguiente / puede variar".
+
+- [ ] **Step 1: Tests que fallan:** 15/11/2026 (domingo) con `either` → ventana 13/11–16/11; con `previous` → 13/11; con `next` → 16/11; 31/10/2026 (sábado) con `previous` → 30/10; 15/8 (feriado) con `next` → 17/8 si es hábil; Viernes Santo 2027 (26/3) no es hábil; migración v3 → v4 conserva el esquema existente y convierte las reglas; `periodLine` con sueldo confirmado el 16/11 arranca el 16 aunque la ventana empiece el 13.
+- [ ] **Step 2–4.** **Step 5:** Checkpoint. `feat: reglas de día de cobro, feriados de Paraguay y período desde el cobro real`.
+
 ### Task 9: Verificación en el A54 y v0.2.0
 
 - [ ] **Step 1** (orquestador): instalar release sobre la app real (`adb install -r`, nunca desinstalar) y verificar que la migración v3 conserva los datos.
