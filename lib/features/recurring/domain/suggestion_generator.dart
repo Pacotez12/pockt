@@ -130,6 +130,7 @@ class SuggestionGenerator {
       }
 
       if (!startDate.isAfter(today)) {
+        final rules = parsePayDayRules(currentSchedule.payDayRules, payDaysList);
         final payDaysToCreate = <DateTime>[];
         var curYear = startDate.year;
         var curMonth = startDate.month;
@@ -137,15 +138,18 @@ class SuggestionGenerator {
         final endMonth = today.month;
 
         while (curYear < endYear || (curYear == endYear && curMonth <= endMonth)) {
-          final daysInM = payDaysInMonth(
+          final windows = payWindowsInMonth(
             curYear,
             curMonth,
             payDaysList,
-            shiftToPreviousBusinessDay:
-                currentSchedule.shiftToPreviousBusinessDay,
+            rules,
           );
-          for (final d in daysInM) {
-            final dayDate = DateTime(d.year, d.month, d.day);
+          for (final window in windows) {
+            final dayDate = DateTime(
+              window.earliest.year,
+              window.earliest.month,
+              window.earliest.day,
+            );
             if (!dayDate.isBefore(startDate) && !dayDate.isAfter(today)) {
               payDaysToCreate.add(dayDate);
             }

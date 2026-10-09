@@ -225,6 +225,27 @@ class TransactionsRepository {
     return query.watchSingle().map((row) => row.read(sumAmount) ?? 0);
   }
 
+  Stream<DateTime?> watchLastConfirmedSalaryDate({
+    required String categoryId,
+    DateTime? beforeOrOnLocalDay,
+  }) {
+    final query = db.select(db.transactions)
+      ..where((t) {
+        var pred = t.deletedAt.isNull() &
+            t.type.equalsValue(TxType.income) &
+            (t.source.equalsValue(TxSource.incomeSchedule) | t.categoryId.equals(categoryId));
+        if (beforeOrOnLocalDay != null) {
+          final endUtc = dayRangeUtc(beforeOrOnLocalDay).endUtc;
+          pred = pred & t.occurredAt.isSmallerThanValue(endUtc);
+        }
+        return pred;
+      })
+      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])
+      ..limit(1);
+
+    return query.watchSingleOrNull().map((tx) => tx != null ? toLocal(tx.occurredAt) : null);
+  }
+
   Stream<List<CategoryTotal>> watchMonthCategoryTotals(int year, int month) {
     final range = monthRangeUtc(year, month);
     final sumAmount = db.transactions.amount.sum();

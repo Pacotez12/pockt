@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
@@ -69,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<List<TxView>>? _recentSub;
   StreamSubscription<List<SuggestionView>>? _suggestionsSub;
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
+  StreamSubscription<DateTime?>? _lastSalarySub;
   StreamSubscription<int>? _payIncomeSub;
   StreamSubscription<int>? _payExpenseSub;
 
@@ -76,6 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _previousTotal = 0;
   int _incomeSincePay = 0;
   int _expenseSincePay = 0;
+  DateTime? _lastSalaryDate;
   IncomeSchedule? _schedule;
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
@@ -114,12 +115,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
+    _lastSalarySub?.cancel();
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
     super.dispose();
   }
 
   void _updatePaySubscriptions(IncomeSchedule? sched) {
+    _lastSalarySub?.cancel();
+    _lastSalarySub = null;
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
     _payIncomeSub = null;
@@ -128,6 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (sched == null) {
       if (mounted) {
         setState(() {
+          _lastSalaryDate = null;
           _incomeSincePay = 0;
           _expenseSincePay = 0;
         });
@@ -135,24 +140,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    List<int> payDays;
-    try {
-      payDays = (jsonDecode(sched.payDays) as List)
-          .map((e) => (e as num).toInt())
-          .toList();
-    } catch (_) {
-      payDays = const [];
-    }
+    final payDays = parsePayDays(sched.payDays);
+    final rules = parsePayDayRules(sched.payDayRules, payDays);
 
-    final prevPay = previousPayDay(
+    final prevWindow = previousPayWindow(
       _getNow(),
       payDays,
-      shiftToPreviousBusinessDay: sched.shiftToPreviousBusinessDay,
+      rules,
     );
 
-    if (prevPay == null) {
+    if (prevWindow == null) {
       if (mounted) {
         setState(() {
+          _lastSalaryDate = null;
           _incomeSincePay = 0;
           _expenseSincePay = 0;
         });
@@ -161,20 +161,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final repo = ref.read(transactionsRepositoryProvider);
-    _payIncomeSub = repo.watchTotalSince(prevPay, TxType.income).listen((income) {
-      if (mounted) {
-        setState(() {
-          _incomeSincePay = income;
-        });
+    _lastSalarySub = repo
+        .watchLastConfirmedSalaryDate(
+          categoryId: sched.categoryId,
+          beforeOrOnLocalDay: _getNow(),
+        )
+        .listen((salaryDate) {
+      _lastSalaryDate = salaryDate;
+      DateTime periodStart = prevWindow.earliest;
+      if (salaryDate != null) {
+        final cleanSalary = DateTime(salaryDate.year, salaryDate.month, salaryDate.day);
+        if (!cleanSalary.isBefore(prevWindow.earliest)) {
+          periodStart = cleanSalary;
+        }
       }
-    });
 
-    _payExpenseSub = repo.watchTotalSince(prevPay, TxType.expense).listen((expense) {
-      if (mounted) {
-        setState(() {
-          _expenseSincePay = expense;
-        });
-      }
+      _payIncomeSub?.cancel();
+      _payExpenseSub?.cancel();
+
+      _payIncomeSub = repo.watchTotalSince(periodStart, TxType.income).listen((income) {
+        if (mounted) {
+          setState(() {
+            _incomeSincePay = income;
+          });
+        }
+      });
+
+      _payExpenseSub = repo.watchTotalSince(periodStart, TxType.expense).listen((expense) {
+        if (mounted) {
+          setState(() {
+            _expenseSincePay = expense;
+          });
+        }
+      });
     });
   }
 
@@ -185,6 +204,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
+    _lastSalarySub?.cancel();
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
 
@@ -290,6 +310,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       schedule: _schedule,
       incomeSincePay: _incomeSincePay,
       expenseSincePay: _expenseSincePay,
+      lastConfirmedSalaryDate: _lastSalaryDate,
     );
 
     return Scaffold(
@@ -669,28 +690,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         key: const ValueKey('period-line'),
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text.rich(
-            TextSpan(
-              text: '${line.label} · quedan ',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                color: colors.textSecondary.withValues(alpha: 0.75),
-              ),
-              children: [
-                TextSpan(
-                  text: formatGs(line.remaining),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: line.remaining < 0
-                        ? colors.danger
-                        : colors.textPrimary,
-                  ),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                text: '${line.label} · quedan ',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: colors.textSecondary.withValues(alpha: 0.75),
                 ),
-              ],
+                children: [
+                  TextSpan(
+                    text: formatGs(line.remaining),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: line.remaining < 0
+                          ? colors.danger
+                          : colors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              key: const ValueKey('period-line-remaining'),
             ),
-            key: const ValueKey('period-line-remaining'),
           ),
+          const SizedBox(width: 8),
           Text(
             line.payDayText,
             key: const ValueKey('period-line-payday'),

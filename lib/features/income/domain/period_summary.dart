@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
@@ -14,18 +13,34 @@ class PeriodLine {
   /// Cantidad de días hasta el próximo cobro (0 si hoy es día de cobro).
   final int daysToNextPay;
 
-  /// Fecha exacta del próximo cobro.
+  /// Fecha exacta o inicial del próximo cobro.
   final DateTime nextPayDate;
+
+  /// Ventana del próximo cobro.
+  final PayWindow? nextPayWindow;
+
+  /// Fecha en la que arrancó este período para computar ingresos y gastos.
+  final DateTime periodStartDate;
 
   const PeriodLine({
     required this.label,
     required this.remaining,
     required this.daysToNextPay,
     required this.nextPayDate,
+    this.nextPayWindow,
+    required this.periodStartDate,
   });
 
-  /// Mensaje del próximo cobro según los días restantes.
+  /// Mensaje del próximo cobro según los días restantes o rango.
   String get payDayText {
+    if (nextPayWindow != null && nextPayWindow!.isRange) {
+      const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+      final w1 = weekdays[nextPayWindow!.earliest.weekday - 1];
+      final d1 = nextPayWindow!.earliest.day;
+      final w2 = weekdays[nextPayWindow!.latest.weekday - 1];
+      final d2 = nextPayWindow!.latest.day;
+      return 'cobrás entre el $w1 $d1 y el $w2 $d2';
+    }
     if (daysToNextPay == 0) return 'cobrás hoy';
     if (daysToNextPay == 1) return 'cobrás mañana';
     return 'cobrás en $daysToNextPay días';
@@ -36,6 +51,7 @@ class PeriodLine {
   String get fullText => '$label · quedan ${formatGs(remaining)} · $payDayText';
 }
 
+
 /// Calcula la línea de período para el Inicio según el esquema de cobro vigente.
 /// Devuelve `null` si no hay esquema configurado o si no se puede determinar la fecha de cobro.
 PeriodLine? periodLine({
@@ -43,30 +59,20 @@ PeriodLine? periodLine({
   required IncomeSchedule? schedule,
   required int incomeSincePay,
   required int expenseSincePay,
+  DateTime? lastConfirmedSalaryDate,
 }) {
   if (schedule == null) return null;
 
-  List<int> payDays;
-  try {
-    payDays = (jsonDecode(schedule.payDays) as List)
-        .map((e) => (e as num).toInt())
-        .toList();
-  } catch (_) {
-    return null;
-  }
-
+  final payDays = parsePayDays(schedule.payDays);
   if (payDays.isEmpty) return null;
 
-  final next = nextPayDay(
-    todayLocal,
-    payDays,
-    shiftToPreviousBusinessDay: schedule.shiftToPreviousBusinessDay,
-  );
+  final rules = parsePayDayRules(schedule.payDayRules, payDays);
 
-  if (next == null) return null;
+  final nextWindow = nextPayWindow(todayLocal, payDays, rules);
+  if (nextWindow == null) return null;
 
   final today = DateTime(todayLocal.year, todayLocal.month, todayLocal.day);
-  final target = DateTime(next.year, next.month, next.day);
+  final target = DateTime(nextWindow.earliest.year, nextWindow.earliest.month, nextWindow.earliest.day);
   final daysToNextPay = target.difference(today).inDays;
 
   final String label;
@@ -84,12 +90,33 @@ PeriodLine? periodLine({
     }
   }
 
+  // Determinación de periodStartDate:
+  // spec §4: "El período de 'quedan' arranca en la fecha real del último ingreso
+  // confirmado del esquema, si existe y es >= previousPayWindow.earliest; si no,
+  // previousPayWindow.earliest."
+  final prevWindow = previousPayWindow(todayLocal, payDays, rules);
+  final fallbackStart = prevWindow?.earliest ?? today;
+  DateTime periodStart = fallbackStart;
+
+  if (lastConfirmedSalaryDate != null) {
+    final cleanSalary = DateTime(
+      lastConfirmedSalaryDate.year,
+      lastConfirmedSalaryDate.month,
+      lastConfirmedSalaryDate.day,
+    );
+    if (!cleanSalary.isBefore(fallbackStart)) {
+      periodStart = cleanSalary;
+    }
+  }
+
   final remaining = incomeSincePay - expenseSincePay;
 
   return PeriodLine(
     label: label,
     remaining: remaining,
     daysToNextPay: daysToNextPay,
-    nextPayDate: next,
+    nextPayDate: nextWindow.earliest,
+    nextPayWindow: nextWindow,
+    periodStartDate: periodStart,
   );
 }

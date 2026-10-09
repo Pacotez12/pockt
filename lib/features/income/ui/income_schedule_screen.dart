@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -55,7 +54,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   int _day1 = 15;
   int _day2 = -1;
   int _monthlyDay = -1;
-  bool _shiftToBusinessDay = true;
+  PayDayRule _day1Rule = PayDayRule.either;
+  PayDayRule _day2Rule = PayDayRule.previous;
+  PayDayRule _monthlyRule = PayDayRule.previous;
   int? _expectedAmount;
   String _incomeCategoryId = '018f0000-0000-7000-8000-000000000011';
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
@@ -70,17 +71,36 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     }
   }
 
-  DateTime? get _nextPayDate {
-    return nextPayDay(
+  List<PayDayRule> get _payDayRules {
+    if (_mode == PayMode.biweekly) {
+      return [_day1Rule, _day2Rule];
+    } else {
+      return [_monthlyRule];
+    }
+  }
+
+  PayWindow? get _nextPayWindow {
+    return nextPayWindow(
       _today,
       _payDays,
-      shiftToPreviousBusinessDay: _shiftToBusinessDay,
+      _payDayRules,
     );
   }
 
   String get _nextPayDateText {
-    final next = _nextPayDate;
-    if (next == null) return 'Sin fecha de cobro';
+    final window = _nextPayWindow;
+    if (window == null) return 'Sin fecha de cobro';
+    if (window.isRange) {
+      final w1 = _kWeekdaysSpanish[window.earliest.weekday - 1];
+      final m1 = _kMonthsSpanish[window.earliest.month - 1];
+      final w2 = _kWeekdaysSpanish[window.latest.weekday - 1];
+      final m2 = _kMonthsSpanish[window.latest.month - 1];
+      if (window.earliest.month == window.latest.month) {
+        return 'Próximo cobro: entre el $w1 ${window.earliest.day} y el $w2 ${window.latest.day} de $m2';
+      }
+      return 'Próximo cobro: entre el $w1 ${window.earliest.day} de $m1 y el $w2 ${window.latest.day} de $m2';
+    }
+    final next = window.earliest;
     final weekday = _kWeekdaysSpanish[next.weekday - 1];
     final month = _kMonthsSpanish[next.month - 1];
     return 'Próximo cobro: $weekday ${next.day} de $month';
@@ -92,19 +112,24 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     _scheduleSub = ref.read(incomeScheduleRepositoryProvider).watchCurrent().listen((schedule) {
       if (!mounted || schedule == null) return;
       try {
-        final parsedDays = (jsonDecode(schedule.payDays) as List)
-            .map((e) => (e as num).toInt())
-            .toList();
+        final parsedDays = parsePayDays(schedule.payDays);
+        final parsedRules = parsePayDayRules(schedule.payDayRules, parsedDays);
         setState(() {
           _mode = schedule.mode == 'monthly' ? PayMode.monthly : PayMode.biweekly;
-          _shiftToBusinessDay = schedule.shiftToPreviousBusinessDay;
           _expectedAmount = schedule.expectedAmount;
           _incomeCategoryId = schedule.categoryId;
           if (_mode == PayMode.biweekly && parsedDays.length >= 2) {
             _day1 = parsedDays[0];
             _day2 = parsedDays[1];
+            if (parsedRules.length >= 2) {
+              _day1Rule = parsedRules[0];
+              _day2Rule = parsedRules[1];
+            }
           } else if (parsedDays.isNotEmpty) {
             _monthlyDay = parsedDays[0];
+            if (parsedRules.isNotEmpty) {
+              _monthlyRule = parsedRules[0];
+            }
           }
         });
       } catch (_) {}
@@ -122,7 +147,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     await repo.setSchedule(
       mode: _mode,
       payDays: _payDays,
-      shiftToPreviousBusinessDay: _shiftToBusinessDay,
+      payDayRules: _payDayRules,
       expectedAmount: _expectedAmount,
       categoryId: _incomeCategoryId,
     );
@@ -237,8 +262,6 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   const SizedBox(height: 16),
                   _buildDaysSelector(context),
                   const SizedBox(height: 16),
-                  _buildBusinessDaySwitch(context),
-                  const SizedBox(height: 16),
                   _buildExpectedAmountTile(context),
                   const SizedBox(height: 20),
                   _buildLivePreviewCard(context),
@@ -321,73 +344,73 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 color: colors.textTertiary,
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '1er cobro: día $_day1',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [1, 5, 10, 15, 20].map((d) {
-                          final sel = _day1 == d;
-                          return _DayChip(
-                            text: '$d',
-                            isSelected: sel,
-                            onTap: () {
-                              Haptics.tick();
-                              setState(() => _day1 = d);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '2º cobro: ${_day2 == -1 ? "Último" : "día $_day2"}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [25, 28, 30, -1].map((d) {
-                          final sel = _day2 == d;
-                          return _DayChip(
-                            text: d == -1 ? 'Último' : '$d',
-                            isSelected: sel,
-                            onTap: () {
-                              Haptics.tick();
-                              setState(() => _day2 = d);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            const SizedBox(height: 16),
+            // Primer cobro
+            Text(
+              '1er cobro: día $_day1',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [1, 5, 10, 15, 20].map((d) {
+                final sel = _day1 == d;
+                return _DayChip(
+                  text: '$d',
+                  isSelected: sel,
+                  onTap: () {
+                    Haptics.tick();
+                    setState(() => _day1 = d);
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            _RuleSelector(
+              key: const ValueKey('rule-selector-day1'),
+              currentRule: _day1Rule,
+              onChanged: (r) => setState(() => _day1Rule = r),
+            ),
+            const SizedBox(height: 20),
+            Divider(color: colors.glassBorder, height: 1),
+            const SizedBox(height: 20),
+            // Segundo cobro
+            Text(
+              '2º cobro: ${_day2 == -1 ? "Último día" : "día $_day2"}',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [25, 28, 30, -1].map((d) {
+                final sel = _day2 == d;
+                return _DayChip(
+                  text: d == -1 ? 'Último' : '$d',
+                  isSelected: sel,
+                  onTap: () {
+                    Haptics.tick();
+                    setState(() => _day2 = d);
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            _RuleSelector(
+              key: const ValueKey('rule-selector-day2'),
+              currentRule: _day2Rule,
+              onChanged: (r) => setState(() => _day2Rule = r),
             ),
           ],
         ),
@@ -417,7 +440,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 color: colors.textTertiary,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -433,57 +456,16 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 14),
+            _RuleSelector(
+              key: const ValueKey('rule-selector-monthly'),
+              currentRule: _monthlyRule,
+              onChanged: (r) => setState(() => _monthlyRule = r),
+            ),
           ],
         ),
       );
     }
-  }
-
-  Widget _buildBusinessDaySwitch(BuildContext context) {
-    final colors = context.pockt;
-
-    return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: BorderRadius.circular(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Corrimiento a día hábil',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Si cae sábado o domingo, cobrar el viernes anterior',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: colors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            key: const ValueKey('shift-business-day-switch'),
-            value: _shiftToBusinessDay,
-            activeTrackColor: colors.brandStart,
-            onChanged: (val) {
-              Haptics.tick();
-              setState(() => _shiftToBusinessDay = val);
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildExpectedAmountTile(BuildContext context) {
@@ -518,17 +500,15 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
-                      color: _expectedAmount != null && _expectedAmount! > 0
-                          ? colors.positive
-                          : colors.textTertiary,
+                      color: colors.textTertiary,
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              uiIcon('pencil-simple'),
-              size: 18,
+              uiIcon('caret-right'),
+              size: 16,
               color: colors.textTertiary,
             ),
           ],
@@ -541,7 +521,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     final colors = context.pockt;
 
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.all(16),
       borderRadius: BorderRadius.circular(20),
       child: Row(
         children: [
@@ -605,6 +585,116 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             fontSize: 15,
             fontWeight: FontWeight.w700,
             color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RuleSelector extends StatelessWidget {
+  final PayDayRule currentRule;
+  final ValueChanged<PayDayRule> onChanged;
+
+  const _RuleSelector({
+    super.key,
+    required this.currentRule,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Si no es día hábil:',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: colors.glassFill,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.glassBorder),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _RulePill(
+                  title: 'El anterior',
+                  isSelected: currentRule == PayDayRule.previous,
+                  onTap: () => onChanged(PayDayRule.previous),
+                ),
+              ),
+              Expanded(
+                child: _RulePill(
+                  title: 'El siguiente',
+                  isSelected: currentRule == PayDayRule.next,
+                  onTap: () => onChanged(PayDayRule.next),
+                ),
+              ),
+              Expanded(
+                child: _RulePill(
+                  title: 'Puede variar',
+                  isSelected: currentRule == PayDayRule.either,
+                  onTap: () => onChanged(PayDayRule.either),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RulePill extends StatelessWidget {
+  final String title;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RulePill({
+    required this.title,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+
+    return GestureDetector(
+      onTap: () {
+        Haptics.tick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? colors.textPrimary : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: isSelected ? colors.background : colors.textSecondary,
           ),
         ),
       ),

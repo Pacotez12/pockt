@@ -39,17 +39,24 @@ class IncomeScheduleRepository {
   Future<void> setSchedule({
     required PayMode mode,
     required List<int> payDays,
-    required bool shiftToPreviousBusinessDay,
+    List<PayDayRule>? payDayRules,
+    @Deprecated('Usar payDayRules') bool? shiftToPreviousBusinessDay,
     int? expectedAmount,
     required String categoryId,
   }) async {
     final today = _todayLocal();
+    final rules = payDayRules ??
+        payDays.map((d) {
+          if (shiftToPreviousBusinessDay == false) return PayDayRule.either;
+          return d == -1 ? PayDayRule.previous : PayDayRule.either;
+        }).toList();
+
     await _db.into(_db.incomeSchedules).insert(
           IncomeSchedulesCompanion.insert(
             id: _uuid.v4(),
             mode: mode.name,
             payDays: jsonEncode(payDays),
-            shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
+            payDayRules: jsonEncode(rules.map((r) => r.name).toList()),
             expectedAmount: Value(expectedAmount),
             categoryId: categoryId,
             effectiveFrom: today,

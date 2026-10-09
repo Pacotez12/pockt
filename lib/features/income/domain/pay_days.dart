@@ -1,7 +1,216 @@
+import 'dart:convert';
+import 'package:pockt/features/income/domain/py_holidays.dart';
+
+/// Helper para parsear reglas desde un JSON string o fallback.
+List<PayDayRule> parsePayDayRules(String? rulesJson, List<int> payDays) {
+  if (rulesJson != null && rulesJson.isNotEmpty) {
+    try {
+      final list = jsonDecode(rulesJson) as List;
+      return list.map((e) => PayDayRule.parse(e.toString())).toList();
+    } catch (_) {}
+  }
+  return payDays.map((d) => d == -1 ? PayDayRule.previous : PayDayRule.either).toList();
+}
+
+/// Helper para parsear payDays desde un JSON string.
+List<int> parsePayDays(String payDaysJson) {
+  try {
+    return (jsonDecode(payDaysJson) as List)
+        .map((e) => (e as num).toInt())
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
 /// Modo de cobro: quincenal o mensual.
 enum PayMode { biweekly, monthly }
 
-DateTime _shiftToPreviousBusinessDay(DateTime date) {
+/// Regla para determinar la fecha de cobro cuando cae en un día no hábil (fin de semana o feriado).
+enum PayDayRule {
+  /// Día hábil anterior.
+  previous,
+
+  /// Día hábil siguiente.
+  next,
+
+  /// Puede variar: el cobro es una ventana de rango [anterior, siguiente].
+  either;
+
+  static PayDayRule parse(String name) {
+    return PayDayRule.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => PayDayRule.either,
+    );
+  }
+}
+
+/// Ventana de cobro (un rango de fechas [earliest, latest]).
+/// Si cae en día hábil o la regla no es `either`, [earliest] y [latest] coinciden.
+class PayWindow {
+  final DateTime earliest;
+  final DateTime latest;
+
+  const PayWindow({
+    required this.earliest,
+    required this.latest,
+  });
+
+  bool get isRange => earliest != latest;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PayWindow &&
+          runtimeType == other.runtimeType &&
+          earliest == other.earliest &&
+          latest == other.latest;
+
+  @override
+  int get hashCode => earliest.hashCode ^ latest.hashCode;
+
+  @override
+  String toString() =>
+      isRange ? 'PayWindow($earliest - $latest)' : 'PayWindow($earliest)';
+}
+
+DateTime _findPreviousBusinessDay(DateTime date) {
+  var d = date.subtract(const Duration(days: 1));
+  while (!isBusinessDay(d)) {
+    d = d.subtract(const Duration(days: 1));
+  }
+  return DateTime(d.year, d.month, d.day);
+}
+
+DateTime _findNextBusinessDay(DateTime date) {
+  var d = date.add(const Duration(days: 1));
+  while (!isBusinessDay(d)) {
+    d = d.add(const Duration(days: 1));
+  }
+  return DateTime(d.year, d.month, d.day);
+}
+
+PayWindow _resolvePayWindow(DateTime target, PayDayRule rule) {
+  final clean = DateTime(target.year, target.month, target.day);
+  if (isBusinessDay(clean)) {
+    return PayWindow(earliest: clean, latest: clean);
+  }
+
+  final prev = _findPreviousBusinessDay(clean);
+  final next = _findNextBusinessDay(clean);
+
+  switch (rule) {
+    case PayDayRule.previous:
+      return PayWindow(earliest: prev, latest: prev);
+    case PayDayRule.next:
+      return PayWindow(earliest: next, latest: next);
+    case PayDayRule.either:
+      return PayWindow(earliest: prev, latest: next);
+  }
+}
+
+/// Devuelve las ventanas de cobro de un mes según la lista [payDays] y sus [rules].
+List<PayWindow> payWindowsInMonth(
+  int year,
+  int month,
+  List<int> payDays,
+  List<PayDayRule> rules,
+) {
+  if (payDays.isEmpty) {
+    return const [];
+  }
+
+  final daysInMonth = DateTime(year, month + 1, 0).day;
+  final windows = <PayWindow>[];
+
+  for (var i = 0; i < payDays.length; i++) {
+    final rawDay = payDays[i];
+    final rule = (i < rules.length)
+        ? rules[i]
+        : (rawDay == -1 ? PayDayRule.previous : PayDayRule.either);
+
+    final int day;
+    if (rawDay == -1 || rawDay > daysInMonth) {
+      day = daysInMonth;
+    } else if (rawDay <= 0) {
+      day = 1;
+    } else {
+      day = rawDay;
+    }
+
+    final targetDate = DateTime(year, month, day);
+    windows.add(_resolvePayWindow(targetDate, rule));
+  }
+
+  windows.sort((a, b) => a.earliest.compareTo(b.earliest));
+  return windows;
+}
+
+/// Devuelve la primera ventana de cobro cuyo fin (`latest`) sea mayor o igual a [fromLocalDay].
+PayWindow? nextPayWindow(
+  DateTime fromLocalDay,
+  List<int> payDays,
+  List<PayDayRule> rules,
+) {
+  if (payDays.isEmpty) {
+    return null;
+  }
+
+  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  var y = from.year;
+  var m = from.month;
+
+  for (var i = 0; i < 24; i++) {
+    final windows = payWindowsInMonth(y, m, payDays, rules);
+    for (final window in windows) {
+      if (!window.latest.isBefore(from)) {
+        return window;
+      }
+    }
+
+    m++;
+    if (m > 12) {
+      y++;
+      m = 1;
+    }
+  }
+
+  return null;
+}
+
+/// Devuelve la última ventana de cobro cuyo inicio (`earliest`) sea menor o igual a [fromLocalDay].
+PayWindow? previousPayWindow(
+  DateTime fromLocalDay,
+  List<int> payDays,
+  List<PayDayRule> rules,
+) {
+  if (payDays.isEmpty) {
+    return null;
+  }
+
+  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  var y = from.year;
+  var m = from.month;
+
+  for (var i = 0; i < 24; i++) {
+    final windows = payWindowsInMonth(y, m, payDays, rules);
+    for (final window in windows.reversed) {
+      if (!window.earliest.isAfter(from)) {
+        return window;
+      }
+    }
+
+    m--;
+    if (m < 1) {
+      y--;
+      m = 12;
+    }
+  }
+
+  return null;
+}
+
+DateTime _legacyShift(DateTime date) {
   if (date.weekday == DateTime.saturday) {
     return DateTime(date.year, date.month, date.day - 1);
   } else if (date.weekday == DateTime.sunday) {
@@ -10,24 +219,14 @@ DateTime _shiftToPreviousBusinessDay(DateTime date) {
   return date;
 }
 
-/// Devuelve los días de cobro de un mes según la lista [payDays].
-///
-/// Reglas:
-/// - `-1` representa el último día del mes.
-/// - Cualquier día mayor a la cantidad de días del mes se ajusta al último día.
-/// - Si [shiftToPreviousBusinessDay] es true, si un día cae en fin de semana
-///   se corre al viernes anterior (sábado -> -1 día, domingo -> -2 días).
-/// - El resultado está ordenado cronológicamente y sin fechas repetidas.
+/// Funciones de compatibilidad:
 List<DateTime> payDaysInMonth(
   int year,
   int month,
   List<int> payDays, {
   required bool shiftToPreviousBusinessDay,
 }) {
-  if (payDays.isEmpty) {
-    return const [];
-  }
-
+  if (payDays.isEmpty) return const [];
   final daysInMonth = DateTime(year, month + 1, 0).day;
   final results = <DateTime>{};
 
@@ -43,7 +242,7 @@ List<DateTime> payDaysInMonth(
 
     var date = DateTime(year, month, day);
     if (shiftToPreviousBusinessDay) {
-      date = _shiftToPreviousBusinessDay(date);
+      date = _legacyShift(date);
     }
     results.add(date);
   }
@@ -52,24 +251,16 @@ List<DateTime> payDaysInMonth(
   return list;
 }
 
-/// Devuelve el primer día de cobro mayor o igual a [fromLocalDay].
-///
-/// Si [payDays] está vacío, devuelve `null`.
-/// Busca en el mes actual y meses subsiguientes hasta encontrar el próximo cobro.
 DateTime? nextPayDay(
   DateTime fromLocalDay,
   List<int> payDays, {
   required bool shiftToPreviousBusinessDay,
 }) {
-  if (payDays.isEmpty) {
-    return null;
-  }
-
+  if (payDays.isEmpty) return null;
   final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
   var y = from.year;
   var m = from.month;
 
-  // Buscamos hasta 24 meses hacia adelante
   for (var i = 0; i < 24; i++) {
     final daysInM = payDaysInMonth(
       y,
@@ -77,41 +268,30 @@ DateTime? nextPayDay(
       payDays,
       shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
     );
-
     for (final payDay in daysInM) {
       if (!payDay.isBefore(from)) {
         return payDay;
       }
     }
-
     m++;
     if (m > 12) {
       y++;
       m = 1;
     }
   }
-
   return null;
 }
 
-/// Devuelve el último día de cobro menor o igual a [fromLocalDay].
-///
-/// Si [payDays] está vacío, devuelve `null`.
-/// Busca en el mes actual y meses anteriores hasta encontrar el último cobro.
 DateTime? previousPayDay(
   DateTime fromLocalDay,
   List<int> payDays, {
   required bool shiftToPreviousBusinessDay,
 }) {
-  if (payDays.isEmpty) {
-    return null;
-  }
-
+  if (payDays.isEmpty) return null;
   final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
   var y = from.year;
   var m = from.month;
 
-  // Buscamos hasta 24 meses hacia atrás
   for (var i = 0; i < 24; i++) {
     final daysInM = payDaysInMonth(
       y,
@@ -119,20 +299,16 @@ DateTime? previousPayDay(
       payDays,
       shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
     );
-
     for (final payDay in daysInM.reversed) {
       if (!payDay.isAfter(from)) {
         return payDay;
       }
     }
-
     m--;
     if (m < 1) {
       y--;
       m = 12;
     }
   }
-
   return null;
 }
-

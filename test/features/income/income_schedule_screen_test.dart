@@ -36,6 +36,9 @@ void main() {
     WidgetTester tester, {
     DateTime? nowLocal,
   }) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -97,5 +100,33 @@ void main() {
     expect(current, isNotNull);
     expect(current!.mode, 'monthly');
     expect(current.payDays, contains('30'));
+  });
+
+  testWidgets('selector de regla por día de cobro actualiza preview y persiste payDayRules', (tester) async {
+    // 10 de noviembre de 2026: el 15/11/2026 es domingo
+    await pumpIncomeScheduleScreen(tester, nowLocal: DateTime(2026, 11, 10, 10, 0));
+
+    // Por defecto quincenal [15, -1] con día 1 en either -> rango viernes 13 a lunes 16
+    expect(find.textContaining('entre el viernes 13 y el lunes 16 de noviembre'), findsOneWidget);
+
+    // En el selector del 1er cobro, cambiar a "El anterior"
+    final ruleSelector1 = find.byKey(const ValueKey('rule-selector-day1'));
+    expect(ruleSelector1, findsOneWidget);
+    await tester.tap(find.descendant(of: ruleSelector1, matching: find.text('El anterior')));
+    await tester.pumpAndSettle();
+
+    // Ahora sólo viernes 13
+    expect(find.textContaining('viernes 13 de noviembre'), findsOneWidget);
+
+    // Guardar
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Guardar esquema'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
+    expect(current, isNotNull);
+    expect(current!.payDayRules, equals('["previous","previous"]'));
   });
 }

@@ -45,7 +45,7 @@ Future<void> seedDemoData(
   await incomeRepo.setSchedule(
     mode: PayMode.biweekly,
     payDays: const [15, -1],
-    shiftToPreviousBusinessDay: true,
+    payDayRules: const [PayDayRule.either, PayDayRule.previous],
     expectedAmount: 3500000,
     categoryId: sueldo.id,
   );

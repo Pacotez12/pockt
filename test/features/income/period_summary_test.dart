@@ -15,12 +15,12 @@ void main() {
       expect(line, isNull);
     });
 
-    test('esquema [15, -1] sin corrimiento: 14/10 -> 1ª quincena, cobrás mañana', () {
+    test('esquema [15, -1]: 14/10 -> 1ª quincena, cobrás mañana al 15/10', () {
       final schedule = IncomeSchedule(
         id: 'sched-1',
         mode: 'biweekly',
         payDays: '[15, -1]',
-        shiftToPreviousBusinessDay: false,
+        payDayRules: '["either", "previous"]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -40,37 +40,12 @@ void main() {
       expect(line.nextPayDate, DateTime(2026, 10, 15));
     });
 
-    test('16/10 -> 2ª, 15 días al 31 sin corrimiento', () {
+    test('16/10 -> 2ª quincena, 14 días al viernes 30/10 (31 sábado con previous)', () {
       final schedule = IncomeSchedule(
         id: 'sched-1',
         mode: 'biweekly',
         payDays: '[15, -1]',
-        shiftToPreviousBusinessDay: false,
-        categoryId: 'cat-1',
-        effectiveFrom: DateTime(2026, 10, 1),
-      );
-
-      final line = periodLine(
-        todayLocal: DateTime(2026, 10, 16),
-        schedule: schedule,
-        incomeSincePay: 5000000,
-        expenseSincePay: 4180000,
-      );
-
-      expect(line, isNotNull);
-      expect(line!.label, '2ª quincena');
-      expect(line.daysToNextPay, 15);
-      expect(line.nextPayDate, DateTime(2026, 10, 31));
-      expect(line.remaining, 820000);
-      expect(line.payDayText, 'cobrás en 15 días');
-    });
-
-    test('con corrimiento: 16/10 -> 14 días al viernes 30', () {
-      final schedule = IncomeSchedule(
-        id: 'sched-1',
-        mode: 'biweekly',
-        payDays: '[15, -1]',
-        shiftToPreviousBusinessDay: true,
+        payDayRules: '["either", "previous"]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -90,12 +65,103 @@ void main() {
       expect(line.payDayText, 'cobrás en 14 días');
     });
 
+    test('15/11/2026 (domingo) con either -> ventana 13/11 a 16/11: cobrás entre el vie 13 y el lun 16', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 11, 1),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 11, 10),
+        schedule: schedule,
+        incomeSincePay: 3500000,
+        expenseSincePay: 1200000,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.nextPayWindow!.isRange, isTrue);
+      expect(line.payDayText, 'cobrás entre el vie 13 y el lun 16');
+      expect(line.fullText, '1ª quincena · quedan Gs. 2.300.000 · cobrás entre el vie 13 y el lun 16');
+    });
+
+    test('periodLine con sueldo confirmado el 16/11 arranca el 16 aunque la ventana empiece el 13', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 11, 1),
+      );
+
+      // Hoy es 18/11/2026, ventana pasada fue [13/11, 16/11]
+      // El sueldo se confirmó efectivamente el lunes 16/11
+      final line = periodLine(
+        todayLocal: DateTime(2026, 11, 18),
+        schedule: schedule,
+        incomeSincePay: 3500000,
+        expenseSincePay: 500000,
+        lastConfirmedSalaryDate: DateTime(2026, 11, 16),
+      );
+
+      expect(line, isNotNull);
+      expect(line!.periodStartDate, DateTime(2026, 11, 16));
+    });
+
+    test('periodLine sin sueldo confirmado arranca en ventana previous earliest (13/11)', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 11, 1),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 11, 18),
+        schedule: schedule,
+        incomeSincePay: 3500000,
+        expenseSincePay: 500000,
+        lastConfirmedSalaryDate: null,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.periodStartDate, DateTime(2026, 11, 13));
+    });
+
+    test('sueldo confirmado anterior a la ventana (e.g. mes anterior) no se usa y arranca en 13/11', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 11, 1),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 11, 18),
+        schedule: schedule,
+        incomeSincePay: 3500000,
+        expenseSincePay: 500000,
+        lastConfirmedSalaryDate: DateTime(2026, 10, 30),
+      );
+
+      expect(line, isNotNull);
+      expect(line!.periodStartDate, DateTime(2026, 11, 13));
+    });
+
     test('restante negativo con gastos mayores a ingresos', () {
       final schedule = IncomeSchedule(
         id: 'sched-1',
         mode: 'biweekly',
         payDays: '[15, -1]',
-        shiftToPreviousBusinessDay: false,
+        payDayRules: '["either", "previous"]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -116,7 +182,7 @@ void main() {
         id: 'sched-1',
         mode: 'biweekly',
         payDays: '[15, -1]',
-        shiftToPreviousBusinessDay: false,
+        payDayRules: '["previous", "previous"]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -139,7 +205,7 @@ void main() {
         id: 'sched-1',
         mode: 'monthly',
         payDays: '[-1]',
-        shiftToPreviousBusinessDay: false,
+        payDayRules: '["previous"]',
         categoryId: 'cat-1',
         effectiveFrom: DateTime(2026, 10, 1),
       );
@@ -153,7 +219,7 @@ void main() {
 
       expect(line, isNotNull);
       expect(line!.label, 'Este mes');
-      expect(line.daysToNextPay, 23);
+      expect(line.daysToNextPay, 22); // 30/10 es el último día hábil de octubre (31 sábado)
       expect(line.remaining, 4000000);
     });
   });

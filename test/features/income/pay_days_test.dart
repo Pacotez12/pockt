@@ -233,6 +233,110 @@ void main() {
     });
   });
 
+  group('PayWindow and payWindowsInMonth', () {
+    test('15/11/2026 (domingo) con either -> ventana 13/11-16/11', () {
+      final windows = payWindowsInMonth(
+        2026,
+        11,
+        [15],
+        [PayDayRule.either],
+      );
+      expect(windows, [
+        PayWindow(
+          earliest: DateTime(2026, 11, 13),
+          latest: DateTime(2026, 11, 16),
+        ),
+      ]);
+      expect(windows.first.isRange, isTrue);
+    });
+
+    test('15/11/2026 con previous -> 13/11', () {
+      final windows = payWindowsInMonth(
+        2026,
+        11,
+        [15],
+        [PayDayRule.previous],
+      );
+      expect(windows, [
+        PayWindow(
+          earliest: DateTime(2026, 11, 13),
+          latest: DateTime(2026, 11, 13),
+        ),
+      ]);
+      expect(windows.first.isRange, isFalse);
+    });
+
+    test('15/11/2026 con next -> 16/11', () {
+      final windows = payWindowsInMonth(
+        2026,
+        11,
+        [15],
+        [PayDayRule.next],
+      );
+      expect(windows, [
+        PayWindow(
+          earliest: DateTime(2026, 11, 16),
+          latest: DateTime(2026, 11, 16),
+        ),
+      ]);
+      expect(windows.first.isRange, isFalse);
+    });
+
+    test('31/10/2026 (sábado) con previous -> 30/10', () {
+      final windows = payWindowsInMonth(
+        2026,
+        10,
+        [-1],
+        [PayDayRule.previous],
+      );
+      expect(windows, [
+        PayWindow(
+          earliest: DateTime(2026, 10, 30),
+          latest: DateTime(2026, 10, 30),
+        ),
+      ]);
+    });
+
+    test('15/8 (feriado) con next -> 17/8 si es hábil', () {
+      final windows = payWindowsInMonth(
+        2026,
+        8,
+        [15],
+        [PayDayRule.next],
+      );
+      expect(windows, [
+        PayWindow(
+          earliest: DateTime(2026, 8, 17),
+          latest: DateTime(2026, 8, 17),
+        ),
+      ]);
+    });
+  });
+
+  group('nextPayWindow and previousPayWindow', () {
+    test('nextPayWindow encuentra la ventana correcta con rango', () {
+      final window = nextPayWindow(
+        DateTime(2026, 11, 1),
+        [15],
+        [PayDayRule.either],
+      );
+      expect(window, isNotNull);
+      expect(window!.earliest, DateTime(2026, 11, 13));
+      expect(window.latest, DateTime(2026, 11, 16));
+    });
+
+    test('previousPayWindow encuentra la ventana anterior', () {
+      final window = previousPayWindow(
+        DateTime(2026, 11, 18),
+        [15],
+        [PayDayRule.either],
+      );
+      expect(window, isNotNull);
+      expect(window!.earliest, DateTime(2026, 11, 13));
+      expect(window.latest, DateTime(2026, 11, 16));
+    });
+  });
+
   group('PayMode enum', () {
     test('define biweekly y monthly', () {
       expect(PayMode.values, contains(PayMode.biweekly));

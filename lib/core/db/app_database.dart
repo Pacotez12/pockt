@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:pockt/core/db/tables.dart';
@@ -23,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -50,6 +51,57 @@ class AppDatabase extends _$AppDatabase {
             'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
             'ON suggested_transactions (source, source_ref, occurred_at);',
           );
+        }
+        if (from < 4) {
+          await customStatement('''
+            CREATE TABLE income_schedules_new (
+              id TEXT NOT NULL PRIMARY KEY,
+              mode TEXT NOT NULL,
+              pay_days TEXT NOT NULL,
+              pay_day_rules TEXT NOT NULL,
+              expected_amount INTEGER,
+              category_id TEXT NOT NULL REFERENCES categories(id),
+              effective_from INTEGER NOT NULL
+            );
+          ''');
+
+          final rows = await customSelect(
+            'SELECT id, mode, pay_days, expected_amount, category_id, effective_from FROM income_schedules;',
+          ).get();
+
+          for (final row in rows) {
+            final id = row.read<String>('id');
+            final mode = row.read<String>('mode');
+            final payDaysStr = row.read<String>('pay_days');
+            final expectedAmount = row.readNullable<int>('expected_amount');
+            final categoryId = row.read<String>('category_id');
+            final effectiveFromRaw = row.data['effective_from'];
+
+            final payDaysList = (jsonDecode(payDaysStr) as List)
+                .map((e) => (e as num).toInt())
+                .toList();
+            final rulesList = payDaysList
+                .map((d) => d == -1 ? 'previous' : 'either')
+                .toList();
+            final rulesStr = jsonEncode(rulesList);
+
+            await customStatement(
+              'INSERT INTO income_schedules_new (id, mode, pay_days, pay_day_rules, expected_amount, category_id, effective_from) '
+              'VALUES (?, ?, ?, ?, ?, ?, ?);',
+              [
+                id,
+                mode,
+                payDaysStr,
+                rulesStr,
+                expectedAmount,
+                categoryId,
+                effectiveFromRaw,
+              ],
+            );
+          }
+
+          await customStatement('DROP TABLE income_schedules;');
+          await customStatement('ALTER TABLE income_schedules_new RENAME TO income_schedules;');
         }
       },
     );

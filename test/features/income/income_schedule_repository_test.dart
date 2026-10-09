@@ -34,7 +34,7 @@ void main() {
     await repo.setSchedule(
       mode: PayMode.biweekly,
       payDays: [15, -1],
-      shiftToPreviousBusinessDay: true,
+      payDayRules: [PayDayRule.either, PayDayRule.previous],
       expectedAmount: 4500000,
       categoryId: sueldoCatId,
     );
@@ -43,7 +43,7 @@ void main() {
     expect(current, isNotNull);
     expect(current!.mode, 'biweekly');
     expect(current.payDays, '[15,-1]');
-    expect(current.shiftToPreviousBusinessDay, isTrue);
+    expect(current.payDayRules, '["either","previous"]');
     expect(current.expectedAmount, 4500000);
     expect(current.categoryId, sueldoCatId);
     expect(current.effectiveFrom, DateTime(2026, 10, 15));

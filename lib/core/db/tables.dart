@@ -86,7 +86,7 @@ class IncomeSchedules extends Table {
   TextColumn get id => text()();
   TextColumn get mode => text()();
   TextColumn get payDays => text()();
-  BoolColumn get shiftToPreviousBusinessDay => boolean()();
+  TextColumn get payDayRules => text()();
   IntColumn get expectedAmount => integer().nullable()();
   TextColumn get categoryId => text().references(Categories, #id)();
   DateTimeColumn get effectiveFrom => dateTime()();

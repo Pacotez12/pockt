@@ -2895,20 +2895,17 @@ class $IncomeSchedulesTable extends IncomeSchedules
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _shiftToPreviousBusinessDayMeta =
-      const VerificationMeta('shiftToPreviousBusinessDay');
+  static const VerificationMeta _payDayRulesMeta = const VerificationMeta(
+    'payDayRules',
+  );
   @override
-  late final GeneratedColumn<bool> shiftToPreviousBusinessDay =
-      GeneratedColumn<bool>(
-        'shift_to_previous_business_day',
-        aliasedName,
-        false,
-        type: DriftSqlType.bool,
-        requiredDuringInsert: true,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'CHECK ("shift_to_previous_business_day" IN (0, 1))',
-        ),
-      );
+  late final GeneratedColumn<String> payDayRules = GeneratedColumn<String>(
+    'pay_day_rules',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _expectedAmountMeta = const VerificationMeta(
     'expectedAmount',
   );
@@ -2951,7 +2948,7 @@ class $IncomeSchedulesTable extends IncomeSchedules
     id,
     mode,
     payDays,
-    shiftToPreviousBusinessDay,
+    payDayRules,
     expectedAmount,
     categoryId,
     effectiveFrom,
@@ -2989,16 +2986,16 @@ class $IncomeSchedulesTable extends IncomeSchedules
     } else if (isInserting) {
       context.missing(_payDaysMeta);
     }
-    if (data.containsKey('shift_to_previous_business_day')) {
+    if (data.containsKey('pay_day_rules')) {
       context.handle(
-        _shiftToPreviousBusinessDayMeta,
-        shiftToPreviousBusinessDay.isAcceptableOrUnknown(
-          data['shift_to_previous_business_day']!,
-          _shiftToPreviousBusinessDayMeta,
+        _payDayRulesMeta,
+        payDayRules.isAcceptableOrUnknown(
+          data['pay_day_rules']!,
+          _payDayRulesMeta,
         ),
       );
     } else if (isInserting) {
-      context.missing(_shiftToPreviousBusinessDayMeta);
+      context.missing(_payDayRulesMeta);
     }
     if (data.containsKey('expected_amount')) {
       context.handle(
@@ -3049,9 +3046,9 @@ class $IncomeSchedulesTable extends IncomeSchedules
         DriftSqlType.string,
         data['${effectivePrefix}pay_days'],
       )!,
-      shiftToPreviousBusinessDay: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}shift_to_previous_business_day'],
+      payDayRules: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pay_day_rules'],
       )!,
       expectedAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3078,7 +3075,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
   final String id;
   final String mode;
   final String payDays;
-  final bool shiftToPreviousBusinessDay;
+  final String payDayRules;
   final int? expectedAmount;
   final String categoryId;
   final DateTime effectiveFrom;
@@ -3086,7 +3083,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     required this.id,
     required this.mode,
     required this.payDays,
-    required this.shiftToPreviousBusinessDay,
+    required this.payDayRules,
     this.expectedAmount,
     required this.categoryId,
     required this.effectiveFrom,
@@ -3097,9 +3094,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     map['id'] = Variable<String>(id);
     map['mode'] = Variable<String>(mode);
     map['pay_days'] = Variable<String>(payDays);
-    map['shift_to_previous_business_day'] = Variable<bool>(
-      shiftToPreviousBusinessDay,
-    );
+    map['pay_day_rules'] = Variable<String>(payDayRules);
     if (!nullToAbsent || expectedAmount != null) {
       map['expected_amount'] = Variable<int>(expectedAmount);
     }
@@ -3113,7 +3108,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       id: Value(id),
       mode: Value(mode),
       payDays: Value(payDays),
-      shiftToPreviousBusinessDay: Value(shiftToPreviousBusinessDay),
+      payDayRules: Value(payDayRules),
       expectedAmount: expectedAmount == null && nullToAbsent
           ? const Value.absent()
           : Value(expectedAmount),
@@ -3131,9 +3126,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       id: serializer.fromJson<String>(json['id']),
       mode: serializer.fromJson<String>(json['mode']),
       payDays: serializer.fromJson<String>(json['payDays']),
-      shiftToPreviousBusinessDay: serializer.fromJson<bool>(
-        json['shiftToPreviousBusinessDay'],
-      ),
+      payDayRules: serializer.fromJson<String>(json['payDayRules']),
       expectedAmount: serializer.fromJson<int?>(json['expectedAmount']),
       categoryId: serializer.fromJson<String>(json['categoryId']),
       effectiveFrom: serializer.fromJson<DateTime>(json['effectiveFrom']),
@@ -3146,9 +3139,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       'id': serializer.toJson<String>(id),
       'mode': serializer.toJson<String>(mode),
       'payDays': serializer.toJson<String>(payDays),
-      'shiftToPreviousBusinessDay': serializer.toJson<bool>(
-        shiftToPreviousBusinessDay,
-      ),
+      'payDayRules': serializer.toJson<String>(payDayRules),
       'expectedAmount': serializer.toJson<int?>(expectedAmount),
       'categoryId': serializer.toJson<String>(categoryId),
       'effectiveFrom': serializer.toJson<DateTime>(effectiveFrom),
@@ -3159,7 +3150,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     String? id,
     String? mode,
     String? payDays,
-    bool? shiftToPreviousBusinessDay,
+    String? payDayRules,
     Value<int?> expectedAmount = const Value.absent(),
     String? categoryId,
     DateTime? effectiveFrom,
@@ -3167,8 +3158,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     id: id ?? this.id,
     mode: mode ?? this.mode,
     payDays: payDays ?? this.payDays,
-    shiftToPreviousBusinessDay:
-        shiftToPreviousBusinessDay ?? this.shiftToPreviousBusinessDay,
+    payDayRules: payDayRules ?? this.payDayRules,
     expectedAmount: expectedAmount.present
         ? expectedAmount.value
         : this.expectedAmount,
@@ -3180,9 +3170,9 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
       id: data.id.present ? data.id.value : this.id,
       mode: data.mode.present ? data.mode.value : this.mode,
       payDays: data.payDays.present ? data.payDays.value : this.payDays,
-      shiftToPreviousBusinessDay: data.shiftToPreviousBusinessDay.present
-          ? data.shiftToPreviousBusinessDay.value
-          : this.shiftToPreviousBusinessDay,
+      payDayRules: data.payDayRules.present
+          ? data.payDayRules.value
+          : this.payDayRules,
       expectedAmount: data.expectedAmount.present
           ? data.expectedAmount.value
           : this.expectedAmount,
@@ -3201,7 +3191,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
           ..write('id: $id, ')
           ..write('mode: $mode, ')
           ..write('payDays: $payDays, ')
-          ..write('shiftToPreviousBusinessDay: $shiftToPreviousBusinessDay, ')
+          ..write('payDayRules: $payDayRules, ')
           ..write('expectedAmount: $expectedAmount, ')
           ..write('categoryId: $categoryId, ')
           ..write('effectiveFrom: $effectiveFrom')
@@ -3214,7 +3204,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
     id,
     mode,
     payDays,
-    shiftToPreviousBusinessDay,
+    payDayRules,
     expectedAmount,
     categoryId,
     effectiveFrom,
@@ -3226,7 +3216,7 @@ class IncomeSchedule extends DataClass implements Insertable<IncomeSchedule> {
           other.id == this.id &&
           other.mode == this.mode &&
           other.payDays == this.payDays &&
-          other.shiftToPreviousBusinessDay == this.shiftToPreviousBusinessDay &&
+          other.payDayRules == this.payDayRules &&
           other.expectedAmount == this.expectedAmount &&
           other.categoryId == this.categoryId &&
           other.effectiveFrom == this.effectiveFrom);
@@ -3236,7 +3226,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
   final Value<String> id;
   final Value<String> mode;
   final Value<String> payDays;
-  final Value<bool> shiftToPreviousBusinessDay;
+  final Value<String> payDayRules;
   final Value<int?> expectedAmount;
   final Value<String> categoryId;
   final Value<DateTime> effectiveFrom;
@@ -3245,7 +3235,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     this.id = const Value.absent(),
     this.mode = const Value.absent(),
     this.payDays = const Value.absent(),
-    this.shiftToPreviousBusinessDay = const Value.absent(),
+    this.payDayRules = const Value.absent(),
     this.expectedAmount = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.effectiveFrom = const Value.absent(),
@@ -3255,7 +3245,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     required String id,
     required String mode,
     required String payDays,
-    required bool shiftToPreviousBusinessDay,
+    required String payDayRules,
     this.expectedAmount = const Value.absent(),
     required String categoryId,
     required DateTime effectiveFrom,
@@ -3263,14 +3253,14 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
   }) : id = Value(id),
        mode = Value(mode),
        payDays = Value(payDays),
-       shiftToPreviousBusinessDay = Value(shiftToPreviousBusinessDay),
+       payDayRules = Value(payDayRules),
        categoryId = Value(categoryId),
        effectiveFrom = Value(effectiveFrom);
   static Insertable<IncomeSchedule> custom({
     Expression<String>? id,
     Expression<String>? mode,
     Expression<String>? payDays,
-    Expression<bool>? shiftToPreviousBusinessDay,
+    Expression<String>? payDayRules,
     Expression<int>? expectedAmount,
     Expression<String>? categoryId,
     Expression<DateTime>? effectiveFrom,
@@ -3280,8 +3270,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
       if (id != null) 'id': id,
       if (mode != null) 'mode': mode,
       if (payDays != null) 'pay_days': payDays,
-      if (shiftToPreviousBusinessDay != null)
-        'shift_to_previous_business_day': shiftToPreviousBusinessDay,
+      if (payDayRules != null) 'pay_day_rules': payDayRules,
       if (expectedAmount != null) 'expected_amount': expectedAmount,
       if (categoryId != null) 'category_id': categoryId,
       if (effectiveFrom != null) 'effective_from': effectiveFrom,
@@ -3293,7 +3282,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     Value<String>? id,
     Value<String>? mode,
     Value<String>? payDays,
-    Value<bool>? shiftToPreviousBusinessDay,
+    Value<String>? payDayRules,
     Value<int?>? expectedAmount,
     Value<String>? categoryId,
     Value<DateTime>? effectiveFrom,
@@ -3303,8 +3292,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
       id: id ?? this.id,
       mode: mode ?? this.mode,
       payDays: payDays ?? this.payDays,
-      shiftToPreviousBusinessDay:
-          shiftToPreviousBusinessDay ?? this.shiftToPreviousBusinessDay,
+      payDayRules: payDayRules ?? this.payDayRules,
       expectedAmount: expectedAmount ?? this.expectedAmount,
       categoryId: categoryId ?? this.categoryId,
       effectiveFrom: effectiveFrom ?? this.effectiveFrom,
@@ -3324,10 +3312,8 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
     if (payDays.present) {
       map['pay_days'] = Variable<String>(payDays.value);
     }
-    if (shiftToPreviousBusinessDay.present) {
-      map['shift_to_previous_business_day'] = Variable<bool>(
-        shiftToPreviousBusinessDay.value,
-      );
+    if (payDayRules.present) {
+      map['pay_day_rules'] = Variable<String>(payDayRules.value);
     }
     if (expectedAmount.present) {
       map['expected_amount'] = Variable<int>(expectedAmount.value);
@@ -3350,7 +3336,7 @@ class IncomeSchedulesCompanion extends UpdateCompanion<IncomeSchedule> {
           ..write('id: $id, ')
           ..write('mode: $mode, ')
           ..write('payDays: $payDays, ')
-          ..write('shiftToPreviousBusinessDay: $shiftToPreviousBusinessDay, ')
+          ..write('payDayRules: $payDayRules, ')
           ..write('expectedAmount: $expectedAmount, ')
           ..write('categoryId: $categoryId, ')
           ..write('effectiveFrom: $effectiveFrom, ')
@@ -7452,7 +7438,7 @@ typedef $$IncomeSchedulesTableCreateCompanionBuilder =
       required String id,
       required String mode,
       required String payDays,
-      required bool shiftToPreviousBusinessDay,
+      required String payDayRules,
       Value<int?> expectedAmount,
       required String categoryId,
       required DateTime effectiveFrom,
@@ -7463,7 +7449,7 @@ typedef $$IncomeSchedulesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> mode,
       Value<String> payDays,
-      Value<bool> shiftToPreviousBusinessDay,
+      Value<String> payDayRules,
       Value<int?> expectedAmount,
       Value<String> categoryId,
       Value<DateTime> effectiveFrom,
@@ -7521,8 +7507,8 @@ class $$IncomeSchedulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get shiftToPreviousBusinessDay => $composableBuilder(
-    column: $table.shiftToPreviousBusinessDay,
+  ColumnFilters<String> get payDayRules => $composableBuilder(
+    column: $table.payDayRules,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7584,8 +7570,8 @@ class $$IncomeSchedulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get shiftToPreviousBusinessDay => $composableBuilder(
-    column: $table.shiftToPreviousBusinessDay,
+  ColumnOrderings<String> get payDayRules => $composableBuilder(
+    column: $table.payDayRules,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7641,8 +7627,8 @@ class $$IncomeSchedulesTableAnnotationComposer
   GeneratedColumn<String> get payDays =>
       $composableBuilder(column: $table.payDays, builder: (column) => column);
 
-  GeneratedColumn<bool> get shiftToPreviousBusinessDay => $composableBuilder(
-    column: $table.shiftToPreviousBusinessDay,
+  GeneratedColumn<String> get payDayRules => $composableBuilder(
+    column: $table.payDayRules,
     builder: (column) => column,
   );
 
@@ -7713,7 +7699,7 @@ class $$IncomeSchedulesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> mode = const Value.absent(),
                 Value<String> payDays = const Value.absent(),
-                Value<bool> shiftToPreviousBusinessDay = const Value.absent(),
+                Value<String> payDayRules = const Value.absent(),
                 Value<int?> expectedAmount = const Value.absent(),
                 Value<String> categoryId = const Value.absent(),
                 Value<DateTime> effectiveFrom = const Value.absent(),
@@ -7722,7 +7708,7 @@ class $$IncomeSchedulesTableTableManager
                 id: id,
                 mode: mode,
                 payDays: payDays,
-                shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
+                payDayRules: payDayRules,
                 expectedAmount: expectedAmount,
                 categoryId: categoryId,
                 effectiveFrom: effectiveFrom,
@@ -7733,7 +7719,7 @@ class $$IncomeSchedulesTableTableManager
                 required String id,
                 required String mode,
                 required String payDays,
-                required bool shiftToPreviousBusinessDay,
+                required String payDayRules,
                 Value<int?> expectedAmount = const Value.absent(),
                 required String categoryId,
                 required DateTime effectiveFrom,
@@ -7742,7 +7728,7 @@ class $$IncomeSchedulesTableTableManager
                 id: id,
                 mode: mode,
                 payDays: payDays,
-                shiftToPreviousBusinessDay: shiftToPreviousBusinessDay,
+                payDayRules: payDayRules,
                 expectedAmount: expectedAmount,
                 categoryId: categoryId,
                 effectiveFrom: effectiveFrom,
