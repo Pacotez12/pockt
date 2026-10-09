@@ -25,7 +25,9 @@ class ReminderScheduler {
   /// la configuración actual, los gastos existentes y los días sin gasto.
   Future<void> reschedule({required DateTime nowLocal}) async {
     // 1. Leer intensidad
-    final intensityStr = await settingsRepo.get(SettingsKeys.remindersIntensity);
+    final intensityStr = await settingsRepo.get(
+      SettingsKeys.remindersIntensity,
+    );
     final intensity = switch (intensityStr) {
       'off' => ReminderIntensity.off,
       'soft' => ReminderIntensity.soft,

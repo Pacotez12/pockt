@@ -15,11 +15,10 @@ class DayMarksRepository {
   /// Marca [localDay] como día sin gastos ("Hoy no gasté nada").
   Future<void> markNoSpend(DateTime localDay) async {
     final key = _formatDay(localDay);
-    await db.into(db.dayMarks).insertOnConflictUpdate(
-          DayMarksCompanion(
-            date: Value(key),
-            noSpend: const Value(true),
-          ),
+    await db
+        .into(db.dayMarks)
+        .insertOnConflictUpdate(
+          DayMarksCompanion(date: Value(key), noSpend: const Value(true)),
         );
   }
 
@@ -33,10 +32,12 @@ class DayMarksRepository {
     final toStr = _formatDay(toLocal);
 
     final query = db.select(db.dayMarks)
-      ..where((t) =>
-          t.noSpend.equals(true) &
-          t.date.isBiggerOrEqualValue(fromStr) &
-          t.date.isSmallerOrEqualValue(toStr));
+      ..where(
+        (t) =>
+            t.noSpend.equals(true) &
+            t.date.isBiggerOrEqualValue(fromStr) &
+            t.date.isSmallerOrEqualValue(toStr),
+      );
 
     final rows = await query.get();
     return rows.map((r) => DateTime.parse(r.date)).toSet();

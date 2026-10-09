@@ -37,7 +37,7 @@ void main() {
         expect(r.atLocal.hour, 21);
         expect(r.atLocal.minute, 0);
         expect(r.atLocal.day, 9 + i);
-        expect(r.body, '¿Gastaste algo hoy? Anotalo en 10 segundos.');
+        expect(kNightTexts, contains(r.body));
       }
     });
 
@@ -54,9 +54,9 @@ void main() {
 
       expect(reminders.length, 2);
       expect(reminders[0].atLocal.hour, 13);
-      expect(reminders[0].body, '¿Cómo va el día? Anotá lo que llevás gastado.');
+      expect(kMiddayTexts, contains(reminders[0].body));
       expect(reminders[1].atLocal.hour, 21);
-      expect(reminders[1].body, '¿Gastaste algo hoy? Anotalo en 10 segundos.');
+      expect(kNightTexts, contains(reminders[1].body));
     });
 
     test('insistent genera cada 3 h desde las 12:00, máximo 4 por día', () {
@@ -73,7 +73,7 @@ void main() {
       expect(reminders.length, 4);
       expect(reminders.map((r) => r.atLocal.hour).toList(), [12, 15, 18, 21]);
       for (final r in reminders) {
-        expect(r.body, 'ANOTÁ TUS GASTOS DE HOY.');
+        expect(kInsistentTexts, contains(r.body));
       }
     });
 
@@ -170,6 +170,28 @@ void main() {
       expect(call1[1].notificationId, 2026100901);
       expect(call1[2].notificationId, 2026101000);
       expect(call1[3].notificationId, 2026101001);
+    });
+  });
+
+  group('textos de recordatorio', () {
+    test('cada grupo tiene al menos 5 textos distintos', () {
+      for (final pool in [kNightTexts, kMiddayTexts, kInsistentTexts]) {
+        expect(pool.toSet(), hasLength(greaterThanOrEqualTo(5)));
+      }
+    });
+    test('el texto cambia de un día al siguiente', () {
+      final a = reminderText(ReminderIntensity.soft, 0, DateTime(2026, 10, 9));
+      final b = reminderText(ReminderIntensity.soft, 0, DateTime(2026, 10, 10));
+      expect(a, isNot(b));
+    });
+    test('Normal usa el texto de mediodía en el primer horario y el de la noche en el segundo', () {
+      final day = DateTime(2026, 10, 9);
+      expect(kMiddayTexts, contains(reminderText(ReminderIntensity.normal, 0, day)));
+      expect(kNightTexts, contains(reminderText(ReminderIntensity.normal, 1, day)));
+    });
+    test('Insistente usa sus propios textos', () {
+      expect(kInsistentTexts,
+          contains(reminderText(ReminderIntensity.insistent, 2, DateTime(2026, 10, 9))));
     });
   });
 }

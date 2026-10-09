@@ -382,9 +382,11 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final intensity = await ref
         .read(settingsRepositoryProvider)
         .get(SettingsKeys.remindersIntensity);
-    final body = intensity == 'insistent'
-        ? 'ANOTÁ TUS GASTOS DE HOY.'
-        : '¿Gastaste algo hoy? Anotalo en 10 segundos.';
+    final level = ReminderIntensity.values.firstWhere(
+      (v) => v.name == intensity,
+      orElse: () => ReminderIntensity.normal,
+    );
+    final body = reminderText(level, 0, DateTime.now());
     await notifier.schedule(
       PlannedReminder(
         atLocal: DateTime.now().add(const Duration(seconds: 5)),

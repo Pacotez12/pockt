@@ -11,6 +11,7 @@ import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
+import 'package:pockt/features/reminders/domain/reminder_plan.dart';
 import 'package:pockt/features/reminders/ui/reminders_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
@@ -92,9 +93,21 @@ void main() {
 
     final test = fakeNotifier.scheduled.single;
     expect(test.notificationId, kTestReminderId);
-    expect(test.body, 'ANOTÁ TUS GASTOS DE HOY.');
+    expect(kInsistentTexts, contains(test.body));
     final secs = test.atLocal.difference(DateTime.now()).inSeconds;
     expect(secs, inInclusiveRange(1, 10));
+  });
+
+  testWidgets('Probar recordatorio con Normal usa un texto de Normal, no el de Suave', (tester) async {
+    await settingsRepo.set(SettingsKeys.remindersIntensity, 'normal');
+    await pumpRemindersScreen(tester);
+
+    final button = find.text('Probar recordatorio');
+    await tester.scrollUntilVisible(button, 200);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(kMiddayTexts, contains(fakeNotifier.scheduled.single.body));
   });
 
   testWidgets('si permiso está desactivado muestra aviso para activarlo', (tester) async {

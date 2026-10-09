@@ -1,10 +1,5 @@
 /// Intensidad de los recordatorios de gastos.
-enum ReminderIntensity {
-  off,
-  soft,
-  normal,
-  insistent,
-}
+enum ReminderIntensity { off, soft, normal, insistent }
 
 /// Representa un recordatorio programado en una fecha y hora local determinada.
 class PlannedReminder {
@@ -31,8 +26,7 @@ class PlannedReminder {
           body == other.body;
 
   @override
-  int get hashCode =>
-      Object.hash(atLocal, notificationId, title, body);
+  int get hashCode => Object.hash(atLocal, notificationId, title, body);
 
   @override
   String toString() =>
@@ -80,46 +74,37 @@ List<PlannedReminder> planReminders({
     return const [];
   }
 
-  // Definición de horarios y textos por intensidad
-  final List<({int h, int m, String body})> slots;
+  // Horarios por intensidad; el texto de cada horario sale de reminderText.
+  final List<({int h, int m})> slots;
   switch (intensity) {
     case ReminderIntensity.off:
       slots = const [];
       break;
     case ReminderIntensity.soft:
-      slots = const [
-        (h: 21, m: 0, body: '¿Gastaste algo hoy? Anotalo en 10 segundos.'),
-      ];
+      slots = const [(h: 21, m: 0)];
       break;
     case ReminderIntensity.normal:
-      slots = const [
-        (h: 13, m: 0, body: '¿Cómo va el día? Anotá lo que llevás gastado.'),
-        (h: 21, m: 0, body: '¿Gastaste algo hoy? Anotalo en 10 segundos.'),
-      ];
+      slots = const [(h: 13, m: 0), (h: 21, m: 0)];
       break;
     case ReminderIntensity.insistent:
       slots = const [
-        (h: 12, m: 0, body: 'ANOTÁ TUS GASTOS DE HOY.'),
-        (h: 15, m: 0, body: 'ANOTÁ TUS GASTOS DE HOY.'),
-        (h: 18, m: 0, body: 'ANOTÁ TUS GASTOS DE HOY.'),
-        (h: 21, m: 0, body: 'ANOTÁ TUS GASTOS DE HOY.'),
+        (h: 12, m: 0),
+        (h: 15, m: 0),
+        (h: 18, m: 0),
+        (h: 21, m: 0),
       ];
       break;
   }
 
-  final normExpense =
-      daysWithExpense.map((d) => (d.year, d.month, d.day)).toSet();
-  final normNoSpend =
-      noSpendDays.map((d) => (d.year, d.month, d.day)).toSet();
+  final normExpense = daysWithExpense
+      .map((d) => (d.year, d.month, d.day))
+      .toSet();
+  final normNoSpend = noSpendDays.map((d) => (d.year, d.month, d.day)).toSet();
 
   final result = <PlannedReminder>[];
 
   for (var i = 0; i < days; i++) {
-    final targetDay = DateTime(
-      nowLocal.year,
-      nowLocal.month,
-      nowLocal.day + i,
-    );
+    final targetDay = DateTime(nowLocal.year, nowLocal.month, nowLocal.day + i);
 
     final dayKey = (targetDay.year, targetDay.month, targetDay.day);
     if (normExpense.contains(dayKey) || normNoSpend.contains(dayKey)) {
@@ -156,11 +141,60 @@ List<PlannedReminder> planReminders({
           atLocal: reminderTime,
           notificationId: id,
           title: 'Pockt',
-          body: slot.body,
+          body: reminderText(intensity, slotIdx, targetDay),
         ),
       );
     }
   }
 
   return result;
+}
+
+/// Textos de la noche (Suave y el segundo horario de Normal).
+const List<String> kNightTexts = [
+  '¿Gastaste algo hoy? Anotalo en 10 segundos.',
+  'Antes de dormir: ¿quedó algún gasto sin anotar?',
+  'Un minuto para tu bolsillo: anotá lo de hoy.',
+  '¿Café, súper, Bolt? Si hubo gastos hoy, anotalos.',
+  'Cerrá el día con tus gastos al día.',
+  'Tu yo de fin de mes te lo va a agradecer: anotá lo de hoy.',
+];
+
+/// Textos del mediodía (primer horario de Normal).
+const List<String> kMiddayTexts = [
+  '¿Cómo va el día? Anotá lo que llevás gastado.',
+  'Mitad del día: ¿algún gasto para anotar?',
+  '¿Almorzaste afuera? Anotalo ahora que te acordás.',
+  'Lo que se anota a tiempo no se olvida. ¿Algo de esta mañana?',
+  'Pausa de mediodía: dos toques y tu gasto queda anotado.',
+];
+
+/// Textos de Insistente (todos sus horarios).
+const List<String> kInsistentTexts = [
+  'ANOTÁ TUS GASTOS DE HOY.',
+  'Todavía no anotaste nada hoy. ¿Lo hacemos ahora?',
+  '10 segundos. Un gasto. Pockt te espera.',
+  '¿Hoy no gastaste nada? Tocá «Hoy no gasté nada» y te dejo tranquilo.',
+  'Tus gastos de hoy siguen sin anotar. ANOTALOS.',
+  'Sin gastos anotados hoy. No lo dejes para mañana.',
+];
+
+/// Texto del recordatorio número [slotIndex] del día [day] para [intensity].
+/// Rota según el día del año, así no se repite el mismo texto todos los días.
+String reminderText(ReminderIntensity intensity, int slotIndex, DateTime day) {
+  final List<String> pool;
+  switch (intensity) {
+    case ReminderIntensity.normal:
+      pool = slotIndex == 0 ? kMiddayTexts : kNightTexts;
+      break;
+    case ReminderIntensity.insistent:
+      pool = kInsistentTexts;
+      break;
+    case ReminderIntensity.soft:
+    case ReminderIntensity.off:
+      pool = kNightTexts;
+      break;
+  }
+  final dayOfYear = day.difference(DateTime(day.year)).inDays;
+  return pool[(dayOfYear + slotIndex) % pool.length];
 }
