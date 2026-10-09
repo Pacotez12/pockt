@@ -221,7 +221,7 @@ Leve por tecla, medio al guardar, patrón distinto al cruzar 80 % y 100 % de un 
 
 ### 7.1 Backup
 - Login con Google (`google_sign_in`) con el scope mínimo `drive.file`. Proyecto de Google Cloud en modo "en pruebas" con el autor como único usuario de prueba.
-- La app crea la carpeta visible **"Gastos · Backups"** en el primer backup. Si se borra a mano, la recrea en el siguiente.
+- La app crea la carpeta visible **"Pockt · Backups"** en el primer backup. Si se borra a mano, la recrea en el siguiente.
 - Proceso: `VACUUM INTO` (copia consistente) → compresión → cifrado → subida.
 - **Automático** cada 2 días (día de por medio), solo con WiFi (`workmanager` con restricción de red), y después de confirmar una tanda de sugeridos.
 - Se conservan las últimas 7 copias (unas dos semanas de historia).
