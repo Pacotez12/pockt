@@ -3,6 +3,7 @@ import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/features/budgets/ui/budgets_screen.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/transactions/ui/transactions_screen.dart';
@@ -34,7 +35,7 @@ class _AppShellState extends State<AppShell> {
             children: const [
               HomeScreen(),
               TransactionsScreen(),
-              _PlaceholderTab(title: 'Presupuestos', subtitle: 'Próximamente'),
+              BudgetsScreen(),
               _PlaceholderTab(title: 'Reportes', subtitle: 'Próximamente'),
             ],
           ),
