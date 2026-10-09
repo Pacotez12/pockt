@@ -81,6 +81,22 @@ void main() {
     expect(saved, 'soft');
   });
 
+  testWidgets('Probar recordatorio programa uno real en unos segundos', (tester) async {
+    await settingsRepo.set(SettingsKeys.remindersIntensity, 'insistent');
+    await pumpRemindersScreen(tester);
+
+    final button = find.text('Probar recordatorio');
+    await tester.scrollUntilVisible(button, 200);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    final test = fakeNotifier.scheduled.single;
+    expect(test.notificationId, kTestReminderId);
+    expect(test.body, 'ANOTÁ TUS GASTOS DE HOY.');
+    final secs = test.atLocal.difference(DateTime.now()).inSeconds;
+    expect(secs, inInclusiveRange(1, 10));
+  });
+
   testWidgets('si permiso está desactivado muestra aviso para activarlo', (tester) async {
     fakeNotifier.hasPermission = false;
     await pumpRemindersScreen(tester);

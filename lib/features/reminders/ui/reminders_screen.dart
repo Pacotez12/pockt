@@ -8,6 +8,10 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
+import 'package:pockt/features/reminders/domain/reminder_plan.dart';
+
+/// Id de la notificación de prueba (fuera del rango de los recordatorios diarios).
+const kTestReminderId = 99;
 
 /// Pantalla de configuración de Recordatorios (spec §5.8 y §5.10):
 /// Intensidad · Horas de silencio · Permisos de notificación.
@@ -96,7 +100,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                             _IntensityTile(
                               title: 'Suave',
                               subtitle: '21:00',
-                              sample: '¿Gastaste algo hoy? Anotalo en 10 segundos.',
+                              sample:
+                                  '¿Gastaste algo hoy? Anotalo en 10 segundos.',
                               isSelected: current == 'soft',
                               onTap: () => _updateIntensity('soft'),
                             ),
@@ -186,6 +191,46 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                         fontSize: 12,
                         color: colors.textTertiary,
                         height: 1.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Pressable(
+                    onTap: _sendTestReminder,
+                    child: GlassCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      child: Row(
+                        children: [
+                          Icon(
+                            uiIcon('bell'),
+                            size: 20,
+                            color: colors.textPrimary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Probar recordatorio',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'llega en 5 s',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: colors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -328,15 +373,36 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
+  /// Programa un recordatorio real dentro de 5 segundos, con el texto de la
+  /// intensidad elegida y sus botones, para ver cómo queda la notificación.
+  Future<void> _sendTestReminder() async {
+    Haptics.tick();
+    final notifier = ref.read(notifierProvider);
+    if (!await notifier.ensurePermission()) return;
+    final intensity = await ref
+        .read(settingsRepositoryProvider)
+        .get(SettingsKeys.remindersIntensity);
+    final body = intensity == 'insistent'
+        ? 'ANOTÁ TUS GASTOS DE HOY.'
+        : '¿Gastaste algo hoy? Anotalo en 10 segundos.';
+    await notifier.schedule(
+      PlannedReminder(
+        atLocal: DateTime.now().add(const Duration(seconds: 5)),
+        notificationId: kTestReminderId,
+        title: 'Pockt',
+        body: body,
+      ),
+    );
+  }
+
   Future<void> _updateIntensity(String value) async {
     Haptics.tick();
-    await ref.read(settingsRepositoryProvider).set(
-          SettingsKeys.remindersIntensity,
-          value,
-        );
-    await ref.read(reminderSchedulerProvider).reschedule(
-          nowLocal: DateTime.now(),
-        );
+    await ref
+        .read(settingsRepositoryProvider)
+        .set(SettingsKeys.remindersIntensity, value);
+    await ref
+        .read(reminderSchedulerProvider)
+        .reschedule(nowLocal: DateTime.now());
   }
 
   Future<void> _pickTime(
@@ -351,18 +417,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0,
     );
 
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
 
     if (picked != null) {
       final timeStr =
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       await ref.read(settingsRepositoryProvider).set(key, timeStr);
-      await ref.read(reminderSchedulerProvider).reschedule(
-            nowLocal: DateTime.now(),
-          );
+      await ref
+          .read(reminderSchedulerProvider)
+          .reschedule(nowLocal: DateTime.now());
     }
   }
 }
@@ -390,9 +453,7 @@ class _IntensityTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
