@@ -63,6 +63,21 @@ android/app/src/main/res/layout/pockt_widget.xml, xml/pockt_widget_info.xml
 - [ ] **Step 2–4:** FAIL → implementar (tres opciones en un `GlassCard`, ícono `uiIcon`, check animado) → PASS, analyze 0.
 - [ ] **Step 5:** Checkpoint. `feat: selector de apariencia en ajustes`.
 
+### Task 1b: Sueldo mensual + reparto por cobro
+
+Pedido del autor (cobra 30 % el 15 y 70 % a fin de mes). Spec §4 `income_schedules` actualizada. La app tiene datos: **migración v4 → v5** con test.
+
+**Files:** Modify `tables.dart`, `app_database.dart`, `income_schedule_repository.dart`, `suggestion_generator.dart`, `income_schedule_screen.dart`; Test `test/core/db/migration_v5_test.dart`, `test/features/income/pay_split_test.dart`, `income_schedule_screen_test.dart`, `suggestion_generator_test.dart`.
+
+**Interfaces:**
+- Columnas: `monthlyAmount` (int?, reemplaza a `expectedAmount`) y `paySplitPercents` (texto, lista de int paralela a `payDays`). Migración: `monthlyAmount = expectedAmount × cantidad de días de cobro` (si había) y reparto en partes iguales.
+- `List<int> splitAmounts(int monthlyAmount, List<int> percents)` (función pura; el último absorbe el redondeo; suma exacta).
+- El generador usa `splitAmounts(...)[i]` para la sugerencia del cobro `i`; sin `monthlyAmount`, la sugerencia llega sin monto (como hoy).
+- Pantalla: "Sueldo mensual" (teclado de montos) + "Reparto" con control deslizante de a 5 % para el primer cobro (el resto va al segundo) y la vista previa "El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000". En esquema mensual no se muestra el reparto.
+
+- [ ] **Step 1: Tests que fallan:** `splitAmounts(7000000, [30, 70]) == [2100000, 4900000]`; `splitAmounts(1000001, [50, 50])` suma 1000001; migración v4 → v5 con `expectedAmount` 3500000 y 2 cobros → `monthlyAmount` 7000000, `[50, 50]`; el generador crea 2100000 el 15 y 4900000 el último día con `[30, 70]`; la pantalla muestra la vista previa al mover el control.
+- [ ] **Step 2–4.** **Step 5:** Checkpoint. `feat: sueldo mensual con reparto por cobro`.
+
 ### Task 2: Datos de reportes
 
 **Files:** Create `lib/features/reports/data/reports_repository.dart`, `lib/features/reports/domain/compare.dart`; Test `test/features/reports/reports_repository_test.dart`, `test/features/reports/compare_test.dart`.
