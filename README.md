@@ -1,19 +1,35 @@
 <div align="center">
 
-<img src="docs/brand/pockt-icon-rounded.svg" alt="Pockt" width="128" height="128">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/readme/banner-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme/banner-light.png">
+  <img src="docs/brand/readme/banner-dark.png" alt="Pockt — Tus gastos, en el bolsillo." width="100%">
+</picture>
 
-# Pockt
+<br>
 
-**Tus gastos, en el bolsillo.**
-Una app de finanzas personales para Android, rápida para anotar y hermosa de usar.
+Una app de finanzas personales para Android, **rápida para anotar y hermosa de usar**.
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/versión-0.1-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-0.2-FF8A3D)](#estado)
+
+<br>
+
+<img src="docs/brand/readme/carga.gif" alt="Cargar un gasto en Pockt: elegir categoría, escribir el monto y guardar" width="300">
+
+<sub><i>Cargar un gasto: categoría, monto, listo.</i></sub>
 
 </div>
+
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme/gallery-light.png">
+  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: carga, movimientos, presupuestos y bandeja de sugeridos" width="100%">
+</picture>
 
 ---
 
@@ -25,7 +41,7 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Texto natural que aprende.** Escribís `super 230 mil ayer` o `bolt 28.500` y Pockt lo entiende. Cada comercio que guardás queda en una libreta local: la próxima vez ya sabe su categoría, y tolera errores de tipeo.
 - **Tus días, a la vista.** Un calendario de calor del mes, al estilo de las contribuciones de GitHub, que muestra en qué días gastaste más. Tocás un día y ves en qué se fue.
 - **Presupuestos por categoría** con anillos de progreso y notificaciones al 80 % y al 100 % (una sola vez por mes).
-- **Recurrentes y cobros** (quincenales o mensuales, con corrimiento a día hábil) que te esperan en una bandeja para confirmar, sin cargarse a ciegas.
+- **Recurrentes y cobros** que te esperan en una bandeja para confirmar, sin cargarse a ciegas. Entiende el cobro quincenal real: si el 15 cae en fin de semana o feriado, puede ser el día hábil anterior o el siguiente, y el "quedan" arranca el día que cobraste de verdad.
 - **Recordatorios con intensidad**: de "suave" a "insistente", y solo si ese día no anotaste nada.
 - **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura y ranking por comercio.
 
@@ -40,7 +56,7 @@ Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
 | **Vidrio** | Superficies translúcidas, con desenfoque real solo donde rinde (barra de navegación y hojas). |
 | **Motion con física** | Springs interrumpibles y transiciones compartidas: nada aparece de la nada. |
 | **Haptics** | Un toque leve por tecla, uno firme al guardar. Confirman sin interrumpir. |
-| **120 fps** | Las transiciones se miden en un dispositivo real con `dumpsys gfxinfo`, no a ojo. |
+| **Medido, no a ojo** | La fluidez de las transiciones se mide en un teléfono real con las herramientas de Flutter. |
 
 ## Privacidad
 
@@ -52,7 +68,7 @@ Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
 
 **La app**
 
-- **[Flutter](https://flutter.dev) 3.47 + Dart 3.13** — el framework. Dibuja cada píxel con su propio motor (Impeller), lo que permite un diseño 100 % propio y animaciones a 120 fps.
+- **[Flutter](https://flutter.dev) 3.47 + Dart 3.13** — el framework. Dibuja cada píxel con su propio motor (Impeller), lo que permite un diseño 100 % propio y animaciones fluidas.
 - **[Inter](https://rsms.me/inter/)** — la tipografía, incluida dentro de la app. Con cifras tabulares: todos los dígitos miden lo mismo, así los montos no "bailan" mientras escribís.
 
 **Datos**
@@ -64,6 +80,10 @@ Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
 
 - **[Riverpod](https://riverpod.dev)** — conecta los datos con las pantallas: el total del inicio "escucha" a la base y se actualiza solo al cargar un gasto.
 
+**Notificaciones**
+
+- **[flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications)** — alertas de presupuesto y avisos de cobros y recurrentes.
+
 **Fechas y formatos**
 
 - **[timezone](https://pub.dev/packages/timezone) + [flutter_timezone](https://pub.dev/packages/flutter_timezone)** — toman la zona horaria del teléfono, para que un gasto de las 23:30 caiga en el día correcto aunque internamente se guarde en UTC.
@@ -73,11 +93,10 @@ Pockt tiene identidad visual propia, no el aspecto por defecto de Material:
 
 - **[build_runner](https://pub.dev/packages/build_runner) + drift_dev + riverpod_generator** — generan el código repetitivo (consultas tipadas, providers) para no escribirlo a mano.
 - **[flutter_test](https://docs.flutter.dev/testing) + [mocktail](https://pub.dev/packages/mocktail)** — tests unitarios, de base de datos y de widgets. La lógica de fechas y montos se escribe con tests primero.
-- **`dumpsys gfxinfo`** — medición real de frames en el dispositivo para sostener los 120 fps.
+- **integration_test** — mide los tiempos de cada frame en un teléfono real (en una variante aparte, sin tocar tus datos).
 
 **Próximamente**
 
-- **flutter_local_notifications** — recordatorios y alertas de presupuesto.
 - **workmanager** — backup automático en segundo plano, solo con WiFi.
 - **home_widget** — widget de pantalla de inicio con tus categorías más usadas.
 - **local_auth** — bloqueo opcional con huella.
@@ -101,8 +120,8 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | Etapa | Contenido | |
 |---|---|---|
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
-| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos, Ajustes | 🚧 7 de 9 tareas |
-| **Plan 3** | Reportes, recordatorios, widget y acceso rápido | ⏳ |
+| **Plan 2** | Presupuestos, recurrentes, esquema de cobro, bandeja de sugeridos, Ajustes | 🚧 casi listo |
+| **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ⏳ |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
