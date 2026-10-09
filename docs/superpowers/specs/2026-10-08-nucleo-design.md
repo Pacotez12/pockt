@@ -213,6 +213,7 @@ Leve por tecla, medio al guardar, patrón distinto al cruzar 80 % y 100 % de un 
 - Nombre: **Pockt** (así, sin la "e").
 - Ícono: concepto "orbe con abertura". Orbe con degradado radial (`#ffb07a` → `#ff6a52` → `#e8306f`), resplandor naranja→rosa alrededor y una curva de abertura de bolsillo en negro. Fuente maestra: `docs/brand/pockt-icon.svg` (lienzo 108×108 de ícono adaptativo; las formas clave dentro de la zona segura central de 66×66).
 - Variantes a generar desde el SVG maestro: ícono adaptativo (capa frontal: orbe y abertura; capa de fondo: negro con resplandor), ícono monocromo para íconos temáticos de Android 13+, splash screen (Android 12+ `windowSplashScreenAnimatedIcon`), PNG por densidad.
+- Logotipo: "pockt" en minúsculas, Inter 800, con un punto-orbe al final. Apertura: el orbe se presenta con el logotipo y se disuelve en el resplandor del Inicio (~1,1 s, solo en arranque en frío).
 - Validación: instalar en el A54 y revisar el ícono en la pantalla de inicio real, en fondos claro y oscuro y con íconos temáticos.
 
 ## 7. Backup, restauración y seguridad

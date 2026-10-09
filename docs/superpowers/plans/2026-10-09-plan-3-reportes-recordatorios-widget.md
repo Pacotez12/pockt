@@ -137,13 +137,14 @@ Cuatro vistas deslizables (`PageView` con indicador): 1) **Mes por categoría** 
 
 - [ ] **Step 1:** Implementar y compilar. **Step 2** (orquestador): agregar el tile en el panel del A54 y verificar que abre la grilla. **Step 3:** Checkpoint. `feat: tile de ajustes rápidos`.
 
-### Task 7b: Logotipo "Pockt" y animación de apertura
+### Task 7b: Logotipo "pockt" y animación de apertura
 
-Pedido del autor. **Antes de empezar, el orquestador usa la skill `find-skills`** para buscar skills de diseño de logotipos/wordmarks y de animaciones de apertura, y nombra en el prompt las que sirvan.
+**Decidido por el autor (2026-10-09), sobre bocetos:** logotipo **D** y apertura **2**. Referencia visual: `.superpowers/brainstorm/141047-1791565808/content/wordmark-splash.html`.
 
-- **Logotipo (wordmark):** "Pockt" como marca tipográfica propia (no solo Inter en negrita): ajuste de espaciado, una o dos letras con un detalle del orbe o de la curva de la abertura. Entregables: `docs/brand/pockt-wordmark.svg` (claro y oscuro), versión horizontal orbe + palabra (`pockt-lockup.svg`), y su uso en splash, primer uso y README.
-- **Apertura:** el splash del sistema (Android 12+: `AnimatedVectorDrawable`, ≤ 1 s) muestra el orbe; Flutter continúa sin corte: el resplandor se abre, aparece el logotipo, y el orbe se funde con el resplandor del Inicio. Total ≤ 900 ms, solo en arranque en frío, se saltea al tocar, y con "reducir animaciones" pasa a un fundido simple. Mientras tanto se abre la base y se generan las sugerencias (la animación tapa la carga real, no la alarga).
-- Tests: con `disableAnimations` no hay animación; el Inicio queda visible después de la apertura; tocar la saltea.
+- **Logotipo D:** "pockt" **en minúsculas**, Inter peso 800, tracking −0,06 em, con un **punto-orbe** al final (círculo de 0,22 em con el degradado radial del orbe y un halo suave), alineado a la línea de base. El punto funciona solo como mini-ícono. Entregables: widget `PocktWordmark({double size})` en `lib/core/design/wordmark.dart` (texto + punto pintado; colores de los tokens según el tema) y `docs/brand/pockt-wordmark.svg` (claro y oscuro).
+- **Apertura 2 — "el orbe se convierte en el Inicio":** splash del sistema con el orbe (vectorial, ya existe) → en Flutter, sin corte: el orbe hace un pequeño rebote, aparece el logotipo debajo, y luego el orbe se disuelve mientras su resplandor viaja hacia arriba y queda como el `MonthGlow` del Inicio; el Inicio entra con un fundido y un leve ascenso. Total ~1,1 s. Solo en arranque en frío; se saltea al tocar; con "reducir animaciones" → fundido simple. La apertura tapa la carga real (abrir base, generar sugerencias), no la alarga.
+- Skills a nombrar en el prompt: `animate`, `emil-design-eng`, `apple-design`, `flutter-animating-apps` (y `logo-animation` / `SVG Logo Designer` si el autor aprueba instalarlas).
+- Tests: con `disableAnimations` no hay animación y el Inicio aparece directo; tocar saltea; al terminar, el Inicio queda visible y el `MonthGlow` con su color normal.
 - Checkpoint. `feat: logotipo y animación de apertura`.
 
 ### Task 8: Verificación en el A54 y v0.3.0
