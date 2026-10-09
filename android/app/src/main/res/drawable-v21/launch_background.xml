@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash previo a Android 12: fondo negro con el orbe vectorial centrado. -->
+<!-- Splash previo a Android 12: solo negro; la apertura animada la hace Flutter. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@android:color/black" />
-    <item
-        android:width="160dp"
-        android:height="160dp"
-        android:gravity="center"
-        android:drawable="@drawable/ic_launcher_foreground" />
 </layer-list>

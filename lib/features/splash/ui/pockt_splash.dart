@@ -84,7 +84,8 @@ class _PocktSplashState extends State<PocktSplash>
       // 0.0 .. 0.45: spring bounce de 0.85 -> 1.04 -> 1.0
       final p = (t / 0.45).clamp(0.0, 1.0);
       final spring = Curves.easeOutBack.transform(p);
-      return 0.85 + (1.0 - 0.85) * spring;
+      // Nace desde el negro del splash del sistema (0.6) con rebote.
+      return 0.6 + (1.0 - 0.6) * spring;
     } else {
       // 0.45 .. 1.0: se expande a 3.2 mientras se disuelve
       final p = ((t - 0.45) / 0.55).clamp(0.0, 1.0);
@@ -94,6 +95,10 @@ class _PocktSplashState extends State<PocktSplash>
   }
 
   double _evaluateOrbOpacity(double t) {
+    if (t <= 0.12) {
+      // Aparece desde el negro: el splash del sistema queda vacío.
+      return Curves.easeOut.transform(t / 0.12);
+    }
     if (t <= 0.45) {
       return 1.0;
     }
