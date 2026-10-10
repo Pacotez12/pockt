@@ -655,11 +655,9 @@ packages:
   phosphor_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "flutter-3.44-support"
-      resolved-ref: "71f65b6b46ac6493629437d24cf892c0fb9dfe2a"
-      url: "https://github.com/hiake21c/flutter.git"
-    source: git
+      path: "packages/phosphor_flutter"
+      relative: true
+    source: path
     version: "2.2.0"
   platform:
     dependency: transitive

@@ -40,10 +40,10 @@ dev_dependencies:
   mocktail: 1.0.5
 
 dependency_overrides:
+  # Copia local de phosphor_flutter 2.1.0 (MIT) con el ajuste de compatibilidad
+  # para Flutter >= 3.44; el paquete oficial no se publica desde 2024.
   phosphor_flutter:
-    git:
-      url: https://github.com/hiake21c/flutter.git
-      ref: flutter-3.44-support
+    path: packages/phosphor_flutter
 
 flutter:
   uses-material-design: true
