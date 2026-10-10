@@ -8,6 +8,7 @@ import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/transactions/data/categories_repository.dart';
 import 'package:pockt/features/transactions/data/keywords_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -23,6 +24,7 @@ final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
   return TransactionsRepository(
     ref.watch(databaseProvider),
     notifier: ref.watch(notifierProvider),
+    homeWidget: ref.watch(homeWidgetPlatformProvider),
   );
 });
 

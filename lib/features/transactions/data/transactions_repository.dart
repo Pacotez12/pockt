@@ -5,6 +5,7 @@ import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/budgets/domain/budget_status.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:uuid/uuid.dart';
 
 class TxView {
@@ -25,11 +26,13 @@ class TransactionsRepository {
   final AppDatabase db;
   final DateTime Function() _clock;
   final Notifier? notifier;
+  final HomeWidgetPlatform? homeWidget;
 
   TransactionsRepository(
     this.db, {
     DateTime Function()? clock,
     this.notifier,
+    this.homeWidget,
   })  : _clock = clock ?? DateTime.now;
 
   DateTime _now() => _clock().toUtc();
@@ -119,6 +122,17 @@ class TransactionsRepository {
           nowLocal: occurredAt,
           db: db,
           notifier: notif,
+        );
+      } catch (_) {}
+    }
+
+    final hw = homeWidget;
+    if (hw != null) {
+      try {
+        await HomeWidgetBridge.update(
+          db: db,
+          nowLocal: toLocal(occurredAt),
+          platform: hw,
         );
       } catch (_) {}
     }

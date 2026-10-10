@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
@@ -8,18 +10,55 @@ import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/reports/ui/reports_screen.dart';
 import 'package:pockt/features/transactions/ui/transactions_screen.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 
 /// Shell principal con barra flotante de vidrio y selector de pestañas:
 /// Inicio · Movimientos · ＋ · Presupuestos · Reportes.
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   int _currentIndex = 0;
+  StreamSubscription<Uri?>? _widgetClickSub;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initHomeWidgetLaunch();
+    });
+  }
+
+  Future<void> _initHomeWidgetLaunch() async {
+    final platform = ref.read(homeWidgetPlatformProvider);
+    try {
+      final initialUri = await platform.initiallyLaunchedUri();
+      if (initialUri != null && mounted) {
+        await handleWidgetLaunchUri(context, initialUri);
+      }
+    } catch (_) {}
+
+    try {
+      _widgetClickSub = platform.widgetClicks.listen(
+        (uri) async {
+          if (uri != null && mounted) {
+            await handleWidgetLaunchUri(context, uri);
+          }
+        },
+        onError: (_) {},
+      );
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _widgetClickSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

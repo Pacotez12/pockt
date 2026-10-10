@@ -7,6 +7,7 @@ import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// Punto de entrada top-level ejecutado en segundo plano por Workmanager.
@@ -30,6 +31,9 @@ void callbackDispatcher() {
 
       // 2. Reprogramar recordatorios según el estado actual
       await scheduler.reschedule(nowLocal: now);
+
+      // 3. Actualizar widget de pantalla de inicio
+      await HomeWidgetBridge.update(db: db, nowLocal: now);
 
       await db.close();
       return true;
