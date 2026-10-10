@@ -26,3 +26,13 @@ El orquestador corre la medición en el A54 y pasa la tabla por escenario. Para 
 
 - [ ] Por cada corrección: medición antes/después del escenario afectado (la corre el orquestador), commit con los números en el mensaje.
 - [ ] Cierre: todos los escenarios con raster y build p99 ≤ 8,3 ms, o un informe honesto de los que no llegan y por qué.
+
+### Task 3: Resplandor aurora con reacción al mes
+
+**Spec:** §6.2 punto 2 (aurora sutil, reacción al presupuesto, pulso al guardar). **Files:** Modify `lib/features/home/ui/month_glow.dart` y donde se use; Test `test/features/home/month_glow_test.dart`.
+
+- Dos manchas con degradado radial pintado una vez; deriva lenta con `AnimationController` repetido (ida y vuelta) aplicado solo como `Transform` (traslación + escala) dentro de un `RepaintBoundary`. Con `MediaQuery.disableAnimations` quedan quietas.
+- Función pura `glowTint(Color base, double spentRatio)`: sin mezcla < 0,8; hacia ámbar entre 0,8 y 1,0; rojo-rosa ≥ 1,0. `spentRatio` = gastado del mes / suma de presupuestos; null sin presupuestos (sin mezcla). Tests unitarios de los tres tramos.
+- Pulso al guardar un movimiento (escala 1 → 1,08 → 1, ~500 ms). Test de widget: el pulso se dispara al guardar.
+- Sin regresión de rendimiento: el orquestador mide `scroll_inicio` y `cambio_mes` (mediana de 3) antes y después.
+- Checkpoint. `feat: resplandor aurora que reacciona al mes`.
