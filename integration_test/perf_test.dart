@@ -15,6 +15,8 @@ import 'package:timezone/data/latest.dart' as tz;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // Captura todos los frames reales (no solo los de cada pump).
+  binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets('medicion de rendimiento por escenario', (tester) async {
     // Base en memoria: la medición corre en el teléfono real y no debe
