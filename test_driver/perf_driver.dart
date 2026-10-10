@@ -5,21 +5,26 @@ import 'package:integration_test/integration_test_driver.dart';
 Future<void> main() => integrationDriver(
       responseDataCallback: (data) async {
         if (data != null) {
-          final timelineData = data['transiciones'] as Map<String, dynamic>;
-          final timeline = driver.Timeline.fromJson(timelineData);
-          final summary = driver.TimelineSummary.summarize(timeline);
-          await summary.writeTimelineToFile(
-            'transiciones',
-            pretty: true,
-            includeSummary: true,
-          );
+          for (final entry in data.entries) {
+            final key = entry.key;
+            final val = entry.value;
+            if (val is Map<String, dynamic>) {
+              final timeline = driver.Timeline.fromJson(val);
+              final summary = driver.TimelineSummary.summarize(timeline);
+              await summary.writeTimelineToFile(
+                key,
+                pretty: true,
+                includeSummary: true,
+              );
 
-          _printTopRasterEvents(timelineData);
+              _printTopRasterEvents(key, val);
+            }
+          }
         }
       },
     );
 
-void _printTopRasterEvents(Map<String, dynamic> timelineData) {
+void _printTopRasterEvents(String scenario, Map<String, dynamic> timelineData) {
   final events = (timelineData['traceEvents'] as List<dynamic>?)
           ?.cast<Map<String, dynamic>>() ??
       const [];
@@ -71,7 +76,7 @@ void _printTopRasterEvents(Map<String, dynamic> timelineData) {
     ..sort((a, b) => b.value.compareTo(a.value));
   final top5 = sorted.take(5);
 
-  stdout.writeln('\n--- Top 5 eventos de raster por tiempo total ---');
+  stdout.writeln('\n--- [$scenario] Top 5 eventos de raster por tiempo total ---');
   for (final entry in top5) {
     final ms = (entry.value / 1000).toStringAsFixed(2);
     stdout.writeln('  ${entry.key}: $ms ms');
