@@ -14,7 +14,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/versión-0.2-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-0.3-FF8A3D)](#estado)
 
 <br>
 
@@ -31,6 +31,8 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
   <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con calendario de calor, detalle del día, presupuestos y bandeja de sugeridos" width="100%">
 </picture>
 
+<p align="center"><img src="docs/brand/readme/gallery-reports.png" alt="Reportes de Pockt: por categoría, evolución y por comercio" width="100%"></p>
+
 ---
 
 ## Qué es Pockt
@@ -42,7 +44,9 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Tus días, a la vista.** Un calendario de calor del mes, al estilo de las contribuciones de GitHub, que muestra en qué días gastaste más. Tocás un día y ves en qué se fue.
 - **Presupuestos por categoría** con anillos de progreso y notificaciones al 80 % y al 100 % (una sola vez por mes).
 - **Recurrentes y cobros** que te esperan en una bandeja para confirmar, sin cargarse a ciegas. Entiende el cobro quincenal real: si el 15 cae en fin de semana o feriado, puede ser el día hábil anterior o el siguiente, y el "quedan" arranca el día que cobraste de verdad.
-- **Recordatorios con intensidad**: de "suave" a "insistente", y solo si ese día no anotaste nada.
+- **Recordatorios con intensidad**: de "suave" a "insistente", con textos que cambian cada día, y solo si ese día no anotaste nada.
+- **Widget y acceso rápido**: tus 4 categorías más usadas en la pantalla de inicio y un tile en el panel de ajustes rápidos para anotar sin abrir la app.
+- **Sueldo mensual con reparto**: por ejemplo 30 % el 15 y 70 % a fin de mes; cada cobro se sugiere con su monto.
 - **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura y ranking por comercio.
 
 ## Diseño
@@ -112,7 +116,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 |---|---|---|
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
 | **Plan 2** | Presupuestos, recurrentes, cobro quincenal con días hábiles y feriados, bandeja de sugeridos, Ajustes | ✅ v0.2 |
-| **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ⏳ |
+| **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ✅ v0.3 |
 | **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
