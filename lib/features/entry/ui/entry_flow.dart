@@ -36,7 +36,7 @@ Widget entrySpringTransitionsBuilder(
     ).animate(curved),
     child: FadeTransition(
       opacity: curved,
-      child: child,
+      child: RepaintBoundary(child: child),
     ),
   );
 }
@@ -627,7 +627,7 @@ class _CategoryGridState extends ConsumerState<_CategoryGrid> {
                           width: 58,
                           height: 58,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(29),
                             color: catColor,
                             boxShadow: [
                               BoxShadow(
