@@ -107,6 +107,9 @@ Barra flotante de vidrio: Inicio · Movimientos · **＋** · Presupuestos · Re
 De arriba a abajo:
 1. Selector de mes e ícono de ajustes.
 2. Total gastado del mes, grande, con el **resplandor** detrás. Su color sale de la categoría con más gasto del mes y cambia con una transición lenta.
+   - **Aurora sutil** (decidido 2026-10-10, maqueta A): el resplandor son **dos manchas** de color que se desplazan y escalan muy despacio (ciclos de ~22 y ~26 s, ida y vuelta), como una aurora. Cada mancha se pinta una sola vez y solo se anima con transformaciones (traslación y escala dentro de un `RepaintBoundary`), sin repintar el degradado en cada frame. Con "reducir movimiento" quedan quietas.
+   - **Reacciona al mes:** el tono base sale de la categoría con más gasto; a medida que el gasto se acerca al presupuesto total del mes se mezcla hacia ámbar (desde el 80 %) y hacia rojo-rosa (100 % o más), con transición lenta (~900 ms). Sin presupuestos definidos no hay mezcla.
+   - **Pulso al guardar:** al guardar un movimiento, el resplandor late una vez (escala 1 → 1,08 → 1 y un poco más de brillo, ~500 ms).
 3. Barra segmentada por categoría.
 4. Línea de quincena: "2ª quincena · quedan Gs. X · cobrás en N días". "Quedan" = ingresos registrados desde el último día de cobro − gastos desde el último día de cobro (lo que queda hasta volver a cobrar). Con esquema mensual, lo mismo con su único día de cobro. Los días se cuentan hasta el próximo día de cobro según el `income_schedule` vigente.
 5. Tarjeta "N por confirmar" cuando hay sugeridos pendientes. Abre la bandeja.
