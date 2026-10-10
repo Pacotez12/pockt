@@ -572,32 +572,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        GlassCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          borderRadius: BorderRadius.circular(24),
-          child: _recentTxs.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
-                      'Sin movimientos aún',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (final item in _recentTxs)
-                      SwipeableTxRow(
-                        view: item,
-                        subtitle: formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
-                      ),
-                  ],
-                ),
+        TxGroupCard(
+          items: _recentTxs,
+          cardRadius: 24,
+          subtitleBuilder: (item) => formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
+          emptyPlaceholder: Text(
+            'Sin movimientos aún',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: colors.textTertiary,
+            ),
+          ),
         ),
       ],
     );

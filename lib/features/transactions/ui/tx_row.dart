@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/tokens.dart';
@@ -82,8 +83,14 @@ String txTitle(TxView v) {
 class TxRow extends StatelessWidget {
   final TxView view;
   final String subtitle;
+  final EdgeInsetsGeometry padding;
 
-  const TxRow({super.key, required this.view, required this.subtitle});
+  const TxRow({
+    super.key,
+    required this.view,
+    required this.subtitle,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +100,7 @@ class TxRow extends StatelessWidget {
     final isIncome = view.tx.type == TxType.income;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: padding,
       child: Row(
         children: [
           Container(
@@ -158,14 +165,24 @@ class TxRow extends StatelessWidget {
 }
 
 /// Fila deslizable: hacia la izquierda borra (con deshacer), hacia la derecha
-/// abre la edición. Al descartarse se oculta en el mismo frame (Dismissible
-/// exige salir del árbol) y reaparece si el movimiento se restaura.
+/// abre la edición. El fondo de acción ocupa la fila entera y sigue el radio
+/// de las esquinas de la tarjeta sin recortes.
 class SwipeableTxRow extends ConsumerStatefulWidget {
   final TxView view;
   final String subtitle;
+  final bool? isFirst;
+  final bool? isLast;
+  final double cardRadius;
+  final EdgeInsetsGeometry? padding;
 
-  SwipeableTxRow({required this.view, required this.subtitle})
-      : super(key: ValueKey('tx-row-${view.tx.id}'));
+  SwipeableTxRow({
+    required this.view,
+    required this.subtitle,
+    this.isFirst,
+    this.isLast,
+    this.cardRadius = 24.0,
+    this.padding,
+  }) : super(key: ValueKey('tx-row-${view.tx.id}'));
 
   @override
   ConsumerState<SwipeableTxRow> createState() => _SwipeableTxRowState();
@@ -187,25 +204,38 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
   Widget build(BuildContext context) {
     if (_gone) return const SizedBox.shrink();
     final colors = context.pockt;
-    final radius = BorderRadius.circular(16);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final BorderRadius rowRadius;
+    if (widget.isFirst == null && widget.isLast == null) {
+      rowRadius = BorderRadius.circular(16);
+    } else {
+      rowRadius = BorderRadius.vertical(
+        top: (widget.isFirst ?? false) ? Radius.circular(widget.cardRadius) : Radius.zero,
+        bottom: (widget.isLast ?? false) ? Radius.circular(widget.cardRadius) : Radius.zero,
+      );
+    }
 
     Widget actionBackground({
+      required Key key,
       required Alignment alignment,
       required Color color,
       required IconData icon,
       required Color iconColor,
     }) {
-      return DecoratedBox(
-        decoration: BoxDecoration(color: color, borderRadius: radius),
-        child: Align(
-          alignment: alignment,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
+      return Container(
+        key: key,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: rowRadius,
         ),
+        alignment: alignment,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Icon(icon, size: 20, color: iconColor),
       );
     }
+
+    final rowBackground = Color.alphaBlend(colors.glassFill, colors.background);
 
     return Dismissible(
       key: ValueKey('dismiss-${widget.view.tx.id}'),
@@ -214,16 +244,18 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
         DismissDirection.startToEnd: 0.25,
       },
       background: actionBackground(
+        key: const ValueKey('tx-action-bg-edit'),
         alignment: Alignment.centerLeft,
-        color: colors.glassFill,
+        color: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
         icon: uiIcon('pencil-simple'),
         iconColor: colors.textPrimary,
       ),
       secondaryBackground: actionBackground(
+        key: const ValueKey('tx-action-bg-delete'),
         alignment: Alignment.centerRight,
         color: colors.brandEnd.withValues(alpha: 0.85),
         icon: uiIcon('trash'),
-        iconColor: colors.textPrimary,
+        iconColor: Colors.white,
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
@@ -237,7 +269,67 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
         setState(() => _gone = true);
         deleteWithUndo(context, ref, widget.view.tx.id);
       },
-      child: TxRow(view: widget.view, subtitle: widget.subtitle),
+      child: Container(
+        decoration: BoxDecoration(
+          color: rowBackground,
+          borderRadius: rowRadius,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: TxRow(
+          view: widget.view,
+          subtitle: widget.subtitle,
+          padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de vidrio para agrupar filas de movimientos en una sola tarjeta visual
+/// sin recortes en los bordes y asegurando esquinas continuas.
+class TxGroupCard extends StatelessWidget {
+  final List<TxView> items;
+  final String Function(TxView view) subtitleBuilder;
+  final double cardRadius;
+  final Widget? emptyPlaceholder;
+
+  const TxGroupCard({
+    super.key,
+    required this.items,
+    required this.subtitleBuilder,
+    this.cardRadius = 24.0,
+    this.emptyPlaceholder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      if (emptyPlaceholder != null) {
+        return GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+          borderRadius: BorderRadius.circular(cardRadius),
+          child: Center(child: emptyPlaceholder),
+        );
+      }
+      return const SizedBox.shrink();
+    }
+
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(cardRadius),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < items.length; i++)
+            SwipeableTxRow(
+              view: items[i],
+              subtitle: subtitleBuilder(items[i]),
+              isFirst: i == 0,
+              isLast: i == items.length - 1,
+              cardRadius: cardRadius,
+            ),
+        ],
+      ),
     );
   }
 }

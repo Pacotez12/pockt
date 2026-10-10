@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
-import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
@@ -204,18 +203,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               ),
                             ),
                           ),
-                          GlassCard(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Column(
-                              children: [
-                                for (final item in items)
-                                  SwipeableTxRow(
-                                    view: item,
-                                    subtitle: _rowSubtitle(item, now),
-                                  ),
-                              ],
-                            ),
+                          TxGroupCard(
+                            items: items,
+                            cardRadius: 20,
+                            subtitleBuilder: (item) => _rowSubtitle(item, now),
                           ),
                         ],
                       );
