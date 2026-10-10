@@ -1150,8 +1150,9 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.glassBorder.withValues(alpha: 0.5),
+        color: colors.glassFill,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.glassBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

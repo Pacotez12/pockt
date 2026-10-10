@@ -7,6 +7,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/reports/data/reports_repository.dart';
 import 'package:pockt/features/reports/ui/reports_screen.dart';
@@ -169,5 +170,38 @@ void main() {
     // Se abre el detalle/hoja con los movimientos del mes de Comida
     expect(find.text('Compras de la semana'), findsOneWidget);
     expect(find.text('Superseis'), findsOneWidget);
+  });
+
+  testWidgets('en Comparación las tarjetas Mes actual / Mes anterior usan los tokens de diseño', (tester) async {
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 120000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 5, 12, 0),
+    );
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 100000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 9, 5, 12, 0),
+    );
+
+    await pumpReportsScreen(tester);
+
+    final pageView = find.byType(PageView);
+    await tester.drag(pageView, const Offset(-450, 0));
+    await tester.pumpAndSettle();
+    await tester.drag(pageView, const Offset(-450, 0));
+    await tester.pumpAndSettle();
+
+    final pillFinder = find.ancestor(
+      of: find.textContaining('Mes actual'),
+      matching: find.byType(Container),
+    ).first;
+
+    final container = tester.widget<Container>(pillFinder);
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.color, PocktColors.dark.glassFill);
+    expect(decoration.border, Border.all(color: PocktColors.dark.glassBorder));
   });
 }
