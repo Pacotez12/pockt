@@ -18,6 +18,7 @@ import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/backup/ui/backup_screen.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/home/domain/heat_levels.dart';
+import 'package:pockt/features/home/domain/home_cards_config.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
@@ -70,6 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
   StreamSubscription<Map<int, int>>? _dailyTotalsSub;
   StreamSubscription<List<TxView>>? _recentSub;
+  StreamSubscription<int>? _recentCountSub;
   StreamSubscription<List<SuggestionView>>? _suggestionsSub;
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
   StreamSubscription<DateTime?>? _lastSalarySub;
@@ -123,6 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
     _recentSub?.cancel();
+    _recentCountSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
     _lastSalarySub?.cancel();
@@ -271,6 +274,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _initSubscriptions() {
     _recentSub?.cancel();
+    _recentCountSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
     _lastSalarySub?.cancel();
@@ -330,10 +334,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     _initMonthDataSubscriptions();
 
-    _recentSub = repo.watchRecent(limit: 5).listen((recent) {
+    _recentCountSub = settingsRepo
+        .watch(SettingsKeys.homeRecentCount)
+        .map((v) => int.tryParse(v ?? '') ?? 5)
+        .listen((count) {
       if (mounted) {
-        setState(() {
-          _recentTxs = recent;
+        _recentSub?.cancel();
+        _recentSub = repo.watchRecent(limit: count).listen((recent) {
+          if (mounted) {
+            setState(() {
+              _recentTxs = recent;
+            });
+          }
         });
       }
     });
@@ -371,6 +383,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final glowMode = ref.watch(glowModeProvider).value ?? GlowMode.subtle;
+    final reactsToBudget = ref.watch(glowReactsToBudgetProvider).value ?? true;
+    final weekStart = ref.watch(weekStartProvider).value ?? WeekStart.monday;
+    final cardsConfig = ref.watch(homeCardsConfigProvider).value ?? defaultHomeCards;
+
     final baseColor = _categoryTotals.isNotEmpty
         ? Color(
             isDark
@@ -380,7 +397,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : colors.brandStart;
 
     final totalBudget = _budgets.fold<int>(0, (sum, b) => sum + b.budget.monthlyLimit);
-    final spentRatio = totalBudget > 0 ? _monthTotal / totalBudget : null;
+    final spentRatio = (reactsToBudget && totalBudget > 0) ? _monthTotal / totalBudget : null;
     final glowColor = glowTint(baseColor, spentRatio);
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -408,6 +425,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: MonthGlow(
               color: glowColor,
               pulseTrigger: ref.watch(monthGlowPulseProvider),
+              mode: glowMode,
             ),
           ),
           // Contenido con scroll
@@ -425,14 +443,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _buildSpendingTotal(context),
                   const SizedBox(height: 16),
                   _buildSegmentedBar(context),
-                  if (pLine != null) ...[
-                    const SizedBox(height: 10),
-                    _buildPeriodLine(context, pLine),
-                  ],
-                  if (_pendingSuggestions.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _buildPendingCard(context),
-                  ],
                   StreamBuilder<BackupStatus>(
                     stream: ref.watch(backupServiceProvider).watchStatus(),
                     builder: (context, snapshot) {
@@ -445,21 +455,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       return const SizedBox.shrink();
                     },
                   ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onHorizontalDragEnd: _handleHorizontalSwipe,
-                    child: HeatCalendar(
-                      year: _year,
-                      month: _month,
-                      levels: heatLevels(_dailyTotals),
-                      todayLocal: _getNow(),
-                      onDayTap: (day) {
-                        showDayDetail(context, DateTime(_year, _month, day));
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRecentTransactions(context),
+                  ...cardsConfig
+                      .where((item) => item.visible)
+                      .map((item) => _buildCardById(
+                            context,
+                            item.id,
+                            pLine: pLine,
+                            weekStart: weekStart,
+                          ))
+                      .whereType<Widget>(),
                   const SizedBox(height: 110),
                 ],
               ),
@@ -468,6 +472,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Widget? _buildCardById(
+    BuildContext context,
+    String id, {
+    PeriodLine? pLine,
+    required WeekStart weekStart,
+  }) {
+    switch (id) {
+      case 'period':
+        if (pLine == null) return null;
+        return Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: _buildPeriodLine(context, pLine),
+        );
+      case 'suggestions':
+        if (_pendingSuggestions.isEmpty) return null;
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: _buildPendingCard(context),
+        );
+      case 'calendar':
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: GestureDetector(
+            onHorizontalDragEnd: _handleHorizontalSwipe,
+            child: HeatCalendar(
+              year: _year,
+              month: _month,
+              levels: heatLevels(_dailyTotals),
+              todayLocal: _getNow(),
+              weekStart: weekStart,
+              onDayTap: (day) {
+                showDayDetail(context, DateTime(_year, _month, day));
+              },
+            ),
+          ),
+        );
+      case 'recent':
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: _buildRecentTransactions(context),
+        );
+      default:
+        return null;
+    }
   }
 
   Widget _buildTopBar(BuildContext context) {

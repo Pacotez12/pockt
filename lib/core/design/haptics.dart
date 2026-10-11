@@ -2,12 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 abstract final class Haptics {
+  /// Permite apagar las vibraciones globalmente (ajuste `feedback.haptics`).
+  static bool enabled = true;
+
   /// Solo para tests: registra cada haptic disparado sin tocar el canal de
   /// plataforma (mockear SystemChannels.platform cuelga los tests de widgets).
   @visibleForTesting
   static void Function(String kind)? debugRecorder;
 
   static Future<void> _fire(String kind, Future<void> Function() feedback) {
+    if (!enabled) return Future.value();
     debugRecorder?.call(kind);
     return feedback();
   }

@@ -10,6 +10,7 @@ import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:pockt/features/entry/ui/amount_keypad.dart';
@@ -236,10 +237,11 @@ class _EntryCategoryPickerScreenState
   void _subscribeCategories() {
     _categoriesSub?.cancel();
     final repo = ref.read(categoriesRepositoryProvider);
+    final order = ref.read(categoryOrderProvider).value ?? CategoryOrder.manual;
     final kind = _currentType == TxType.expense
         ? CategoryKind.expense
         : CategoryKind.income;
-    _categoriesSub = repo.watchActive(kind).listen((cats) {
+    _categoriesSub = repo.watchActive(kind, order: order).listen((cats) {
       if (mounted) {
         setState(() => _activeCategories = cats);
       }
@@ -614,6 +616,7 @@ class CategoryGrid extends ConsumerStatefulWidget {
 class _CategoryGridState extends ConsumerState<CategoryGrid> {
   StreamSubscription<List<Category>>? _subscription;
   List<Category> _categories = const [];
+  CategoryOrder _currentOrder = CategoryOrder.manual;
 
   @override
   void initState() {
@@ -629,13 +632,16 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
     }
   }
 
-  void _subscribe() {
+  void _subscribe({CategoryOrder? order}) {
+    final effectiveOrder = order ?? _currentOrder;
+    _currentOrder = effectiveOrder;
     _subscription?.cancel();
     final repo = ref.read(categoriesRepositoryProvider);
     final kind = widget.currentType == TxType.expense
         ? CategoryKind.expense
         : CategoryKind.income;
-    _subscription = repo.watchActive(kind).listen((data) {
+    _subscription =
+        repo.watchActive(kind, order: effectiveOrder).listen((data) {
       if (mounted) {
         setState(() => _categories = data);
       }
@@ -652,6 +658,10 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final order = ref.watch(categoryOrderProvider).value ?? CategoryOrder.manual;
+    if (order != _currentOrder) {
+      _subscribe(order: order);
+    }
     final categories = _categories;
 
         return GridView.builder(

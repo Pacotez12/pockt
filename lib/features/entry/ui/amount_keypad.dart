@@ -8,6 +8,7 @@ import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
@@ -49,6 +50,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   String? _merchant;
   String? _note;
   bool _isSaving = false;
+  bool _notePrompted = false;
 
   @override
   void initState() {
@@ -79,6 +81,43 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   Future<void> _onSave() async {
     final amount = keypadValue(_digits);
     if (amount <= 0 || _isSaving) return;
+
+    final askNote = ref.read(askNoteProvider).value ?? false;
+    if (askNote && !_notePrompted && (_note == null || _note!.isEmpty)) {
+      _notePrompted = true;
+      final noteController = TextEditingController(text: _note ?? '');
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Nota o comercio'),
+          content: TextField(
+            key: const ValueKey('ask-note-field'),
+            controller: noteController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Ej. Almuerzo, Superseis',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Omitir'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Listo'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == null) {
+        _notePrompted = false;
+        return;
+      }
+      if (noteController.text.trim().isNotEmpty) {
+        _note = noteController.text.trim();
+      }
+    }
 
     setState(() => _isSaving = true);
     try {
@@ -139,6 +178,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
     );
     final amount = keypadValue(_digits);
     final canSave = amount > 0 && !_isSaving;
+    ref.watch(askNoteProvider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -390,7 +430,10 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 // 3x4 Keypad Grid
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _AmountKeypadGrid(onKey: _onKey),
+                  child: _AmountKeypadGrid(
+                    onKey: _onKey,
+                    quickKey: ref.watch(quickKeyProvider).value ?? '000',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // Save Button (FilledButton)
@@ -435,26 +478,22 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
 
 class _AmountKeypadGrid extends StatelessWidget {
   final ValueChanged<String> onKey;
+  final String quickKey;
 
-  const _AmountKeypadGrid({required this.onKey});
-
-  static const List<String> _keys = [
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '000',
-    '0',
-    '⌫',
-  ];
+  const _AmountKeypadGrid({
+    required this.onKey,
+    this.quickKey = '000',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final keys = [
+      '1', '2', '3',
+      '4', '5', '6',
+      '7', '8', '9',
+      quickKey, '0', '⌫',
+    ];
+
     return Column(
       children: [
         for (var row = 0; row < 4; row++) ...[
@@ -465,8 +504,8 @@ class _AmountKeypadGrid extends StatelessWidget {
                 if (col > 0) const SizedBox(width: 8),
                 Expanded(
                   child: _KeypadButton(
-                    label: _keys[row * 3 + col],
-                    onTap: () => onKey(_keys[row * 3 + col]),
+                    label: keys[row * 3 + col],
+                    onTap: () => onKey(keys[row * 3 + col]),
                   ),
                 ),
               ],
@@ -504,7 +543,7 @@ class _KeypadButton extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: label == '000' ? 18 : 22,
+            fontSize: (label == '000' || label == '00') ? 18 : 22,
             fontWeight: FontWeight.w500,
             color: colors.textPrimary,
             fontFeatures: const [FontFeature.tabularFigures()],

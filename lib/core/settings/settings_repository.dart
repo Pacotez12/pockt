@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/time/date_period.dart';
 
 export 'package:pockt/core/time/date_period.dart';
@@ -19,6 +20,25 @@ abstract class SettingsKeys {
   static const backupGoogleAccount = 'backup.googleAccount';
   static const securityLock = 'security.lock';
   static const periodMonthStart = 'period.monthStart';
+
+  // Carga (§7b)
+  static const entryCategoryOrder = 'entry.categoryOrder';
+  static const entryQuickKey = 'entry.quickKey';
+  static const entryAskNote = 'entry.askNote';
+  static const feedbackHaptics = 'feedback.haptics';
+
+  // Inicio y apariencia (§7b)
+  static const homeCards = 'home.cards';
+  static const homeRecentCount = 'home.recentCount';
+  static const glowMode = 'glow.mode';
+  static const glowReactsToBudget = 'glow.reactsToBudget';
+  static const calendarWeekStart = 'calendar.weekStart';
+  static const motionReduce = 'motion.reduce';
+
+  // Avisos (§7b)
+  static const budgetAlertsEnabled = 'budget.alertsEnabled';
+  static const budgetAlertLow = 'budget.alertLow';
+  static const budgetAlertHigh = 'budget.alertHigh';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -82,5 +102,119 @@ final monthStartModeProvider = StreamProvider<MonthStartMode>((ref) {
   return repo
       .watch(SettingsKeys.periodMonthStart)
       .map((val) => MonthStartMode.parse(val));
+});
+
+/// Orden de categorías en el flujo de carga (§7b Carga).
+enum CategoryOrder {
+  mostUsed,
+  manual;
+
+  static CategoryOrder parse(String? value) {
+    if (value == 'mostUsed') return CategoryOrder.mostUsed;
+    return CategoryOrder.manual;
+  }
+}
+
+/// Modo de resplandor ambiental aurora (§7b Inicio y apariencia).
+enum GlowMode {
+  off,
+  subtle,
+  full;
+
+  static GlowMode parse(String? value) {
+    switch (value) {
+      case 'off':
+        return GlowMode.off;
+      case 'full':
+        return GlowMode.full;
+      case 'subtle':
+      default:
+        return GlowMode.subtle;
+    }
+  }
+}
+
+/// Primer día de la semana (§7b Inicio y apariencia).
+enum WeekStart {
+  monday,
+  sunday;
+
+  static WeekStart parse(String? value) {
+    if (value == 'sunday') return WeekStart.sunday;
+    return WeekStart.monday;
+  }
+}
+
+final categoryOrderProvider = StreamProvider<CategoryOrder>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.entryCategoryOrder).map(CategoryOrder.parse);
+});
+
+final quickKeyProvider = StreamProvider<String>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.entryQuickKey).map((val) => val == '00' ? '00' : '000');
+});
+
+final askNoteProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.entryAskNote).map((val) => val == 'true');
+});
+
+final hapticsEnabledProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.feedbackHaptics).map((val) {
+    final enabled = val == null ? true : (val == 'true');
+    Haptics.enabled = enabled;
+    return enabled;
+  });
+});
+
+final homeCardsProvider = StreamProvider<String?>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.homeCards);
+});
+
+final recentCountProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.homeRecentCount).map((val) {
+    final n = int.tryParse(val ?? '');
+    if (n == 10 || n == 20) return n!;
+    return 5;
+  });
+});
+
+final glowModeProvider = StreamProvider<GlowMode>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.glowMode).map(GlowMode.parse);
+});
+
+final glowReactsToBudgetProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.glowReactsToBudget).map((val) => val == null ? true : val == 'true');
+});
+
+final weekStartProvider = StreamProvider<WeekStart>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.calendarWeekStart).map(WeekStart.parse);
+});
+
+final motionReduceProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.motionReduce).map((val) => val == 'true');
+});
+
+final budgetAlertsEnabledProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.budgetAlertsEnabled).map((val) => val == null || val.isEmpty || val == 'true');
+});
+
+final budgetAlertLowProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.budgetAlertLow).map((val) => int.tryParse(val ?? '') ?? 80);
+});
+
+final budgetAlertHighProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.budgetAlertHigh).map((val) => int.tryParse(val ?? '') ?? 100);
 });
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/notifications/notifier.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/budgets/domain/budget_status.dart';
 import 'package:pockt/features/recurring/data/recurring_repository.dart';
@@ -170,5 +171,38 @@ void main() {
       dayOfMonth: 15,
     );
     expect(notifier.permissionRequestedCount, 2);
+  });
+
+  test('con umbral 70 la alerta sale al 70 %', () async {
+    final settingsRepo = SettingsRepository(db);
+    await settingsRepo.set(SettingsKeys.budgetAlertLow, '70');
+    await budgetsRepo.setLimit(comidaId, 1000000);
+
+    // Gasto de 700.000 cruza el 70 %
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 700000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 10),
+    );
+
+    expect(notifier.shown, hasLength(1));
+    expect(notifier.shown.first.body, 'Comida: llegaste al 70 % de tu presupuesto');
+  });
+
+  test('cuando las alertas están desactivadas no sale ninguna', () async {
+    final settingsRepo = SettingsRepository(db);
+    await settingsRepo.set(SettingsKeys.budgetAlertsEnabled, 'false');
+    await budgetsRepo.setLimit(comidaId, 1000000);
+
+    // Gasto de 1.200.000 que normalmente dispararía alerta
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 1200000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 10),
+    );
+
+    expect(notifier.shown, isEmpty);
   });
 }

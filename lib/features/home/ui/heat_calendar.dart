@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 
 /// Calendario de calor mensual ("Tus días").
-/// Grilla lunes→domingo con niveles de intensidad 0..4 según gasto.
+/// Grilla lunes→domingo o domingo→sábado con niveles de intensidad 0..4 según gasto.
 class HeatCalendar extends StatelessWidget {
   final int year;
   final int month;
   final Map<int, int> levels;
   final DateTime todayLocal;
   final ValueChanged<int> onDayTap;
+  final WeekStart weekStart;
 
   const HeatCalendar({
     super.key,
@@ -20,6 +22,7 @@ class HeatCalendar extends StatelessWidget {
     required this.levels,
     required this.todayLocal,
     required this.onDayTap,
+    this.weekStart = WeekStart.monday,
   });
 
   @override
@@ -28,8 +31,9 @@ class HeatCalendar extends StatelessWidget {
 
     final firstDayOfMonth = DateTime(year, month, 1);
     final daysInMonth = DateTime(year, month + 1, 0).day;
-    // En Dart: DateTime.monday = 1. Si empieza en jueves (4) -> 3 celdas vacías previas
-    final leadingEmptyCount = firstDayOfMonth.weekday - 1;
+    final leadingEmptyCount = weekStart == WeekStart.monday
+        ? (firstDayOfMonth.weekday - 1)
+        : (firstDayOfMonth.weekday % 7);
 
     final totalCells = leadingEmptyCount + daysInMonth;
 
@@ -99,17 +103,27 @@ class HeatCalendar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Encabezado de días de la semana: L M M J V S D
+          // Encabezado de días de la semana
           Row(
-            children: const [
-              _WeekdayHeader('L'),
-              _WeekdayHeader('M'),
-              _WeekdayHeader('M'),
-              _WeekdayHeader('J'),
-              _WeekdayHeader('V'),
-              _WeekdayHeader('S'),
-              _WeekdayHeader('D'),
-            ],
+            children: weekStart == WeekStart.monday
+                ? const [
+                    _WeekdayHeader('L'),
+                    _WeekdayHeader('M'),
+                    _WeekdayHeader('M'),
+                    _WeekdayHeader('J'),
+                    _WeekdayHeader('V'),
+                    _WeekdayHeader('S'),
+                    _WeekdayHeader('D'),
+                  ]
+                : const [
+                    _WeekdayHeader('D'),
+                    _WeekdayHeader('L'),
+                    _WeekdayHeader('M'),
+                    _WeekdayHeader('M'),
+                    _WeekdayHeader('J'),
+                    _WeekdayHeader('V'),
+                    _WeekdayHeader('S'),
+                  ],
           ),
           const SizedBox(height: 6),
           // Grilla de celdas

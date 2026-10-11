@@ -52,12 +52,23 @@ class _PocktAppState extends ConsumerState<PocktApp>
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(appearanceProvider).value ?? ThemeMode.system;
+    final reduceMotion = ref.watch(motionReduceProvider).value ?? false;
 
     return MaterialApp(
       title: 'Pockt',
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: themeMode,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        if (reduceMotion) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child,
+          );
+        }
+        return child;
+      },
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

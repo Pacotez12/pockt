@@ -20,7 +20,7 @@ String keypadAppend(String digits, String key) {
   }
 
   if (current.isEmpty) {
-    if (key == '0' || key == '000') {
+    if (key == '0' || key == '000' || key == '00') {
       return '';
     }
     if (key.length == 1 && key.compareTo('1') >= 0 && key.compareTo('9') <= 0) {
@@ -36,6 +36,11 @@ String keypadAppend(String digits, String key) {
 
   if (key == '000') {
     final count = min(3, available);
+    return current + ('0' * count);
+  }
+
+  if (key == '00') {
+    final count = min(2, available);
     return current + ('0' * count);
   }
 

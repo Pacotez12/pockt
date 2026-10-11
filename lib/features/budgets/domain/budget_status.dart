@@ -19,13 +19,18 @@ class BudgetStatus {
   });
 }
 
-BudgetStatus budgetStatus(int spent, int limit) {
+BudgetStatus budgetStatus(
+  int spent,
+  int limit, {
+  double warningRatio = 0.8,
+  double overRatio = 1.0,
+}) {
   final ratio = limit > 0 ? spent / limit : (spent > 0 ? 1.0 : 0.0);
   final remaining = limit - spent;
   final BudgetLevel level;
-  if (ratio >= 1.0) {
+  if (ratio >= overRatio) {
     level = BudgetLevel.over;
-  } else if (ratio >= 0.8) {
+  } else if (ratio >= warningRatio) {
     level = BudgetLevel.warning;
   } else {
     level = BudgetLevel.ok;
@@ -44,11 +49,30 @@ Future<void> evaluateBudgetAlerts(
   required Notifier notifier,
   DatePeriod? period,
 }) async {
+  final alertsSetting = await (db.select(db.settings)
+        ..where((s) => s.key.equals(SettingsKeys.budgetAlertsEnabled)))
+      .getSingleOrNull();
+  final alertsEnabled = alertsSetting == null ||
+      alertsSetting.value.isEmpty ||
+      alertsSetting.value == 'true';
+
+  if (!alertsEnabled) return;
+
   final budget = await (db.select(db.budgets)
         ..where((b) => b.categoryId.equals(categoryId)))
       .getSingleOrNull();
 
   if (budget == null) return;
+
+  final alertLowSetting = await (db.select(db.settings)
+        ..where((s) => s.key.equals(SettingsKeys.budgetAlertLow)))
+      .getSingleOrNull();
+  final alertLow = int.tryParse(alertLowSetting?.value ?? '') ?? 80;
+
+  final alertHighSetting = await (db.select(db.settings)
+        ..where((s) => s.key.equals(SettingsKeys.budgetAlertHigh)))
+      .getSingleOrNull();
+  final alertHigh = int.tryParse(alertHighSetting?.value ?? '') ?? 100;
 
   final category = await (db.select(db.categories)
         ..where((c) => c.id.equals(categoryId)))
@@ -78,7 +102,12 @@ Future<void> evaluateBudgetAlerts(
       .get();
 
   final totalSpent = txs.fold<int>(0, (sum, t) => sum + t.amount);
-  final status = budgetStatus(totalSpent, budget.monthlyLimit);
+  final status = budgetStatus(
+    totalSpent,
+    budget.monthlyLimit,
+    warningRatio: alertLow / 100.0,
+    overRatio: alertHigh / 100.0,
+  );
   final yearMonth =
       '${nowLocal.year}-${nowLocal.month.toString().padLeft(2, '0')}';
 
@@ -87,7 +116,7 @@ Future<void> evaluateBudgetAlerts(
       final overAmount = totalSpent - budget.monthlyLimit;
       final body = overAmount > 0
           ? '$categoryName: te pasaste por ${formatGs(overAmount)}'
-          : '$categoryName: llegaste al 100 % de tu presupuesto';
+          : '$categoryName: llegaste al $alertHigh % de tu presupuesto';
 
       await notifier.show('Pockt', body, payload: 'budget:$categoryId');
       await (db.update(db.budgets)..where((b) => b.id.equals(budget.id))).write(
@@ -98,7 +127,7 @@ Future<void> evaluateBudgetAlerts(
     }
   } else if (status.level == BudgetLevel.warning) {
     if (budget.alert80SentFor != yearMonth) {
-      final body = '$categoryName: llegaste al 80 % de tu presupuesto';
+      final body = '$categoryName: llegaste al $alertLow % de tu presupuesto';
 
       await notifier.show('Pockt', body, payload: 'budget:$categoryId');
       await (db.update(db.budgets)..where((b) => b.id.equals(budget.id))).write(

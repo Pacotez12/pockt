@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 
 final Color glowAmber = PocktColors.dark.warning;
 final Color glowRedPink = PocktColors.dark.brandEnd;
@@ -54,12 +55,14 @@ class MonthGlow extends StatefulWidget {
   final Color color;
   final Object? pulseTrigger;
   final bool? animateDrift;
+  final GlowMode mode;
 
   const MonthGlow({
     super.key,
     required this.color,
     this.pulseTrigger,
     this.animateDrift,
+    this.mode = GlowMode.subtle,
   });
 
   @override
@@ -224,12 +227,14 @@ class _MonthGlowState extends State<MonthGlow>
   }
 
   Widget _buildAurora(Color c, bool isDark) {
-    // Dos manchas separadas y con tonos vecinos (la segunda gira ~40° el
-    // matiz), para que se lean como aurora y no como un solo círculo.
     final hsl = HSLColor.fromColor(c);
     final c2 = hsl.withHue((hsl.hue + 40) % 360).toColor();
-    final spot1 = _buildCachedSpot(c, isDark, size: 470, opacity: 0.9);
-    final spot2 = _buildCachedSpot(c2, isDark, size: 470, opacity: 0.75);
+    final c3 = hsl.withHue((hsl.hue - 35 + 360) % 360).toColor();
+    final isFull = widget.mode == GlowMode.full;
+
+    final spot1 = _buildCachedSpot(c, isDark, size: 470, opacity: isFull ? 1.0 : 0.9);
+    final spot2 = _buildCachedSpot(c2, isDark, size: 470, opacity: isFull ? 0.85 : 0.75);
+    final spot3 = isFull ? _buildCachedSpot(c3, isDark, size: 470, opacity: 0.85) : null;
 
     return AnimatedBuilder(
       animation: Listenable.merge([_drift1Controller, _drift2Controller]),
@@ -260,6 +265,14 @@ class _MonthGlowState extends State<MonthGlow>
                 child: spot2,
               ),
             ),
+            if (spot3 != null)
+              Transform.translate(
+                offset: Offset(offset1.dx * 0.5 + 40, offset2.dy * 0.5 - 30),
+                child: Transform.scale(
+                  scale: (scale1 + scale2) / 2,
+                  child: spot3,
+                ),
+              ),
           ],
         );
       },
@@ -268,6 +281,10 @@ class _MonthGlowState extends State<MonthGlow>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mode == GlowMode.off) {
+      return const SizedBox.shrink();
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentAurora = _buildAurora(_currentColor, isDark);
 
