@@ -317,6 +317,22 @@ class TransactionsRepository {
     });
   }
 
+  Future<List<TxView>> getAllActive() async {
+    final query = db.select(db.transactions).join([
+      innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
+    ])
+      ..where(db.transactions.deletedAt.isNull())
+      ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
+
+    final rows = await query.get();
+    return rows.map((row) {
+      return TxView(
+        tx: row.readTable(db.transactions),
+        category: row.readTable(db.categories),
+      );
+    }).toList();
+  }
+
   Stream<List<TxView>> watchRecent({int limit = 20}) {
     final query = db.select(db.transactions).join([
       innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),

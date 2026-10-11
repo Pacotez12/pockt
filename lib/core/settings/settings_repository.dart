@@ -39,6 +39,10 @@ abstract class SettingsKeys {
   static const budgetAlertsEnabled = 'budget.alertsEnabled';
   static const budgetAlertLow = 'budget.alertLow';
   static const budgetAlertHigh = 'budget.alertHigh';
+
+  // Privacidad y datos (§7b)
+  static const securityLockAfter = 'security.lockAfter';
+  static const privacyHideAmounts = 'privacy.hideAmounts';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -216,5 +220,15 @@ final budgetAlertLowProvider = StreamProvider<int>((ref) {
 final budgetAlertHighProvider = StreamProvider<int>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
   return repo.watch(SettingsKeys.budgetAlertHigh).map((val) => int.tryParse(val ?? '') ?? 100);
+});
+
+final securityLockAfterProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.securityLockAfter).map((val) => int.tryParse(val ?? '') ?? 1);
+});
+
+final privacyHideAmountsProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.privacyHideAmounts).map((val) => val == 'true');
 });
 

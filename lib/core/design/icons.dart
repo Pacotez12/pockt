@@ -178,6 +178,21 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'warning-circle': PhosphorIconsRegular.warningCircle,
   'fingerprint': PhosphorIconsRegular.fingerprint,
   'lock': PhosphorIconsRegular.lock,
+  'clock': PhosphorIconsRegular.clock,
+  'sort-ascending': PhosphorIconsRegular.sortAscending,
+  'keyboard': PhosphorIconsRegular.keyboard,
+  'note-pencil': PhosphorIconsRegular.notePencil,
+  'waveform': PhosphorIconsRegular.waveform,
+  'cards': PhosphorIconsRegular.cards,
+  'list-numbers': PhosphorIconsRegular.listNumbers,
+  'gauge': PhosphorIconsRegular.gauge,
+  'calendar-blank': PhosphorIconsRegular.calendarBlank,
+  'film-strip': PhosphorIconsRegular.filmStrip,
+  'bell-ringing': PhosphorIconsRegular.bellRinging,
+  'warning-octagon': PhosphorIconsRegular.warningOctagon,
+  'timer': PhosphorIconsRegular.timer,
+  'file-csv': PhosphorIconsRegular.fileCsv,
+  'info': PhosphorIconsRegular.info,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -224,6 +239,21 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'warning-circle': PhosphorIconsFill.warningCircle,
   'fingerprint': PhosphorIconsFill.fingerprint,
   'lock': PhosphorIconsFill.lock,
+  'clock': PhosphorIconsFill.clock,
+  'sort-ascending': PhosphorIconsFill.sortAscending,
+  'keyboard': PhosphorIconsFill.keyboard,
+  'note-pencil': PhosphorIconsFill.notePencil,
+  'waveform': PhosphorIconsFill.waveform,
+  'cards': PhosphorIconsFill.cards,
+  'list-numbers': PhosphorIconsFill.listNumbers,
+  'gauge': PhosphorIconsFill.gauge,
+  'calendar-blank': PhosphorIconsFill.calendarBlank,
+  'film-strip': PhosphorIconsFill.filmStrip,
+  'bell-ringing': PhosphorIconsFill.bellRinging,
+  'warning-octagon': PhosphorIconsFill.warningOctagon,
+  'timer': PhosphorIconsFill.timer,
+  'file-csv': PhosphorIconsFill.fileCsv,
+  'info': PhosphorIconsFill.info,
 };
 
 /// Devuelve el [IconData] de Phosphor en estilo Regular o Fill según [filled].

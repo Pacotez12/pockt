@@ -269,6 +269,26 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Borra todos los datos del usuario y restaura las categorías de fábrica.
+  Future<void> wipeAllData() async {
+    await transaction(() async {
+      await delete(transactions).go();
+      await delete(suggestedTransactions).go();
+      await delete(merchantMemory).go();
+      await delete(budgets).go();
+      await delete(salaryDeductions).go();
+      await delete(incomeSchedules).go();
+      await delete(recurringRules).go();
+      await delete(dayMarks).go();
+      await delete(categoryKeywords).go();
+      await delete(categories).go();
+      await delete(settings).go();
+
+      await _seedCategories();
+      await _seedCategoryKeywords();
+    });
+  }
+
   Future<void> _seedCategories() async {
     final seed = <CategoriesCompanion>[
       // 10 categorías de gasto

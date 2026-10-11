@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/security/app_lock.dart';
@@ -39,6 +40,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
       ref.read(appLockControllerProvider).onPaused();
     } else if (state == AppLifecycleState.resumed) {
       ref.read(appLockControllerProvider).onResumed();
+      ref.read(amountsRevealedProvider.notifier).reset();
       _runSuggestionGenerator();
     }
   }

@@ -3,6 +3,8 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/design/theme.dart';
@@ -10,7 +12,7 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:pockt/features/home/ui/home_cards_screen.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
@@ -23,6 +25,13 @@ void main() {
 
   setUp(() async {
     setLocalZone('America/Asuncion');
+    PackageInfo.setMockInitialValues(
+      appName: 'Pockt',
+      packageName: 'app.pockt',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
     testDb = AppDatabase.forTesting(
       DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
     );
@@ -34,7 +43,14 @@ void main() {
   });
 
   Future<void> pumpSettingsScreen(WidgetTester tester) async {
-    addTearDown(() => tester.pumpWidget(const SizedBox()));
+    tester.view.physicalSize = const Size(1000, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.pumpWidget(const SizedBox());
+    });
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -54,14 +70,49 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('SettingsScreen lista Categorías, Esquema de cobro, Recurrentes y Apariencia', (tester) async {
+  testWidgets('SettingsScreen lista las cinco secciones y todas las filas principales', (tester) async {
     await pumpSettingsScreen(tester);
 
     expect(find.text('Ajustes'), findsOneWidget);
-    expect(find.text('Categorías'), findsOneWidget);
+
+    // Secciones
+    expect(find.text('Tu dinero'), findsOneWidget);
+    expect(find.text('Carga'), findsOneWidget);
+    expect(find.text('Inicio y apariencia'), findsOneWidget);
+    expect(find.text('Avisos'), findsOneWidget);
+    expect(find.text('Privacidad y datos'), findsOneWidget);
+
+    // Filas
     expect(find.text('Esquema de cobro'), findsOneWidget);
+    expect(find.text('Inicio del mes'), findsOneWidget);
+    expect(find.text('Categorías'), findsOneWidget);
     expect(find.text('Recurrentes'), findsOneWidget);
+
+    expect(find.text('Orden de categorías'), findsOneWidget);
+    expect(find.text('Tecla rápida'), findsOneWidget);
+    expect(find.text('Pedir nota al guardar'), findsOneWidget);
+    expect(find.text('Vibración'), findsOneWidget);
+
     expect(find.text('Apariencia'), findsOneWidget);
+    expect(find.text('Tarjetas del Inicio'), findsOneWidget);
+    expect(find.text('Movimientos recientes'), findsOneWidget);
+    expect(find.text('Resplandor aurora'), findsOneWidget);
+    expect(find.text('Aurora reacciona al presupuesto'), findsOneWidget);
+    expect(find.text('La semana empieza'), findsOneWidget);
+    expect(find.text('Reducir animaciones'), findsOneWidget);
+
+    expect(find.text('Recordatorios'), findsOneWidget);
+    expect(find.text('Alertas de presupuesto'), findsOneWidget);
+    expect(find.text('Umbral de advertencia'), findsOneWidget);
+    expect(find.text('Umbral de límite'), findsOneWidget);
+
+    expect(find.text('Bloqueo con huella'), findsOneWidget);
+    expect(find.text('Tiempo hasta bloquear'), findsOneWidget);
+    expect(find.text('Ocultar montos'), findsOneWidget);
+    expect(find.text('Copia de seguridad'), findsOneWidget);
+    expect(find.text('Exportar a CSV'), findsOneWidget);
+    expect(find.text('Borrar todos los datos'), findsOneWidget);
+    expect(find.text('Acerca de Pockt'), findsOneWidget);
   });
 
   testWidgets('tocar Categorías navega a CategoryKeywordsScreen', (tester) async {
@@ -100,6 +151,15 @@ void main() {
     expect(find.byType(AppearanceScreen), findsOneWidget);
   });
 
+  testWidgets('tocar Tarjetas del Inicio navega a HomeCardsScreen', (tester) async {
+    await pumpSettingsScreen(tester);
+
+    await tester.tap(find.text('Tarjetas del Inicio'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeCardsScreen), findsOneWidget);
+  });
+
   testWidgets('todas las claves de íconos que usa settings_screen.dart resuelven a un ícono real', (tester) async {
     await pumpSettingsScreen(tester);
 
@@ -124,15 +184,21 @@ void main() {
 
     final darkColors = PocktColors.dark;
 
-    // Encabezados de sección
+    // Encabezados de sección con brandAt
     final tuDineroText = tester.widget<Text>(find.text('Tu dinero'));
     expect(tuDineroText.style?.color, equals(darkColors.brandAt(0)));
+
+    final cargaText = tester.widget<Text>(find.text('Carga'));
+    expect(cargaText.style?.color, equals(darkColors.brandAt(1)));
 
     final inicioAparienciaText = tester.widget<Text>(find.text('Inicio y apariencia'));
     expect(inicioAparienciaText.style?.color, equals(darkColors.brandAt(2)));
 
-    final avisosPrivacidadText = tester.widget<Text>(find.text('Avisos y Privacidad'));
-    expect(avisosPrivacidadText.style?.color, equals(darkColors.brandAt(3)));
+    final avisosText = tester.widget<Text>(find.text('Avisos'));
+    expect(avisosText.style?.color, equals(darkColors.brandAt(3)));
+
+    final privacidadText = tester.widget<Text>(find.text('Privacidad y datos'));
+    expect(privacidadText.style?.color, equals(darkColors.brandAt(3)));
 
     // Íconos por sección
     // Categorías: brandAt(0)
@@ -149,6 +215,11 @@ void main() {
     final recTile = find.byKey(const ValueKey('settings-recurring-tile'));
     final recIcon = tester.widget<Icon>(find.descendant(of: recTile, matching: find.byType(Icon)).first);
     expect(recIcon.color, equals(darkColors.brandAt(0)));
+
+    // Carga: brandAt(1)
+    final quickKeyTile = find.byKey(const ValueKey('settings-quick-key'));
+    final quickKeyIcon = tester.widget<Icon>(find.descendant(of: quickKeyTile, matching: find.byType(Icon)).first);
+    expect(quickKeyIcon.color, equals(darkColors.brandAt(1)));
 
     // Apariencia: brandAt(2)
     final appTile = find.byKey(const ValueKey('settings-appearance-tile'));
@@ -177,5 +248,50 @@ void main() {
     final backupTile = find.byKey(const ValueKey('settings-backup-tile'));
     final backupIcon = tester.widget<Icon>(find.descendant(of: backupTile, matching: find.byType(Icon)).first);
     expect(backupIcon.color, equals(PocktColors.dark.warning));
+  });
+
+  testWidgets('cambiar un segmento o switch en línea guarda el ajuste en SettingsRepository', (tester) async {
+    final settingsRepo = SettingsRepository(testDb);
+    await pumpSettingsScreen(tester);
+
+    // 1. Tecla rápida a '00'
+    await tester.tap(find.text('00'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.entryQuickKey), equals('00'));
+
+    // 2. Movimientos recientes a '10'
+    await tester.tap(find.text('10'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.homeRecentCount), equals('10'));
+
+    // 3. Inicio del mes a 'Desde el cobro'
+    await tester.tap(find.text('Desde el cobro'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.periodMonthStart), equals('payday'));
+
+    // 4. La semana empieza a 'Domingo'
+    await tester.tap(find.text('Domingo'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.calendarWeekStart), equals('sunday'));
+
+    // 5. Umbral de advertencia a '90 %'
+    await tester.tap(find.text('90 %'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.budgetAlertLow), equals('90'));
+
+    // 6. Tiempo hasta bloquear a '5 min'
+    await tester.tap(find.text('5 min'));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.securityLockAfter), equals('5'));
+
+    // 7. Switch de pedir nota
+    await tester.tap(find.byKey(const ValueKey('settings-ask-note-switch')));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.entryAskNote), equals('true'));
+
+    // 8. Switch de ocultar montos
+    await tester.tap(find.byKey(const ValueKey('settings-hide-amounts-switch')));
+    await tester.pumpAndSettle();
+    expect(await settingsRepo.get(SettingsKeys.privacyHideAmounts), equals('true'));
   });
 }

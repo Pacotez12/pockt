@@ -214,6 +214,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      await tester.scrollUntilVisible(
+        find.text('Bloqueo con huella'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       expect(find.text('Bloqueo con huella'), findsOneWidget);
       expect(

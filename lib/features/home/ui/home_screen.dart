@@ -12,6 +12,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
@@ -603,41 +604,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildSpendingTotal(BuildContext context) {
     final colors = context.pockt;
     final monthNameLower = _kMonthNames[_month - 1].toLowerCase();
+    final obscure = ref.watch(shouldObscureAmountsProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Gastado en $monthNameLower',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              color: colors.textSecondary,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          ref.read(amountsRevealedProvider.notifier).toggle();
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Gastado en $monthNameLower',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: colors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          RepaintBoundary(
-            child: TweenAnimationBuilder<int>(
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-              tween: IntTween(begin: _previousTotal, end: _monthTotal),
-              builder: (context, animatedValue, _) {
-                return Text(
-                  formatGs(animatedValue),
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 42,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -1.5,
-                    color: colors.textPrimary,
-                  ),
-                );
-              },
+            const SizedBox(height: 6),
+            RepaintBoundary(
+              child: obscure
+                  ? Text(
+                      '••••',
+                      key: const ValueKey('spending-total-obscured'),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 42,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.5,
+                        color: colors.textPrimary,
+                      ),
+                    )
+                  : TweenAnimationBuilder<int>(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutCubic,
+                      tween: IntTween(begin: _previousTotal, end: _monthTotal),
+                      builder: (context, animatedValue, _) {
+                        return Text(
+                          formatGs(animatedValue),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 42,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -1.5,
+                            color: colors.textPrimary,
+                          ),
+                        );
+                      },
+                    ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -29,10 +29,12 @@ class AppLockController with ChangeNotifier {
 
   bool _locked = false;
   bool _isLockEnabled = false;
+  int _lockAfterMinutes = 1;
   DateTime? _pausedAt;
 
   bool get locked => _locked;
   bool get isLockEnabled => _isLockEnabled;
+  int get lockAfterMinutes => _lockAfterMinutes;
 
   AppLockController({
     required this.auth,
@@ -44,7 +46,9 @@ class AppLockController with ChangeNotifier {
   /// Inicializa leyendo el ajuste `security.lock` y aplicando FLAG_SECURE.
   Future<void> init() async {
     final value = await settings.get(SettingsKeys.securityLock);
+    final lockAfterValue = await settings.get(SettingsKeys.securityLockAfter);
     _isLockEnabled = (value == 'on');
+    _lockAfterMinutes = int.tryParse(lockAfterValue ?? '') ?? 1;
     _locked = _isLockEnabled;
     await _applyFlagSecure(_isLockEnabled);
     notifyListeners();
@@ -76,16 +80,24 @@ class AppLockController with ChangeNotifier {
     _pausedAt = clock();
   }
 
-  /// Al volver al primer plano, si pasó ≥ 1 minuto, bloquea la app.
+  /// Al volver al primer plano, si pasó el tiempo configurado, bloquea la app.
   void onResumed() {
     if (!_isLockEnabled) return;
     if (_pausedAt != null) {
       final elapsed = clock().difference(_pausedAt!);
-      if (elapsed >= const Duration(minutes: 1)) {
+      final threshold = Duration(minutes: _lockAfterMinutes);
+      if (elapsed >= threshold) {
         _locked = true;
         notifyListeners();
       }
     }
+  }
+
+  /// Configura el tiempo de espera hasta bloquear en minutos (0, 1, 5, 15).
+  Future<void> setLockAfter(int minutes) async {
+    _lockAfterMinutes = minutes;
+    await settings.set(SettingsKeys.securityLockAfter, minutes.toString());
+    notifyListeners();
   }
 
   /// Verifica la compatibilidad del dispositivo con el bloqueo local.
