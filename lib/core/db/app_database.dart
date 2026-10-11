@@ -26,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -177,6 +177,21 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           await m.createTable(salaryDeductions);
         }
+        if (from < 7) {
+          for (final update in _kFactoryCategoryColorUpdates) {
+            await customStatement(
+              'UPDATE categories SET color_dark = ?, color_light = ? '
+              'WHERE id = ? AND color_dark = ? AND color_light = ?;',
+              [
+                update.newDark,
+                update.newLight,
+                update.id,
+                update.oldDark,
+                update.oldLight,
+              ],
+            );
+          }
+        }
       },
     );
   }
@@ -261,8 +276,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000001'),
         name: Value('Comida'),
         icon: Value('fork-knife'),
-        colorDark: Value(0xFFFF9F43),
-        colorLight: Value(0xFFD9771A),
+        colorDark: Value(0xFFE4A067),
+        colorLight: Value(0xFF9A5505),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(0),
       ),
@@ -270,8 +285,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000002'),
         name: Value('Transporte'),
         icon: Value('car-profile'),
-        colorDark: Value(0xFF54A0FF),
-        colorLight: Value(0xFF1F6FD1),
+        colorDark: Value(0xFF6BBAF0),
+        colorLight: Value(0xFF0070A6),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(1),
       ),
@@ -279,8 +294,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000003'),
         name: Value('Hogar'),
         icon: Value('house-line'),
-        colorDark: Value(0xFF1DD1A1),
-        colorLight: Value(0xFF0E9673),
+        colorDark: Value(0xFF93C179),
+        colorLight: Value(0xFF49782A),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(2),
       ),
@@ -288,8 +303,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000004'),
         name: Value('Salud'),
         icon: Value('heartbeat'),
-        colorDark: Value(0xFFFF6B6B),
-        colorLight: Value(0xFFD64545),
+        colorDark: Value(0xFF49C7C0),
+        colorLight: Value(0xFF007E78),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(3),
       ),
@@ -297,8 +312,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000005'),
         name: Value('Ocio'),
         icon: Value('popcorn'),
-        colorDark: Value(0xFFC56CF0),
-        colorLight: Value(0xFF9B3FC9),
+        colorDark: Value(0xFFC19FE9),
+        colorLight: Value(0xFF7955A0),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(4),
       ),
@@ -306,8 +321,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000006'),
         name: Value('Servicios'),
         icon: Value('lightning'),
-        colorDark: Value(0xFF48DBFB),
-        colorLight: Value(0xFF0E9CBF),
+        colorDark: Value(0xFF8FB0F8),
+        colorLight: Value(0xFF4665AE),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(5),
       ),
@@ -315,8 +330,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000007'),
         name: Value('Educación'),
         icon: Value('graduation-cap'),
-        colorDark: Value(0xFFA4B0BE),
-        colorLight: Value(0xFF5D6B7A),
+        colorDark: Value(0xFFAAA7F4),
+        colorLight: Value(0xFF635DAB),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(6),
       ),
@@ -324,8 +339,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000008'),
         name: Value('Regalos'),
         icon: Value('gift'),
-        colorDark: Value(0xFFFECA57),
-        colorLight: Value(0xFFC9921A),
+        colorDark: Value(0xFFDD96CD),
+        colorLight: Value(0xFF924B84),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(7),
       ),
@@ -333,8 +348,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000009'),
         name: Value('Ropa'),
         icon: Value('t-shirt'),
-        colorDark: Value(0xFFF368E0),
-        colorLight: Value(0xFFC43BB2),
+        colorDark: Value(0xFFC1B35B),
+        colorLight: Value(0xFF796900),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(8),
       ),
@@ -342,8 +357,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000010'),
         name: Value('Otros'),
         icon: Value('package'),
-        colorDark: Value(0xFF8395A7),
-        colorLight: Value(0xFF556677),
+        colorDark: Value(0xFF9BA6B1),
+        colorLight: Value(0xFF606A74),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(9),
       ),
@@ -353,8 +368,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000011'),
         name: Value('Sueldo'),
         icon: Value('briefcase'),
-        colorDark: Value(0xFF10B981),
-        colorLight: Value(0xFF059669),
+        colorDark: Value(0xFF74C692),
+        colorLight: Value(0xFF187C49),
         kind: Value(CategoryKind.income),
         sortOrder: Value(0),
       ),
@@ -362,8 +377,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000012'),
         name: Value('Extra'),
         icon: Value('sparkle'),
-        colorDark: Value(0xFF06B6D4),
-        colorLight: Value(0xFF0891B2),
+        colorDark: Value(0xFF47C5D2),
+        colorLight: Value(0xFF007B89),
         kind: Value(CategoryKind.income),
         sortOrder: Value(1),
       ),
@@ -371,8 +386,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000013'),
         name: Value('Otros ingresos'),
         icon: Value('arrow-circle-down'),
-        colorDark: Value(0xFF6366F1),
-        colorLight: Value(0xFF4338CA),
+        colorDark: Value(0xFF9BA6B1),
+        colorLight: Value(0xFF606A74),
         kind: Value(CategoryKind.income),
         sortOrder: Value(2),
       ),
@@ -387,3 +402,97 @@ class AppDatabase extends _$AppDatabase {
     return driftDatabase(name: 'pockt');
   }
 }
+
+const _kFactoryCategoryColorUpdates = [
+  (
+    id: '018f0000-0000-7000-8000-000000000001',
+    oldDark: 0xFFFF9F43,
+    oldLight: 0xFFD9771A,
+    newDark: 0xFFE4A067,
+    newLight: 0xFF9A5505,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000002',
+    oldDark: 0xFF54A0FF,
+    oldLight: 0xFF1F6FD1,
+    newDark: 0xFF6BBAF0,
+    newLight: 0xFF0070A6,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000003',
+    oldDark: 0xFF1DD1A1,
+    oldLight: 0xFF0E9673,
+    newDark: 0xFF93C179,
+    newLight: 0xFF49782A,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000004',
+    oldDark: 0xFFFF6B6B,
+    oldLight: 0xFFD64545,
+    newDark: 0xFF49C7C0,
+    newLight: 0xFF007E78,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000005',
+    oldDark: 0xFFC56CF0,
+    oldLight: 0xFF9B3FC9,
+    newDark: 0xFFC19FE9,
+    newLight: 0xFF7955A0,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000006',
+    oldDark: 0xFF48DBFB,
+    oldLight: 0xFF0E9CBF,
+    newDark: 0xFF8FB0F8,
+    newLight: 0xFF4665AE,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000007',
+    oldDark: 0xFFA4B0BE,
+    oldLight: 0xFF5D6B7A,
+    newDark: 0xFFAAA7F4,
+    newLight: 0xFF635DAB,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000008',
+    oldDark: 0xFFFECA57,
+    oldLight: 0xFFC9921A,
+    newDark: 0xFFDD96CD,
+    newLight: 0xFF924B84,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000009',
+    oldDark: 0xFFF368E0,
+    oldLight: 0xFFC43BB2,
+    newDark: 0xFFC1B35B,
+    newLight: 0xFF796900,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000010',
+    oldDark: 0xFF8395A7,
+    oldLight: 0xFF556677,
+    newDark: 0xFF9BA6B1,
+    newLight: 0xFF606A74,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000011',
+    oldDark: 0xFF10B981,
+    oldLight: 0xFF059669,
+    newDark: 0xFF74C692,
+    newLight: 0xFF187C49,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000012',
+    oldDark: 0xFF06B6D4,
+    oldLight: 0xFF0891B2,
+    newDark: 0xFF47C5D2,
+    newLight: 0xFF007B89,
+  ),
+  (
+    id: '018f0000-0000-7000-8000-000000000013',
+    oldDark: 0xFF6366F1,
+    oldLight: 0xFF4338CA,
+    newDark: 0xFF9BA6B1,
+    newLight: 0xFF606A74,
+  ),
+];

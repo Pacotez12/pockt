@@ -156,8 +156,8 @@ void main() {
       NativeDatabase(dbFile),
     );
 
-    // 1. Schema version actualizado a 6
-    expect(db.schemaVersion, equals(6));
+    // 1. Schema version actualizado a 7
+    expect(db.schemaVersion, equals(7));
 
     // 2. Datos existentes intactos
     final txs = await db.select(db.transactions).get();
@@ -193,7 +193,7 @@ void main() {
     // 4. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(6));
+    expect(userVersionResult.first['user_version'], equals(7));
 
     final tableInfo = rawDb.select('PRAGMA table_info(salary_deductions);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();

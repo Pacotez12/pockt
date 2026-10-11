@@ -174,7 +174,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
     try {
-      expect(db.schemaVersion, 6);
+      expect(db.schemaVersion, 7);
 
       // 1. Movimientos intactos
       final txs = await db.select(db.transactions).get();
