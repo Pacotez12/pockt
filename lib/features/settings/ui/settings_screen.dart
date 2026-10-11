@@ -119,7 +119,7 @@ class SettingsScreen extends ConsumerWidget {
                         icon: 'calendar',
                         title: 'Esquema de cobro',
                         subtitle: subtitle,
-                        iconColor: colors.positive,
+                        iconColor: colors.brandStart,
                         onTap: () {
                           Haptics.tick();
                           Navigator.of(context).push(
@@ -195,7 +195,7 @@ class SettingsScreen extends ConsumerWidget {
                             icon: 'bell',
                             title: 'Recordatorios',
                             subtitle: subtitle,
-                            iconColor: colors.warning,
+                            iconColor: colors.brandStart,
                             onTap: () {
                               Haptics.tick();
                               Navigator.of(context).push(

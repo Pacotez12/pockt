@@ -8,8 +8,10 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/reports/data/reports_repository.dart';
+import 'package:pockt/features/reports/ui/charts.dart';
 import 'package:pockt/features/reports/ui/reports_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
@@ -46,6 +48,7 @@ void main() {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
 
     await tester.pumpWidget(
       ProviderScope(
@@ -203,5 +206,120 @@ void main() {
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.color, PocktColors.dark.glassFill);
     expect(decoration.border, Border.all(color: PocktColors.dark.glassBorder));
+  });
+
+  testWidgets('en Evolución la serie Gastos usa color de marca y no peligro en la leyenda', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildDarkTheme(),
+        home: Scaffold(
+          body: EvolutionChart(
+            isDark: true,
+            totals: [
+              MonthTotals(year: 2026, month: 9, expense: 50000, income: 100000),
+              MonthTotals(year: 2026, month: 10, expense: 70000, income: 80000),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Buscar el contenedor de color de la leyenda de Gastos
+    final gastosRowFinder = find.ancestor(
+      of: find.text('Gastos'),
+      matching: find.byType(Row),
+    ).first;
+    final gastosIndicatorFinder = find.descendant(
+      of: gastosRowFinder,
+      matching: find.byType(Container),
+    ).first;
+    final gastosDecoration = (tester.widget<Container>(gastosIndicatorFinder)).decoration as BoxDecoration;
+
+    // Gastos debe ser color de marca, NO de peligro
+    expect(gastosDecoration.color, equals(PocktColors.dark.brandStart));
+    expect(gastosDecoration.color, isNot(equals(PocktColors.dark.danger)));
+
+    // Ingresos debe ser positivo
+    final ingresosRowFinder = find.ancestor(
+      of: find.text('Ingresos'),
+      matching: find.byType(Row),
+    ).first;
+    final ingresosIndicatorFinder = find.descendant(
+      of: ingresosRowFinder,
+      matching: find.byType(Container),
+    ).first;
+    final ingresosDecoration = (tester.widget<Container>(ingresosIndicatorFinder)).decoration as BoxDecoration;
+    expect(ingresosDecoration.color, equals(PocktColors.dark.positive));
+  });
+
+  testWidgets('Ahorro neto muestra color positivo si es >= 0', (tester) async {
+    final sueldoCategory = (await db.select(db.categories).get()).firstWhere((c) => c.name == 'Sueldo');
+    await txRepo.add(
+      type: TxType.income,
+      amount: 200000,
+      categoryId: sueldoCategory.id,
+      occurredAt: DateTime(2026, 10, 2, 12, 0),
+    );
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 50000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 5, 12, 0),
+    );
+
+    await pumpReportsScreen(tester);
+
+    // Navegar a Vista 2 (Evolución) donde está el resumen con Ahorro neto del período
+    final pageView = find.byType(PageView);
+    await tester.drag(pageView, const Offset(-450, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ahorro neto del período'), findsOneWidget);
+
+    final netPositiveTextFinder = find.descendant(
+      of: find.ancestor(
+        of: find.text('Ahorro neto del período'),
+        matching: find.byType(Row),
+      ),
+      matching: find.text(formatGs(150000)),
+    );
+    final positiveTextWidget = tester.widget<Text>(netPositiveTextFinder);
+    expect(positiveTextWidget.style?.color, equals(PocktColors.dark.positive));
+    expect(positiveTextWidget.style?.color, isNot(equals(PocktColors.dark.brandStart)));
+  });
+
+  testWidgets('Ahorro neto muestra color peligro si es < 0', (tester) async {
+    final sueldoCategory = (await db.select(db.categories).get()).firstWhere((c) => c.name == 'Sueldo');
+    await txRepo.add(
+      type: TxType.income,
+      amount: 200000,
+      categoryId: sueldoCategory.id,
+      occurredAt: DateTime(2026, 10, 2, 12, 0),
+    );
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 350000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 5, 12, 0),
+    );
+
+    await pumpReportsScreen(tester);
+
+    final pageView = find.byType(PageView);
+    await tester.drag(pageView, const Offset(-450, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ahorro neto del período'), findsOneWidget);
+
+    final netNegativeTextFinder = find.descendant(
+      of: find.ancestor(
+        of: find.text('Ahorro neto del período'),
+        matching: find.byType(Row),
+      ),
+      matching: find.text(formatGs(-150000)),
+    );
+    final negativeTextWidget = tester.widget<Text>(netNegativeTextFinder);
+    expect(negativeTextWidget.style?.color, equals(PocktColors.dark.danger));
   });
 }

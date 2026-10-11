@@ -947,7 +947,7 @@ class _EvolutionView extends ConsumerWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  color: netSaving >= 0 ? colors.brandStart : colors.danger,
+                  color: netSaving >= 0 ? colors.positive : colors.danger,
                 ),
               ),
             ],

@@ -282,7 +282,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.receipt_long_outlined, color: colors.positive, size: 20),
+                          Icon(Icons.receipt_long_outlined, color: colors.textSecondary, size: 20),
                           const SizedBox(width: 10),
                           Text(
                             '${formatGs(preview.transactionCount, symbol: false)} movimientos',

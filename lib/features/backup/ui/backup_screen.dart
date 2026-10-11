@@ -629,7 +629,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         borderRadius: BorderRadius.circular(20),
         child: Row(
           children: [
-            Icon(Icons.restore, size: 20, color: colors.positive),
+            Icon(Icons.restore, size: 20, color: colors.textPrimary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

@@ -297,12 +297,12 @@ class _EvolutionChartState extends State<EvolutionChart>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _LegendItem(color: colors.danger, label: 'Gastos'),
+              _LegendItem(color: colors.brandStart, label: 'Gastos'),
               const SizedBox(width: 16),
               _LegendItem(color: colors.positive, label: 'Ingresos'),
               const SizedBox(width: 16),
               _LegendItem(
-                color: colors.brandStart,
+                color: colors.brandEnd,
                 label: 'Ahorro',
                 isLine: true,
               ),
@@ -327,9 +327,9 @@ class _EvolutionChartState extends State<EvolutionChart>
                   painter: _EvolutionPainter(
                     totals: widget.totals,
                     progress: progress,
-                    dangerColor: colors.danger,
+                    expenseColor: colors.brandStart,
                     positiveColor: colors.positive,
-                    savingColor: colors.brandStart,
+                    savingColor: colors.brandEnd,
                     gridColor: colors.glassBorder,
                     sheetSurface: colors.sheetSurface,
                   ),
@@ -417,7 +417,7 @@ class _LegendItem extends StatelessWidget {
 class _EvolutionPainter extends CustomPainter {
   final List<MonthTotals> totals;
   final double progress;
-  final Color dangerColor;
+  final Color expenseColor;
   final Color positiveColor;
   final Color savingColor;
   final Color gridColor;
@@ -426,7 +426,7 @@ class _EvolutionPainter extends CustomPainter {
   _EvolutionPainter({
     required this.totals,
     required this.progress,
-    required this.dangerColor,
+    required this.expenseColor,
     required this.positiveColor,
     required this.savingColor,
     required this.gridColor,
@@ -486,7 +486,7 @@ class _EvolutionPainter extends CustomPainter {
         expHeight,
       );
       if (expHeight > 0) {
-        final expPaint = Paint()..color = dangerColor;
+        final expPaint = Paint()..color = expenseColor;
         canvas.drawRRect(
           RRect.fromRectAndCorners(
             expRect,
@@ -560,7 +560,7 @@ class _EvolutionPainter extends CustomPainter {
   bool shouldRepaint(covariant _EvolutionPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.totals != totals ||
-        oldDelegate.dangerColor != dangerColor ||
+        oldDelegate.expenseColor != expenseColor ||
         oldDelegate.positiveColor != positiveColor ||
         oldDelegate.savingColor != savingColor;
   }
