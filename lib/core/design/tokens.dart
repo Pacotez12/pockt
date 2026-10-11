@@ -14,6 +14,8 @@ class PocktColors extends ThemeExtension<PocktColors> {
   final Color danger;
   final Color sheetSurface;
   final List<Color> heat;
+  final List<Color> brandRamp;
+  final Color keypadKey;
 
   const PocktColors({
     required this.background,
@@ -29,7 +31,21 @@ class PocktColors extends ThemeExtension<PocktColors> {
     required this.danger,
     required this.sheetSurface,
     required this.heat,
+    required this.brandRamp,
+    required this.keypadKey,
   });
+
+  Color brandAt(int step) {
+    final index = step.clamp(0, brandRamp.length - 1);
+    return brandRamp[index];
+  }
+
+  static const List<Color> defaultBrandRamp = [
+    Color(0xFFFF8A3D),
+    Color(0xFFFF7053),
+    Color(0xFFFF5769),
+    Color(0xFFFF3D7F),
+  ];
 
   static final PocktColors dark = PocktColors(
     background: const Color(0xFF000000),
@@ -40,9 +56,9 @@ class PocktColors extends ThemeExtension<PocktColors> {
     textTertiary: Colors.white.withValues(alpha: 0.45),
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
-    positive: const Color(0xFF1DD1A1),
-    warning: const Color(0xFFFF9F43),
-    danger: const Color(0xFFFF4D4D),
+    positive: const Color(0xFF4AD496),
+    warning: const Color(0xFFF7B83D),
+    danger: const Color(0xFFF4514F),
     sheetSurface: const Color(0xFF18181B),
     heat: const [
       Color(0x0DFFFFFF),
@@ -51,6 +67,8 @@ class PocktColors extends ThemeExtension<PocktColors> {
       Color(0xB8FF645F),
       Color(0xFFFF3D7F),
     ],
+    brandRamp: defaultBrandRamp,
+    keypadKey: const Color(0xFF141414),
   );
 
   static final PocktColors light = PocktColors(
@@ -62,9 +80,9 @@ class PocktColors extends ThemeExtension<PocktColors> {
     textTertiary: Colors.black.withValues(alpha: 0.45),
     brandStart: const Color(0xFFFF8A3D),
     brandEnd: const Color(0xFFFF3D7F),
-    positive: const Color(0xFF0E9673),
-    warning: const Color(0xFFD97706),
-    danger: const Color(0xFFDC2626),
+    positive: const Color(0xFF008856),
+    warning: const Color(0xFFB07100),
+    danger: const Color(0xFFCC272E),
     sheetSurface: const Color(0xFFFFFFFF),
     heat: const [
       Color(0x0D000000),
@@ -73,6 +91,8 @@ class PocktColors extends ThemeExtension<PocktColors> {
       Color(0xFFF2603F),
       Color(0xFFE8306F),
     ],
+    brandRamp: defaultBrandRamp,
+    keypadKey: const Color(0xFFE4E4E7),
   );
 
   @override
@@ -90,6 +110,8 @@ class PocktColors extends ThemeExtension<PocktColors> {
     Color? danger,
     Color? sheetSurface,
     List<Color>? heat,
+    List<Color>? brandRamp,
+    Color? keypadKey,
   }) {
     return PocktColors(
       background: background ?? this.background,
@@ -105,6 +127,8 @@ class PocktColors extends ThemeExtension<PocktColors> {
       danger: danger ?? this.danger,
       sheetSurface: sheetSurface ?? this.sheetSurface,
       heat: heat ?? this.heat,
+      brandRamp: brandRamp ?? this.brandRamp,
+      keypadKey: keypadKey ?? this.keypadKey,
     );
   }
 
@@ -128,6 +152,11 @@ class PocktColors extends ThemeExtension<PocktColors> {
         5,
         (i) => Color.lerp(heat[i], other.heat[i], t)!,
       ),
+      brandRamp: List<Color>.generate(
+        brandRamp.length,
+        (i) => Color.lerp(brandRamp[i], other.brandRamp[i], t)!,
+      ),
+      keypadKey: Color.lerp(keypadKey, other.keypadKey, t)!,
     );
   }
 }

@@ -1,5 +1,8 @@
+import 'package:drift/drift.dart' show DatabaseConnection;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/tokens.dart';
 
@@ -16,6 +19,7 @@ void main() {
     final mid = PocktColors.dark.lerp(PocktColors.light, 0.5);
     expect(mid.background, isNot(PocktColors.dark.background));
     expect(mid.sheetSurface, isNot(PocktColors.dark.sheetSurface));
+    expect(mid.keypadKey, isNot(PocktColors.dark.keypadKey));
   });
 
   test('sheetSurface oscuro es 0xFF18181B y claro es blanco', () {
@@ -26,10 +30,10 @@ void main() {
   test('colores heat y brand coinciden con especificación', () {
     expect(PocktColors.dark.brandStart, const Color(0xFFFF8A3D));
     expect(PocktColors.dark.brandEnd, const Color(0xFFFF3D7F));
-    expect(PocktColors.dark.positive, const Color(0xFF1DD1A1));
+    expect(PocktColors.dark.positive, const Color(0xFF4AD496));
     expect(PocktColors.light.brandStart, const Color(0xFFFF8A3D));
     expect(PocktColors.light.brandEnd, const Color(0xFFFF3D7F));
-    expect(PocktColors.light.positive, const Color(0xFF0E9673));
+    expect(PocktColors.light.positive, const Color(0xFF008856));
 
     expect(PocktColors.dark.heat, [
       const Color(0x0DFFFFFF),
@@ -46,6 +50,122 @@ void main() {
       const Color(0xFFF2603F),
       const Color(0xFFE8306F),
     ]);
+  });
+
+  test('estados nuevos de §6.2b en oscuro y claro', () {
+    expect(PocktColors.dark.positive, const Color(0xFF4AD496));
+    expect(PocktColors.dark.warning, const Color(0xFFF7B83D));
+    expect(PocktColors.dark.danger, const Color(0xFFF4514F));
+
+    expect(PocktColors.light.positive, const Color(0xFF008856));
+    expect(PocktColors.light.warning, const Color(0xFFB07100));
+    expect(PocktColors.light.danger, const Color(0xFFCC272E));
+  });
+
+  test('brandRamp con 4 pasos del degradé y brandAt(0..3)', () {
+    expect(PocktColors.dark.brandRamp, hasLength(4));
+    expect(PocktColors.dark.brandRamp, const [
+      Color(0xFFFF8A3D),
+      Color(0xFFFF7053),
+      Color(0xFFFF5769),
+      Color(0xFFFF3D7F),
+    ]);
+    expect(PocktColors.light.brandRamp, PocktColors.dark.brandRamp);
+
+    expect(PocktColors.dark.brandAt(0), const Color(0xFFFF8A3D));
+    expect(PocktColors.dark.brandAt(1), const Color(0xFFFF7053));
+    expect(PocktColors.dark.brandAt(2), const Color(0xFFFF5769));
+    expect(PocktColors.dark.brandAt(3), const Color(0xFFFF3D7F));
+
+    expect(PocktColors.light.brandAt(0), const Color(0xFFFF8A3D));
+    expect(PocktColors.light.brandAt(1), const Color(0xFFFF7053));
+    expect(PocktColors.light.brandAt(2), const Color(0xFFFF5769));
+    expect(PocktColors.light.brandAt(3), const Color(0xFFFF3D7F));
+  });
+
+  test('superficie keypadKey para reemplazar #141414', () {
+    expect(PocktColors.dark.keypadKey, const Color(0xFF141414));
+    expect(PocktColors.light.keypadKey, const Color(0xFFE4E4E7));
+  });
+
+  test('los estados no coinciden con ningún color de categoría de fábrica', () async {
+    final db = AppDatabase.forTesting(
+      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+    );
+    final categories = await db.select(db.categories).get();
+    await db.close();
+
+    expect(categories, isNotEmpty);
+
+    final darkStates = {
+      PocktColors.dark.positive.toARGB32(),
+      PocktColors.dark.warning.toARGB32(),
+      PocktColors.dark.danger.toARGB32(),
+    };
+    final lightStates = {
+      PocktColors.light.positive.toARGB32(),
+      PocktColors.light.warning.toARGB32(),
+      PocktColors.light.danger.toARGB32(),
+    };
+
+    for (final cat in categories) {
+      expect(
+        darkStates.contains(cat.colorDark),
+        isFalse,
+        reason: 'Estado oscuro coincide con categoría "${cat.name}" (${cat.colorDark.toRadixString(16)})',
+      );
+      expect(
+        lightStates.contains(cat.colorLight),
+        isFalse,
+        reason: 'Estado claro coincide con categoría "${cat.name}" (${cat.colorLight.toRadixString(16)})',
+      );
+    }
+  });
+
+  test('contraste >= 3:1 de estados y pasos del degradé contra el fondo en ambos temas', () {
+    double contrastRatio(Color fg, Color bg) {
+      final l1 = fg.computeLuminance();
+      final l2 = bg.computeLuminance();
+      final brightest = l1 > l2 ? l1 : l2;
+      final darkest = l1 > l2 ? l2 : l1;
+      return (brightest + 0.05) / (darkest + 0.05);
+    }
+
+    // Modo oscuro: estados y pasos del degradé contra fondo negro
+    expect(
+      contrastRatio(PocktColors.dark.positive, PocktColors.dark.background),
+      greaterThanOrEqualTo(3.0),
+    );
+    expect(
+      contrastRatio(PocktColors.dark.warning, PocktColors.dark.background),
+      greaterThanOrEqualTo(3.0),
+    );
+    expect(
+      contrastRatio(PocktColors.dark.danger, PocktColors.dark.background),
+      greaterThanOrEqualTo(3.0),
+    );
+
+    for (var i = 0; i < 4; i++) {
+      expect(
+        contrastRatio(PocktColors.dark.brandAt(i), PocktColors.dark.background),
+        greaterThanOrEqualTo(3.0),
+        reason: 'brandAt($i) oscuro no cumple contraste 3:1',
+      );
+    }
+
+    // Modo claro: estados contra fondo claro
+    expect(
+      contrastRatio(PocktColors.light.positive, PocktColors.light.background),
+      greaterThanOrEqualTo(3.0),
+    );
+    expect(
+      contrastRatio(PocktColors.light.warning, PocktColors.light.background),
+      greaterThanOrEqualTo(3.0),
+    );
+    expect(
+      contrastRatio(PocktColors.light.danger, PocktColors.light.background),
+      greaterThanOrEqualTo(3.0),
+    );
   });
 
   testWidgets('GlassCard usa radio por defecto de 24', (tester) async {
