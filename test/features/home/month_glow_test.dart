@@ -217,7 +217,7 @@ void main() {
       expect(updatedOffset.x, isNot(equals(initialOffset.x)));
     });
 
-    testWidgets('MonthGlow con disableAnimations mantiene las manchas en Offset.zero', (tester) async {
+    testWidgets('MonthGlow con disableAnimations deja las manchas quietas', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: MediaQuery(
@@ -232,15 +232,22 @@ void main() {
         ),
       );
 
-      final transforms = tester.widgetList<Transform>(
-        find.descendant(
-          of: find.byType(MonthGlow),
-          matching: find.byType(Transform),
-        ),
-      ).toList();
-      final offset = transforms[1].transform.getTranslation();
-      expect(offset.x, equals(0.0));
-      expect(offset.y, equals(0.0));
+      List<Offset> offsets() => tester
+          .widgetList<Transform>(
+            find.descendant(
+              of: find.byType(MonthGlow),
+              matching: find.byType(Transform),
+            ),
+          )
+          .map((t) {
+            final v = t.transform.getTranslation();
+            return Offset(v.x, v.y);
+          })
+          .toList();
+
+      final before = offsets();
+      await tester.pump(const Duration(seconds: 5));
+      expect(offsets(), equals(before));
     });
 
     testWidgets('MonthGlow conectado a monthGlowPulseProvider reacciona al pulso al guardar', (tester) async {

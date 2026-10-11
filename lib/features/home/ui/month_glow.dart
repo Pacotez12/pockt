@@ -216,30 +216,27 @@ class _MonthGlowState extends State<MonthGlow>
   }
 
   Widget _buildAurora(Color c, bool isDark) {
-    final spot1 = _buildCachedSpot(c, isDark, size: 470, opacity: 0.85);
-    final spot2 = _buildCachedSpot(c, isDark, size: 470, opacity: 0.65);
+    // Dos manchas separadas y con tonos vecinos (la segunda gira ~40° el
+    // matiz), para que se lean como aurora y no como un solo círculo.
+    final hsl = HSLColor.fromColor(c);
+    final c2 = hsl.withHue((hsl.hue + 40) % 360).toColor();
+    final spot1 = _buildCachedSpot(c, isDark, size: 470, opacity: 0.9);
+    final spot2 = _buildCachedSpot(c2, isDark, size: 470, opacity: 0.75);
 
     return AnimatedBuilder(
       animation: Listenable.merge([_drift1Controller, _drift2Controller]),
       builder: (context, _) {
         final disable = MediaQuery.disableAnimationsOf(context);
-        final offset1 = disable
-            ? Offset.zero
-            : Offset(
-                -14.0 + 28.0 * _drift1Curved.value,
-                -10.0 + 20.0 * _drift1Curved.value,
-              );
-        final scale1 = disable ? 1.0 : (0.96 + 0.09 * _drift1Curved.value);
-
-        final offset2 = disable
-            ? Offset.zero
-            : Offset(
-                12.0 - 24.0 * _drift2Curved.value,
-                -8.0 + 18.0 * _drift2Curved.value,
-              );
-        final scale2 = disable ? 1.0 : (1.04 - 0.10 * _drift2Curved.value);
+        final t1 = disable ? 0.5 : _drift1Curved.value;
+        final t2 = disable ? 0.5 : _drift2Curved.value;
+        // Recorridos de ~50 px: lento pero perceptible.
+        final offset1 = Offset(-90.0 + 55.0 * t1, -20.0 + 45.0 * t1);
+        final scale1 = 0.92 + 0.20 * t1;
+        final offset2 = Offset(95.0 - 55.0 * t2, 35.0 - 50.0 * t2);
+        final scale2 = 1.08 - 0.20 * t2;
 
         return Stack(
+          clipBehavior: Clip.none,
           children: [
             Transform.translate(
               offset: offset1,

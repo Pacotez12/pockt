@@ -11,6 +11,7 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 
@@ -174,6 +175,26 @@ class InboxScreen extends ConsumerWidget {
   }
 }
 
+/// Notificador que cuenta confirmaciones consecutivas de sugerencias
+/// para disparar un backup automático al confirmar 3 o más sugerencias (Plan 4).
+class ConsecutiveConfirmationsNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void recordConfirmation() {
+    state++;
+    if (state >= 3) {
+      state = 0;
+      ref.read(backupServiceProvider).backupNow();
+    }
+  }
+}
+
+final consecutiveConfirmationsProvider =
+    NotifierProvider<ConsecutiveConfirmationsNotifier, int>(
+  ConsecutiveConfirmationsNotifier.new,
+);
+
 class _SuggestionCard extends ConsumerWidget {
   final SuggestionView item;
 
@@ -183,6 +204,7 @@ class _SuggestionCard extends ConsumerWidget {
     final repo = ref.read(suggestionsRepositoryProvider);
     await repo.confirm(item.suggestion.id);
     Haptics.save();
+    ref.read(consecutiveConfirmationsProvider.notifier).recordConfirmation();
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
@@ -225,6 +247,7 @@ class _SuggestionCard extends ConsumerWidget {
           categoryId: category.id,
           occurredAt: occurredAt,
         );
+        ref.read(consecutiveConfirmationsProvider.notifier).recordConfirmation();
       },
     );
   }

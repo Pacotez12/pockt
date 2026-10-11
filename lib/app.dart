@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
+import 'package:pockt/features/security/app_lock.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 import 'package:pockt/features/splash/ui/pockt_splash.dart';
 
@@ -34,7 +35,10 @@ class _PocktAppState extends ConsumerState<PocktApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.paused) {
+      ref.read(appLockControllerProvider).onPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      ref.read(appLockControllerProvider).onResumed();
       _runSuggestionGenerator();
     }
   }
@@ -66,7 +70,9 @@ class _PocktAppState extends ConsumerState<PocktApp>
       locale: const Locale('es', 'PY'),
       themeAnimationDuration: const Duration(milliseconds: 400),
       themeAnimationCurve: Curves.easeInOut,
-      home: const PocktSplash(child: AppShell()),
+      home: const AppLockGate(
+        child: PocktSplash(child: AppShell()),
+      ),
     );
   }
 }

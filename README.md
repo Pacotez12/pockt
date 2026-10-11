@@ -117,7 +117,9 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
 | **Plan 2** | Presupuestos, recurrentes, cobro quincenal con días hábiles y feriados, bandeja de sugeridos, Ajustes | ✅ v0.2 |
 | **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ✅ v0.3 |
-| **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | ⏳ |
+| **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | 🔨 backup, restauración y bloqueo listos; falta primer uso y conectar Drive |
+| **Plan 4b** | Ajustes por secciones y descuentos del sueldo | ⏳ |
+| **Plan 4c** | Préstamos y compras en cuotas: avance, pagos y vencimientos | ⏳ |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 

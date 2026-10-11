@@ -3,6 +3,9 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/backup/data/drive_backup_store.dart';
+import 'package:pockt/features/backup/data/key_storage.dart';
+import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
@@ -17,10 +20,25 @@ void callbackDispatcher() {
     try {
       await initLocalZone();
       final db = AppDatabase();
+      final settingsRepo = SettingsRepository(db);
+
+      if (task == 'pockt-backup') {
+        final store = DriveBackupStore.background();
+        final keys = KeyStorage();
+        final backupService = BackupService(
+          db: db,
+          store: store,
+          keys: keys,
+          settings: settingsRepo,
+        );
+        final result = await backupService.backupNow();
+        await db.close();
+        return shouldWorkmanagerComplete(result);
+      }
+
       final notifier = LocalNotifier();
       final txRepo = TransactionsRepository(db, notifier: notifier);
       final marksRepo = DayMarksRepository(db);
-      final settingsRepo = SettingsRepository(db);
       final scheduler =
           ReminderScheduler(notifier, txRepo, marksRepo, settingsRepo);
       final now = DateTime.now();
@@ -44,7 +62,24 @@ void callbackDispatcher() {
   });
 }
 
-/// Inicializa Workmanager y registra la tarea periódica de 12 horas.
+/// Determina si una ejecución de backup en segundo plano se considera finalizada
+/// para Workmanager (true para no reintentar en bucle si el error requiere acción del usuario,
+/// false solo para errores transitorios de red o desconocidos).
+bool shouldWorkmanagerComplete(BackupResult result) {
+  switch (result) {
+    case BackupResult.success:
+    case BackupResult.noPassword:
+    case BackupResult.notSignedIn:
+      return true;
+    case BackupResult.network:
+    case BackupResult.unknown:
+      return false;
+  }
+}
+
+/// Inicializa Workmanager y registra las tareas periódicas:
+/// - `pockt-daily` cada 12 horas (recurrentes, recordatorios y widget).
+/// - `pockt-backup` cada 48 horas con WiFi no medido (`NetworkType.unmetered`).
 Future<void> initBackgroundTasks() async {
   try {
     await Workmanager().initialize(callbackDispatcher);
@@ -55,6 +90,15 @@ Future<void> initBackgroundTasks() async {
       existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       constraints: Constraints(
         networkType: NetworkType.notRequired,
+      ),
+    );
+    await Workmanager().registerPeriodicTask(
+      'pockt-backup',
+      'pockt-backup',
+      frequency: const Duration(hours: 48),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      constraints: Constraints(
+        networkType: NetworkType.unmetered,
       ),
     );
   } catch (e) {

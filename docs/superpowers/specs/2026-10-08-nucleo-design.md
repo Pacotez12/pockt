@@ -243,6 +243,57 @@ Conectar Google → la app lista los backups de la carpeta → contraseña → s
 - Con el bloqueo activo, `FLAG_SECURE` oculta la app en la vista de recientes.
 - Sin analíticas, sin publicidad, sin servidor. Los datos solo salen del teléfono hacia el Drive del autor, cifrados.
 
+## 7b. Ajustes (decidido 2026-10-10, maqueta aprobada)
+
+Ajustes deja de ser una lista plana y se organiza en cinco secciones con tarjetas de vidrio. Cada ajuste se guarda en `settings` (clave/valor) y se lee a través de providers; ningún valor queda fijo en el código si existe un ajuste para él.
+
+**Tu dinero**
+- **Sueldo y cobros** (reemplaza "Esquema de cobro"): sueldo **bruto** mensual, reparto entre cobros (por ejemplo 30/70), reglas de día hábil y **descuentos**. Cada descuento tiene nombre, tipo (**porcentaje del bruto** o **monto fijo**) y valor; se restan del **último cobro del mes** (el de fin de mes). La pantalla muestra lo que se cobra de verdad: bruto por cobro, descuentos y **neto** por cobro y del mes. "Quedan", la sugerencia de cobro inicial y las estimaciones usan el **neto**. Un descuento no puede dejar un cobro en negativo (validación con mensaje).
+- **Inicio del mes:** "Calendario" (del 1 al último día, por defecto) o "Desde el cobro" (el período empieza el día del cobro de fin de mes). Afecta totales del Inicio, presupuestos, alertas y reportes; el cálculo del período vive en un solo lugar.
+- **Categorías** y **Recurrentes**: los accesos existentes.
+
+**Carga**
+- **Orden de categorías:** "Más usadas" (por cantidad de movimientos de los últimos 90 días) o "Manual" (el orden de Categorías).
+- **Tecla rápida:** `000` (por defecto) o `00` en el teclado de montos.
+- **Pedir nota al guardar:** si está activo, después del monto aparece el campo de nota/comercio antes de guardar.
+- **Vibración:** activa por defecto; si se apaga, `Haptics` no dispara nada.
+
+**Inicio y apariencia**
+- **Tema:** sistema / claro / oscuro (existente).
+- **Tarjetas del Inicio:** mostrar u ocultar y reordenar (arrastrando) quincena, calendario de calor, sugerencias y últimos movimientos; cantidad de últimos movimientos (5, 10 o 20). El total del mes queda siempre arriba.
+- **Aurora:** apagada / sutil (por defecto) / plena (tres manchas, más color), y si reacciona al presupuesto.
+- **La semana empieza:** lunes (por defecto) o domingo, para el calendario de calor y los reportes semanales.
+- **Reducir animaciones:** reduce las animaciones solo en Pockt aunque el sistema no lo pida (equivale a `disableAnimations`).
+
+**Avisos**
+- **Recordatorios:** intensidad y horario de silencio (existentes).
+- **Alertas de presupuesto:** activar o desactivar, y los dos umbrales editables (por defecto 80 % y 100 %).
+
+**Privacidad y datos**
+- **Bloqueo con huella:** activar y **tiempo hasta bloquear** (al instante, 1, 5 o 15 minutos; por defecto 1).
+- **Ocultar montos:** los montos se muestran como `••••` en Inicio, Reportes y widget hasta tocar el total; el estado se reinicia al volver a la app.
+- **Copia de seguridad** (existente).
+- **Exportar a CSV:** todos los movimientos (fecha, tipo, monto, categoría, nota, comercio) con separador `;` y UTF-8 con BOM para que Excel lo abra bien; se comparte con la hoja de compartir de Android.
+- **Borrar todos los datos:** doble confirmación (escribir "BORRAR"); ofrece hacer un backup antes si hay contraseña configurada.
+- **Acerca de Pockt:** versión, enlace al repositorio y licencias.
+
+## 7c. Préstamos y cuotas (decidido 2026-10-10, maqueta aprobada)
+
+Módulo para seguir lo que se debe, lo que se prestó y las compras en cuotas. **No agrega pestañas** a la barra de navegación.
+
+**Modelo:** tabla `loans` (id, `direction` `owe` | `lent`, `kind` `loan` | `installments`, nombre, contraparte opcional, `totalAmount` total a pagar o a devolver, `installmentAmount` opcional, `installmentsTotal` opcional, `dueDay` opcional (día del mes del vencimiento), `startDate`, `closedAt` nullable). Los pagos son **movimientos normales** con `loanId` (columna nueva nullable en `transactions`): en `owe` son gastos (categoría de fábrica "Préstamos"), en `lent` las devoluciones son ingresos. Así cuentan en "quedan", reportes y calendario. Al crear un préstamo `lent` se puede registrar la salida de plata como gasto.
+
+**Avance (funciones puras):** pagado = suma de los pagos ligados; saldo = total − pagado; cuotas pagadas = pagos regulares (los extra no suman cuota, pero sí bajan el saldo); fin estimado = saldo / cuota, en meses desde el próximo vencimiento. Cuando el saldo llega a 0 el préstamo pasa a **Terminados** (con `closedAt`).
+
+**Dónde aparece:**
+1. **Tarjeta en el Inicio:** próximos vencimientos (hasta 3) y resumen "Debés / Te deben"; solo si hay préstamos activos; se oculta o reordena desde "Tarjetas del Inicio" (§7b).
+2. **Pantalla Préstamos:** pestañas Debo / Presté / Terminados; cada préstamo con barra de avance, "N de M cuotas", saldo, fin estimado y etiqueta "Vence en N días" cuando faltan 5 días o menos.
+3. **Detalle:** anillo de cuotas, saldo, pagado, total, fin estimado, botón **"Registrar pago"** (prellenado con la cuota, editable), botón **"Pago extra / adelanto"** e historial de pagos (los extra con etiqueta).
+4. **Ajustes → Tu dinero → Préstamos y cuotas** (acceso a la misma pantalla).
+5. **Carga:** al elegir la categoría "Préstamos" se pregunta a cuál préstamo corresponde (o ninguno).
+
+**Aviso de vencimiento:** notificación local N días antes de cada `dueDay` (por defecto 2, configurable en el detalle), con los mismos canales de los recordatorios; no se envía si la cuota del mes ya está pagada.
+
 ## 8. Manejo de errores
 
 - Nada falla en silencio: todo error de escritura, backup o permisos se muestra en la UI.

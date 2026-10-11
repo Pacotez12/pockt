@@ -13,6 +13,8 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/backup/domain/backup_service.dart';
+import 'package:pockt/features/backup/ui/backup_screen.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
@@ -370,6 +372,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 14),
                     _buildPendingCard(context),
                   ],
+                  StreamBuilder<BackupStatus>(
+                    stream: ref.watch(backupServiceProvider).watchStatus(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data?.isOverdue == true) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 14),
+                          child: _buildOverdueBackupBanner(context),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                   const SizedBox(height: 16),
                   GestureDetector(
                     onHorizontalDragEnd: _handleHorizontalSwipe,
@@ -684,6 +698,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               uiIcon('chevron-right'),
               size: 16,
               color: colors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverdueBackupBanner(BuildContext context) {
+    final colors = context.pockt;
+
+    return Pressable(
+      key: const ValueKey('backup-overdue-banner'),
+      onTap: () {
+        Haptics.tick();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const BackupScreen(),
+          ),
+        );
+      },
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        borderRadius: BorderRadius.circular(18),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: colors.warning,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.warning.withValues(alpha: 0.8),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Copia de seguridad pendiente (hace más de 5 días)',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: colors.warning,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              uiIcon('caret-right'),
+              size: 16,
+              color: colors.warning,
             ),
           ],
         ),

@@ -7,11 +7,15 @@ import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
+import 'package:intl/intl.dart';
+import 'package:pockt/features/backup/domain/backup_service.dart';
+import 'package:pockt/features/backup/ui/backup_screen.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
 import 'package:pockt/features/reminders/ui/reminders_screen.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
+import 'package:pockt/features/security/app_lock.dart';
 
 /// Hub principal de Ajustes (spec §5.10):
 /// Categorías · Esquema de cobro · Recurrentes
@@ -205,6 +209,39 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
+                  const SizedBox(height: 10),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final service = ref.watch(backupServiceProvider);
+                      return StreamBuilder<BackupStatus>(
+                        stream: service.watchStatus(),
+                        builder: (context, snapshot) {
+                          final status = snapshot.data;
+                          final subtitle = status?.lastSuccessAt != null
+                              ? 'Último: ${DateFormat('dd/MM/yyyy').format(status!.lastSuccessAt!)}'
+                              : 'Respaldo automático y cifrado';
+
+                          return _SettingsTile(
+                            key: const ValueKey('settings-backup-tile'),
+                            icon: 'cloud-arrow-up',
+                            title: 'Copia de seguridad',
+                            subtitle: subtitle,
+                            iconColor: colors.brandEnd,
+                            onTap: () {
+                              Haptics.tick();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const BackupScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  const _LockSettingsTile(),
                 ],
               ),
             ),
@@ -291,6 +328,117 @@ class _SettingsTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LockSettingsTile extends ConsumerStatefulWidget {
+  const _LockSettingsTile();
+
+  @override
+  ConsumerState<_LockSettingsTile> createState() => _LockSettingsTileState();
+}
+
+class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
+  AppLockAvailability? _availability;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAvailability();
+  }
+
+  Future<void> _checkAvailability() async {
+    final controller = ref.read(appLockControllerProvider);
+    final avail = await controller.availability();
+    if (mounted) {
+      setState(() {
+        _availability = avail;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final controller = ref.watch(appLockControllerProvider);
+    final isEnabled = controller.isLockEnabled;
+
+    final isReady = _availability == AppLockAvailability.ready;
+    final isNoDeviceLock = _availability == AppLockAvailability.noDeviceLock;
+    final isUnsupported = _availability == AppLockAvailability.unsupported;
+
+    final String subtitle;
+    if (_availability == null) {
+      subtitle = 'Comprobando seguridad...';
+    } else if (isNoDeviceLock) {
+      subtitle = 'El dispositivo no tiene bloqueo configurado (PIN, patrón o huella)';
+    } else if (isUnsupported) {
+      subtitle = 'No soportado en este dispositivo';
+    } else if (isEnabled) {
+      subtitle = 'Activo (huella o PIN)';
+    } else {
+      subtitle = 'Pedir huella o PIN al abrir la app';
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: BorderRadius.circular(16),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colors.brandStart.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Icon(
+                uiIcon('fingerprint'),
+                size: 20,
+                color: colors.brandStart,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bloqueo con huella',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: isNoDeviceLock ? colors.warning : colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            key: const ValueKey('settings-lock-switch'),
+            value: isEnabled,
+            onChanged: isReady
+                ? (val) async {
+                    Haptics.tick();
+                    await controller.setLockEnabled(val);
+                  }
+                : null,
+          ),
+        ],
       ),
     );
   }

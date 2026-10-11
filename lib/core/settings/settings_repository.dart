@@ -10,6 +10,11 @@ abstract class SettingsKeys {
   static const remindersIntensity = 'reminders.intensity';
   static const remindersQuietStart = 'reminders.quietStart';
   static const remindersQuietEnd = 'reminders.quietEnd';
+  static const backupLastSuccessAt = 'backup.lastSuccessAt';
+  static const backupLastError = 'backup.lastError';
+  static const backupFolderName = 'backup.folderName';
+  static const backupGoogleAccount = 'backup.googleAccount';
+  static const securityLock = 'security.lock';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
