@@ -476,12 +476,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 20),
-                    SizedBox(width: 10),
-                    Text(
+                    Icon(uiIcon('cloud-arrow-up'), color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    const Text(
                       'Respaldar ahora',
                       style: TextStyle(
                         fontFamily: 'Inter',
@@ -629,7 +629,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         borderRadius: BorderRadius.circular(20),
         child: Row(
           children: [
-            Icon(Icons.restore, size: 20, color: colors.textPrimary),
+            Icon(uiIcon('clock-counter-clockwise'), size: 20, color: colors.textPrimary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

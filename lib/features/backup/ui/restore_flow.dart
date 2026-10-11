@@ -123,7 +123,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        isObscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        uiIcon(isObscured ? 'eye-slash' : 'eye'),
                         color: colors.textSecondary,
                       ),
                       onPressed: () {
@@ -266,7 +266,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.history, color: colors.textSecondary, size: 20),
+                          Icon(uiIcon('clock-counter-clockwise'), color: colors.textSecondary, size: 20),
                           const SizedBox(width: 10),
                           Text(
                             'Fecha: $dateStr',
@@ -282,7 +282,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.receipt_long_outlined, color: colors.textSecondary, size: 20),
+                          Icon(uiIcon('receipt'), color: colors.textSecondary, size: 20),
                           const SizedBox(width: 10),
                           Text(
                             '${formatGs(preview.transactionCount, symbol: false)} movimientos',
@@ -298,7 +298,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.layers_outlined, color: colors.textSecondary, size: 20),
+                          Icon(uiIcon('stack'), color: colors.textSecondary, size: 20),
                           const SizedBox(width: 10),
                           Text(
                             'Esquema: v${preview.schemaVersion}',
@@ -322,7 +322,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, size: 20, color: colors.warning),
+                      Icon(uiIcon('warning'), size: 20, color: colors.warning),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -473,7 +473,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.error_outline, size: 48, color: colors.danger),
+                            Icon(uiIcon('warning-circle'), size: 48, color: colors.danger),
                             const SizedBox(height: 12),
                             Text(
                               'No se pudieron cargar las copias',
@@ -517,7 +517,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.cloud_off_outlined, size: 56, color: colors.textTertiary),
+                            Icon(uiIcon('cloud-slash'), size: 56, color: colors.textTertiary),
                             const SizedBox(height: 16),
                             Text(
                               'No encontramos copias en tu Google Drive.',
@@ -572,7 +572,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
-                                    child: Icon(Icons.history, color: colors.textSecondary, size: 22),
+                                    child: Icon(uiIcon('clock-counter-clockwise'), color: colors.textSecondary, size: 22),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
