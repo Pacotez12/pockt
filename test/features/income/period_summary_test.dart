@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 
 void main() {
   group('periodLine', () {
@@ -328,6 +329,43 @@ void main() {
       expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 9)), 4900000);
       // El 16/10, el cobro que abrió el período fue el 15/10 (30% = 2.100.000)
       expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 16)), 2100000);
+    });
+
+    test('quedan estimado usa el neto con descuentos', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[30, 70]',
+        monthlyAmount: 4000000,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+
+      final deductions = [
+        const SalaryDeductionItem(name: 'IPS', kind: 'percent', value: 900),
+        const SalaryDeductionItem(name: 'Fijo', kind: 'fixed', value: 40000),
+      ];
+
+      final expected = expectedAmountForPeriod(
+        schedule,
+        DateTime(2026, 10, 9),
+        deductions: deductions,
+      );
+      expect(expected, 2400000);
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 10, 9),
+        schedule: schedule,
+        incomeSincePay: 0,
+        expenseSincePay: 400000,
+        deductions: deductions,
+      );
+
+      expect(line, isNotNull);
+      expect(line!.isEstimate, isTrue);
+      expect(line.remaining, 2000000);
     });
   });
 }

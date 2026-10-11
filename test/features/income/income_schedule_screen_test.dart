@@ -65,7 +65,7 @@ void main() {
   testWidgets('esquema de cobro: cambiar a mensual día 30 muestra el próximo cobro correcto', (tester) async {
     await pumpIncomeScheduleScreen(tester);
 
-    expect(find.text('Esquema de cobro'), findsOneWidget);
+    expect(find.text('Sueldo y cobros'), findsOneWidget);
     expect(find.text('Quincenal'), findsOneWidget);
     expect(find.text('Mensual'), findsOneWidget);
 
@@ -146,7 +146,13 @@ void main() {
 
     // Sueldo mensual se muestra
     expect(find.text('Sueldo mensual'), findsOneWidget);
-    expect(find.text('Gs. 7.000.000'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('schedule-monthly-amount-tile')),
+        matching: find.text('Gs. 7.000.000'),
+      ),
+      findsOneWidget,
+    );
 
     // Reparto visible con vista previa de 30% / 70%
     expect(find.byKey(const ValueKey('schedule-split-section')), findsOneWidget);
@@ -166,5 +172,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('schedule-split-section')), findsNothing);
     expect(find.byKey(const ValueKey('schedule-split-slider')), findsNothing);
+  });
+
+  testWidgets('sección Descuentos permite agregar, editar, borrar y muestra resumen Lo que cobrás', (tester) async {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    await scheduleRepo.setSchedule(
+      mode: PayMode.biweekly,
+      payDays: [15, -1],
+      payDayRules: [PayDayRule.either, PayDayRule.previous],
+      monthlyAmount: 4000000,
+      paySplitPercents: [30, 70],
+      categoryId: sueldoCatId,
+    );
+
+    await pumpIncomeScheduleScreen(tester);
+
+    // Título de la pantalla
+    expect(find.text('Sueldo y cobros'), findsOneWidget);
+
+    // Resumen "Lo que cobrás" presente
+    expect(find.text('LO QUE COBRÁS'), findsOneWidget);
+
+    // Sección Descuentos presente
+    expect(find.text('DESCUENTOS'), findsOneWidget);
+    expect(find.byKey(const ValueKey('add-deduction-button')), findsOneWidget);
+
+    // Tocar agregar descuento
+    await tester.tap(find.byKey(const ValueKey('add-deduction-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agregar descuento'), findsOneWidget);
+
+    // Ingresar nombre "IPS"
+    await tester.enterText(find.byKey(const ValueKey('deduction-name-input')), 'IPS');
+    // Ingresar 9 (%)
+    await tester.enterText(find.byKey(const ValueKey('deduction-value-input')), '9');
+    await tester.pumpAndSettle();
+
+    // Guardar descuento
+    await tester.tap(find.byKey(const ValueKey('save-deduction-dialog-button')));
+    await tester.pumpAndSettle();
+
+    // Descuento en la lista
+    expect(find.text('IPS'), findsOneWidget);
+    expect(find.textContaining('9 % del bruto'), findsOneWidget);
+
+    // En "Lo que cobrás", el segundo cobro (fin de mes) ahora refleja el descuento (2.800.000 - 360.000 = 2.440.000)
+    expect(find.textContaining('2.440.000'), findsOneWidget);
+
+    // Guardar esquema completo
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Guardar esquema'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
+    expect(current, isNotNull);
+    final savedDeds = await tester.runAsync(() => scheduleRepo.getDeductionsFor(current!.id));
+    expect(savedDeds, hasLength(1));
+    expect(savedDeds!.first.name, 'IPS');
+    expect(savedDeds.first.value, 900);
   });
 }

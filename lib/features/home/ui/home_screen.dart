@@ -74,6 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<DateTime?>? _lastSalarySub;
   StreamSubscription<int>? _payIncomeSub;
   StreamSubscription<int>? _payExpenseSub;
+  StreamSubscription<List<SalaryDeduction>>? _deductionsSub;
 
   int _monthTotal = 0;
   int _previousTotal = 0;
@@ -81,6 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _expenseSincePay = 0;
   DateTime? _lastSalaryDate;
   IncomeSchedule? _schedule;
+  List<SalaryDeduction> _deductions = const [];
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
   List<TxView> _recentTxs = const [];
@@ -124,6 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
     _budgetsSub?.cancel();
+    _deductionsSub?.cancel();
     super.dispose();
   }
 
@@ -134,6 +137,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payExpenseSub?.cancel();
     _payIncomeSub = null;
     _payExpenseSub = null;
+    _deductionsSub?.cancel();
+    _deductionsSub = null;
 
     if (sched == null) {
       if (mounted) {
@@ -141,10 +146,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _lastSalaryDate = null;
           _incomeSincePay = 0;
           _expenseSincePay = 0;
+          _deductions = const [];
         });
       }
       return;
     }
+
+    final schedRepo = ref.read(incomeScheduleRepositoryProvider);
+    _deductionsSub = schedRepo.watchDeductionsFor(sched.id).listen((deds) {
+      if (mounted) {
+        setState(() {
+          _deductions = deds;
+        });
+      }
+    });
 
     final payDays = parsePayDays(sched.payDays);
     final rules = parsePayDayRules(sched.payDayRules, payDays);
@@ -331,8 +346,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       incomeSincePay: _incomeSincePay,
       expenseSincePay: _expenseSincePay,
       lastConfirmedSalaryDate: _lastSalaryDate,
+      deductions: _deductions,
       expectedForPeriod: _schedule != null
-          ? expectedAmountForPeriod(_schedule!, _getNow())
+          ? expectedAmountForPeriod(_schedule!, _getNow(), deductions: _deductions)
           : null,
     );
 

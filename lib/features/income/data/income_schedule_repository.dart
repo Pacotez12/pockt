@@ -4,7 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
-import 'package:pockt/features/income/domain/pay_split.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:uuid/uuid.dart';
 
@@ -33,6 +33,20 @@ class IncomeScheduleRepository {
     return query.watchSingleOrNull();
   }
 
+  /// Emite las deducciones asociadas a un esquema de cobro.
+  Stream<List<SalaryDeduction>> watchDeductionsFor(String scheduleId) {
+    final query = _db.select(_db.salaryDeductions)
+      ..where((t) => t.scheduleId.equals(scheduleId));
+    return query.watch();
+  }
+
+  /// Obtiene las deducciones asociadas a un esquema de cobro.
+  Future<List<SalaryDeduction>> getDeductionsFor(String scheduleId) {
+    final query = _db.select(_db.salaryDeductions)
+      ..where((t) => t.scheduleId.equals(scheduleId));
+    return query.get();
+  }
+
   /// Guarda el esquema de cobro con `effectiveFrom` = hoy local.
   /// Si ya hay uno vigente desde hoy, lo reemplaza (guardar varias veces el
   /// mismo día no deja filas empatadas); los esquemas de días anteriores no se
@@ -40,7 +54,7 @@ class IncomeScheduleRepository {
   ///
   /// Si no había ningún esquema previo en la base de datos, crea una sugerencia
   /// para el cobro más reciente ya pasado (`previousPayWindow(hoy)`) con su
-  /// monto del reparto, de forma idempotente.
+  /// monto del reparto (neto si hay descuentos), de forma idempotente.
   Future<void> setSchedule({
     required PayMode mode,
     required List<int> payDays,
@@ -50,6 +64,7 @@ class IncomeScheduleRepository {
     @Deprecated('Usar monthlyAmount') int? expectedAmount,
     List<int>? paySplitPercents,
     required String categoryId,
+    List<SalaryDeductionItem>? deductions,
   }) async {
     final today = _todayLocal();
     final rules =
@@ -75,6 +90,15 @@ class IncomeScheduleRepository {
       final hadNoPreviousSchedule =
           (await (_db.select(_db.incomeSchedules)..limit(1)).get()).isEmpty;
 
+      final existingForToday = await (_db.select(_db.incomeSchedules)
+            ..where((t) => t.effectiveFrom.equals(today)))
+          .get();
+      for (final s in existingForToday) {
+        await (_db.delete(_db.salaryDeductions)
+              ..where((t) => t.scheduleId.equals(s.id)))
+            .go();
+      }
+
       await (_db.delete(
         _db.incomeSchedules,
       )..where((t) => t.effectiveFrom.equals(today))).go();
@@ -94,6 +118,21 @@ class IncomeScheduleRepository {
               effectiveFrom: today,
             ),
           );
+
+      if (deductions != null && deductions.isNotEmpty) {
+        for (final d in deductions) {
+          final dedId = _uuid.v4();
+          await _db.into(_db.salaryDeductions).insert(
+            SalaryDeductionsCompanion.insert(
+              id: dedId,
+              scheduleId: newScheduleId,
+              name: d.name,
+              kind: d.kind,
+              value: d.value,
+            ),
+          );
+        }
+      }
 
       if (hadNoPreviousSchedule) {
         final prevWindow = previousPayWindow(today, payDays, rules);
@@ -126,8 +165,12 @@ class IncomeScheduleRepository {
 
           final int amount;
           if (actualMonthlyAmount != null && matchIndex != null) {
-            final splitList = splitAmounts(actualMonthlyAmount, splits);
-            amount = matchIndex < splitList.length ? splitList[matchIndex] : 0;
+            final netList = netPayAmounts(
+              actualMonthlyAmount,
+              splits,
+              deductions ?? const [],
+            );
+            amount = matchIndex < netList.length ? netList[matchIndex] : 0;
           } else {
             amount = 0;
           }

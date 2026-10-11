@@ -199,7 +199,7 @@ void main() {
 
       final preview = await restoreService.preview(backupId, 'secret-password');
       expect(preview.transactionCount, equals(1));
-      expect(preview.schemaVersion, equals(5));
+      expect(preview.schemaVersion, equals(6));
       expect(preview.createdAt, isNotNull);
     });
 
@@ -343,7 +343,7 @@ void main() {
 
       // 4. Abrir la base restaurada: debe migrar a v5 sin fallar y tener los 3 movimientos
       final migratedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      expect(migratedDb.schemaVersion, equals(5));
+      expect(migratedDb.schemaVersion, equals(6));
       final txs = await migratedDb.select(migratedDb.transactions).get();
       expect(txs.length, equals(3));
       await migratedDb.close();

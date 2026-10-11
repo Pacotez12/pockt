@@ -2,6 +2,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/income/domain/pay_split.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 
 /// Representa el resumen de período (quincena / mes) mostrado en el Inicio.
 class PeriodLine {
@@ -59,8 +60,13 @@ class PeriodLine {
       : '$label · quedan ${formatGs(remaining)} · $payDayText';
 }
 
-/// Obtiene el monto esperado correspondiente al cobro que abrió el período actual.
-int? expectedAmountForPeriod(IncomeSchedule schedule, DateTime todayLocal) {
+/// Obtiene el monto esperado correspondiente al cobro que abrió el período actual,
+/// teniendo en cuenta los descuentos aplicados al sueldo.
+int? expectedAmountForPeriod(
+  IncomeSchedule schedule,
+  DateTime todayLocal, {
+  Iterable<SalaryDeductionLike> deductions = const [],
+}) {
   if (schedule.monthlyAmount == null) return null;
   final payDays = parsePayDays(schedule.payDays);
   if (payDays.isEmpty) return null;
@@ -69,7 +75,7 @@ int? expectedAmountForPeriod(IncomeSchedule schedule, DateTime todayLocal) {
     schedule.paySplitPercents,
     count: payDays.length,
   );
-  final splitList = splitAmounts(schedule.monthlyAmount!, splits);
+  final splitList = netPayAmounts(schedule.monthlyAmount!, splits, deductions);
   final prevWindow = previousPayWindow(todayLocal, payDays, rules);
   if (prevWindow == null) return null;
 
@@ -108,6 +114,7 @@ PeriodLine? periodLine({
   required int expenseSincePay,
   DateTime? lastConfirmedSalaryDate,
   int? expectedForPeriod,
+  Iterable<SalaryDeductionLike> deductions = const [],
 }) {
   if (schedule == null) return null;
 
@@ -157,8 +164,8 @@ PeriodLine? periodLine({
     }
   }
 
-  final effectiveExpected =
-      expectedForPeriod ?? expectedAmountForPeriod(schedule, todayLocal);
+  final effectiveExpected = expectedForPeriod ??
+      expectedAmountForPeriod(schedule, todayLocal, deductions: deductions);
   final bool isEstimate;
   final int remaining;
 

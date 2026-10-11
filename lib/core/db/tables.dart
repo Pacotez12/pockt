@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 
 enum TxType { expense, income }
 
@@ -91,6 +92,18 @@ class IncomeSchedules extends Table {
   TextColumn get paySplitPercents => text()();
   TextColumn get categoryId => text().references(Categories, #id)();
   DateTimeColumn get effectiveFrom => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName.custom(implementing: [SalaryDeductionLike])
+class SalaryDeductions extends Table {
+  TextColumn get id => text()();
+  TextColumn get scheduleId => text().references(IncomeSchedules, #id)();
+  TextColumn get name => text()();
+  TextColumn get kind => text()();
+  IntColumn get value => integer()();
 
   @override
   Set<Column> get primaryKey => {id};

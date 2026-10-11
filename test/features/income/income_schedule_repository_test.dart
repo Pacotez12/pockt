@@ -5,6 +5,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 
 void main() {
   late AppDatabase db;
@@ -148,6 +149,114 @@ void main() {
 
     final sugsAfter = await db.select(db.suggestedTransactions).get();
     expect(sugsAfter, hasLength(1));
+  });
+
+  test('guardar esquema con descuentos guarda deducciones y la sugerencia de cobro inicial usa el neto', () async {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    final repoWithClock = IncomeScheduleRepository(
+      db,
+      clock: () => DateTime(2026, 10, 9, 10, 0),
+    );
+
+    final deductions = [
+      const SalaryDeductionItem(name: 'IPS', kind: 'percent', value: 900),
+      const SalaryDeductionItem(name: 'Seguro', kind: 'fixed', value: 40000),
+    ];
+
+    await repoWithClock.setSchedule(
+      mode: PayMode.biweekly,
+      payDays: [15, -1],
+      payDayRules: [PayDayRule.either, PayDayRule.previous],
+      monthlyAmount: 4000000,
+      paySplitPercents: [30, 70],
+      categoryId: sueldoCatId,
+      deductions: deductions,
+    );
+
+    final current = await repoWithClock.watchCurrent().first;
+    expect(current, isNotNull);
+
+    // Deducciones guardadas
+    final savedDeds = await repoWithClock.getDeductionsFor(current!.id);
+    expect(savedDeds, hasLength(2));
+    expect(savedDeds[0].name, 'IPS');
+    expect(savedDeds[0].value, 900);
+    expect(savedDeds[1].name, 'Seguro');
+    expect(savedDeds[1].value, 40000);
+
+    // Sugerencia inicial usa el neto: bruto 2.800.000 - 400.000 deducciones = 2.400.000
+    final sugs = await db.select(db.suggestedTransactions).get();
+    expect(sugs, hasLength(1));
+    expect(sugs.first.amount, 2400000);
+  });
+
+  test('guardar esquema con descuentos otro día genera nuevos UUIDs de descuentos sin colisión y preserva el historial', () async {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    var currentDate = DateTime(2026, 10, 1, 10, 0);
+    final repoWithClock = IncomeScheduleRepository(
+      db,
+      clock: () => currentDate,
+    );
+
+    final initialDeductions = [
+      const SalaryDeductionItem(name: 'IPS', kind: 'percent', value: 900),
+      const SalaryDeductionItem(name: 'Seguro', kind: 'fixed', value: 40000),
+    ];
+
+    // Día 1: guardar esquema
+    await repoWithClock.setSchedule(
+      mode: PayMode.monthly,
+      payDays: [-1],
+      payDayRules: [PayDayRule.previous],
+      monthlyAmount: 4000000,
+      paySplitPercents: [100],
+      categoryId: sueldoCatId,
+      deductions: initialDeductions,
+    );
+
+    final schedule1 = await repoWithClock.watchCurrent().first;
+    expect(schedule1, isNotNull);
+    final savedDeds1 = await repoWithClock.getDeductionsFor(schedule1!.id);
+    expect(savedDeds1, hasLength(2));
+    expect(savedDeds1.every((d) => d.id.isNotEmpty), isTrue);
+
+    // Mapear como hace la UI (que conserva los IDs de los descuentos existentes)
+    final dedsFromUi = savedDeds1
+        .map((d) => SalaryDeductionItem(
+              id: d.id,
+              scheduleId: d.scheduleId,
+              name: d.name,
+              kind: d.kind,
+              value: d.value,
+            ))
+        .toList();
+
+    // Día 2: el usuario carga los descuentos existentes (que traen d.id) y vuelve a guardar
+    currentDate = DateTime(2026, 10, 2, 10, 0);
+    await repoWithClock.setSchedule(
+      mode: PayMode.monthly,
+      payDays: [-1],
+      payDayRules: [PayDayRule.previous],
+      monthlyAmount: 4500000,
+      paySplitPercents: [100],
+      categoryId: sueldoCatId,
+      deductions: dedsFromUi,
+    );
+
+    final schedule2 = await repoWithClock.watchCurrent().first;
+    expect(schedule2, isNotNull);
+    expect(schedule2!.id, isNot(equals(schedule1.id)));
+
+    // El esquema viejo conserva sus descuentos
+    final oldDeds = await repoWithClock.getDeductionsFor(schedule1.id);
+    expect(oldDeds, hasLength(2));
+
+    // El esquema nuevo tiene sus propios descuentos con IDs distintos
+    final newDeds = await repoWithClock.getDeductionsFor(schedule2.id);
+    expect(newDeds, hasLength(2));
+    final oldIds = oldDeds.map((d) => d.id).toSet();
+    final newIds = newDeds.map((d) => d.id).toSet();
+    expect(oldIds.intersection(newIds), isEmpty);
   });
 }
 

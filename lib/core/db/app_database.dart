@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 import 'package:uuid/uuid.dart';
 
 part 'app_database.g.dart';
@@ -18,13 +19,14 @@ part 'app_database.g.dart';
   Settings,
   CategoryKeywords,
   MerchantMemory,
+  SalaryDeductions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -171,6 +173,9 @@ class AppDatabase extends _$AppDatabase {
 
           await customStatement('DROP TABLE income_schedules;');
           await customStatement('ALTER TABLE income_schedules_new RENAME TO income_schedules;');
+        }
+        if (from < 6) {
+          await m.createTable(salaryDeductions);
         }
       },
     );

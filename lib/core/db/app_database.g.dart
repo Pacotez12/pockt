@@ -4867,6 +4867,362 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   }
 }
 
+class $SalaryDeductionsTable extends SalaryDeductions
+    with TableInfo<$SalaryDeductionsTable, SalaryDeduction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SalaryDeductionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scheduleIdMeta = const VerificationMeta(
+    'scheduleId',
+  );
+  @override
+  late final GeneratedColumn<String> scheduleId = GeneratedColumn<String>(
+    'schedule_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES income_schedules (id)',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<int> value = GeneratedColumn<int>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, scheduleId, name, kind, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'salary_deductions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SalaryDeduction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('schedule_id')) {
+      context.handle(
+        _scheduleIdMeta,
+        scheduleId.isAcceptableOrUnknown(data['schedule_id']!, _scheduleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scheduleIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SalaryDeduction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SalaryDeduction(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      scheduleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $SalaryDeductionsTable createAlias(String alias) {
+    return $SalaryDeductionsTable(attachedDatabase, alias);
+  }
+}
+
+class SalaryDeduction extends DataClass
+    implements Insertable<SalaryDeduction>, SalaryDeductionLike {
+  final String id;
+  final String scheduleId;
+  final String name;
+  final String kind;
+  final int value;
+  const SalaryDeduction({
+    required this.id,
+    required this.scheduleId,
+    required this.name,
+    required this.kind,
+    required this.value,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['schedule_id'] = Variable<String>(scheduleId);
+    map['name'] = Variable<String>(name);
+    map['kind'] = Variable<String>(kind);
+    map['value'] = Variable<int>(value);
+    return map;
+  }
+
+  SalaryDeductionsCompanion toCompanion(bool nullToAbsent) {
+    return SalaryDeductionsCompanion(
+      id: Value(id),
+      scheduleId: Value(scheduleId),
+      name: Value(name),
+      kind: Value(kind),
+      value: Value(value),
+    );
+  }
+
+  factory SalaryDeduction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SalaryDeduction(
+      id: serializer.fromJson<String>(json['id']),
+      scheduleId: serializer.fromJson<String>(json['scheduleId']),
+      name: serializer.fromJson<String>(json['name']),
+      kind: serializer.fromJson<String>(json['kind']),
+      value: serializer.fromJson<int>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'scheduleId': serializer.toJson<String>(scheduleId),
+      'name': serializer.toJson<String>(name),
+      'kind': serializer.toJson<String>(kind),
+      'value': serializer.toJson<int>(value),
+    };
+  }
+
+  SalaryDeduction copyWith({
+    String? id,
+    String? scheduleId,
+    String? name,
+    String? kind,
+    int? value,
+  }) => SalaryDeduction(
+    id: id ?? this.id,
+    scheduleId: scheduleId ?? this.scheduleId,
+    name: name ?? this.name,
+    kind: kind ?? this.kind,
+    value: value ?? this.value,
+  );
+  SalaryDeduction copyWithCompanion(SalaryDeductionsCompanion data) {
+    return SalaryDeduction(
+      id: data.id.present ? data.id.value : this.id,
+      scheduleId: data.scheduleId.present
+          ? data.scheduleId.value
+          : this.scheduleId,
+      name: data.name.present ? data.name.value : this.name,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SalaryDeduction(')
+          ..write('id: $id, ')
+          ..write('scheduleId: $scheduleId, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, scheduleId, name, kind, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SalaryDeduction &&
+          other.id == this.id &&
+          other.scheduleId == this.scheduleId &&
+          other.name == this.name &&
+          other.kind == this.kind &&
+          other.value == this.value);
+}
+
+class SalaryDeductionsCompanion extends UpdateCompanion<SalaryDeduction> {
+  final Value<String> id;
+  final Value<String> scheduleId;
+  final Value<String> name;
+  final Value<String> kind;
+  final Value<int> value;
+  final Value<int> rowid;
+  const SalaryDeductionsCompanion({
+    this.id = const Value.absent(),
+    this.scheduleId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SalaryDeductionsCompanion.insert({
+    required String id,
+    required String scheduleId,
+    required String name,
+    required String kind,
+    required int value,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       scheduleId = Value(scheduleId),
+       name = Value(name),
+       kind = Value(kind),
+       value = Value(value);
+  static Insertable<SalaryDeduction> custom({
+    Expression<String>? id,
+    Expression<String>? scheduleId,
+    Expression<String>? name,
+    Expression<String>? kind,
+    Expression<int>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scheduleId != null) 'schedule_id': scheduleId,
+      if (name != null) 'name': name,
+      if (kind != null) 'kind': kind,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SalaryDeductionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? scheduleId,
+    Value<String>? name,
+    Value<String>? kind,
+    Value<int>? value,
+    Value<int>? rowid,
+  }) {
+    return SalaryDeductionsCompanion(
+      id: id ?? this.id,
+      scheduleId: scheduleId ?? this.scheduleId,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (scheduleId.present) {
+      map['schedule_id'] = Variable<String>(scheduleId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<int>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SalaryDeductionsCompanion(')
+          ..write('id: $id, ')
+          ..write('scheduleId: $scheduleId, ')
+          ..write('name: $name, ')
+          ..write('kind: $kind, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4885,6 +5241,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $MerchantMemoryTable merchantMemory = $MerchantMemoryTable(this);
+  late final $SalaryDeductionsTable salaryDeductions = $SalaryDeductionsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4900,6 +5259,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     categoryKeywords,
     merchantMemory,
+    salaryDeductions,
   ];
 }
 
@@ -7536,6 +7896,26 @@ final class $$IncomeSchedulesTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$SalaryDeductionsTable, List<SalaryDeduction>>
+  _salaryDeductionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.salaryDeductions,
+    aliasName: 'income_schedules__id__salary_deductions__schedule_id',
+  );
+
+  $$SalaryDeductionsTableProcessedTableManager get salaryDeductionsRefs {
+    final manager = $$SalaryDeductionsTableTableManager(
+      $_db,
+      $_db.salaryDeductions,
+    ).filter((f) => f.scheduleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _salaryDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$IncomeSchedulesTableFilterComposer
@@ -7603,6 +7983,31 @@ class $$IncomeSchedulesTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> salaryDeductionsRefs(
+    Expression<bool> Function($$SalaryDeductionsTableFilterComposer f) f,
+  ) {
+    final $$SalaryDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.salaryDeductions,
+      getReferencedColumn: (t) => t.scheduleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SalaryDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.salaryDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -7734,6 +8139,31 @@ class $$IncomeSchedulesTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> salaryDeductionsRefs<T extends Object>(
+    Expression<T> Function($$SalaryDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$SalaryDeductionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.salaryDeductions,
+      getReferencedColumn: (t) => t.scheduleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SalaryDeductionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.salaryDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$IncomeSchedulesTableTableManager
@@ -7749,7 +8179,7 @@ class $$IncomeSchedulesTableTableManager
           $$IncomeSchedulesTableUpdateCompanionBuilder,
           (IncomeSchedule, $$IncomeSchedulesTableReferences),
           IncomeSchedule,
-          PrefetchHooks Function({bool categoryId})
+          PrefetchHooks Function({bool categoryId, bool salaryDeductionsRefs})
         > {
   $$IncomeSchedulesTableTableManager(
     _$AppDatabase db,
@@ -7816,45 +8246,70 @@ class $$IncomeSchedulesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({categoryId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (categoryId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.categoryId,
-                        referencedTable: $$IncomeSchedulesTableReferences
-                            ._categoryIdTable(db),
-                        referencedColumn: $$IncomeSchedulesTableReferences
-                            ._categoryIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({categoryId = false, salaryDeductionsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (salaryDeductionsRefs) db.salaryDeductions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (categoryId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.categoryId,
+                            referencedTable: $$IncomeSchedulesTableReferences
+                                ._categoryIdTable(db),
+                            referencedColumn: $$IncomeSchedulesTableReferences
+                                ._categoryIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (salaryDeductionsRefs)
+                        await $_getPrefetchedData<
+                          IncomeSchedule,
+                          $IncomeSchedulesTable,
+                          SalaryDeduction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$IncomeSchedulesTableReferences
+                              ._salaryDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$IncomeSchedulesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).salaryDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.scheduleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -7871,7 +8326,7 @@ typedef $$IncomeSchedulesTableProcessedTableManager =
       $$IncomeSchedulesTableUpdateCompanionBuilder,
       (IncomeSchedule, $$IncomeSchedulesTableReferences),
       IncomeSchedule,
-      PrefetchHooks Function({bool categoryId})
+      PrefetchHooks Function({bool categoryId, bool salaryDeductionsRefs})
     >;
 typedef $$BudgetsTableCreateCompanionBuilder = BudgetsCompanion Function({
   required String id,
@@ -9080,6 +9535,329 @@ typedef $$MerchantMemoryTableProcessedTableManager =
       MerchantMemoryData,
       PrefetchHooks Function({bool categoryId})
     >;
+typedef $$SalaryDeductionsTableCreateCompanionBuilder =
+    SalaryDeductionsCompanion Function({
+      required String id,
+      required String scheduleId,
+      required String name,
+      required String kind,
+      required int value,
+      Value<int> rowid,
+    });
+typedef $$SalaryDeductionsTableUpdateCompanionBuilder =
+    SalaryDeductionsCompanion Function({
+      Value<String> id,
+      Value<String> scheduleId,
+      Value<String> name,
+      Value<String> kind,
+      Value<int> value,
+      Value<int> rowid,
+    });
+
+final class $$SalaryDeductionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $SalaryDeductionsTable, SalaryDeduction> {
+  $$SalaryDeductionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $IncomeSchedulesTable _scheduleIdTable(_$AppDatabase db) => db
+      .incomeSchedules
+      .createAlias('salary_deductions__schedule_id__income_schedules__id');
+
+  $$IncomeSchedulesTableProcessedTableManager get scheduleId {
+    final $_column = $_itemColumn<String>('schedule_id')!;
+
+    final manager = $$IncomeSchedulesTableTableManager(
+      $_db,
+      $_db.incomeSchedules,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_scheduleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SalaryDeductionsTableFilterComposer
+    extends Composer<_$AppDatabase, $SalaryDeductionsTable> {
+  $$SalaryDeductionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$IncomeSchedulesTableFilterComposer get scheduleId {
+    final $$IncomeSchedulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scheduleId,
+      referencedTable: $db.incomeSchedules,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IncomeSchedulesTableFilterComposer(
+            $db: $db,
+            $table: $db.incomeSchedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SalaryDeductionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SalaryDeductionsTable> {
+  $$SalaryDeductionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$IncomeSchedulesTableOrderingComposer get scheduleId {
+    final $$IncomeSchedulesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scheduleId,
+      referencedTable: $db.incomeSchedules,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IncomeSchedulesTableOrderingComposer(
+            $db: $db,
+            $table: $db.incomeSchedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SalaryDeductionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SalaryDeductionsTable> {
+  $$SalaryDeductionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  $$IncomeSchedulesTableAnnotationComposer get scheduleId {
+    final $$IncomeSchedulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.scheduleId,
+      referencedTable: $db.incomeSchedules,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$IncomeSchedulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.incomeSchedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SalaryDeductionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SalaryDeductionsTable,
+          SalaryDeduction,
+          $$SalaryDeductionsTableFilterComposer,
+          $$SalaryDeductionsTableOrderingComposer,
+          $$SalaryDeductionsTableAnnotationComposer,
+          $$SalaryDeductionsTableCreateCompanionBuilder,
+          $$SalaryDeductionsTableUpdateCompanionBuilder,
+          (SalaryDeduction, $$SalaryDeductionsTableReferences),
+          SalaryDeduction,
+          PrefetchHooks Function({bool scheduleId})
+        > {
+  $$SalaryDeductionsTableTableManager(
+    _$AppDatabase db,
+    $SalaryDeductionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SalaryDeductionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SalaryDeductionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SalaryDeductionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> scheduleId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int> value = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SalaryDeductionsCompanion(
+                id: id,
+                scheduleId: scheduleId,
+                name: name,
+                kind: kind,
+                value: value,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String scheduleId,
+                required String name,
+                required String kind,
+                required int value,
+                Value<int> rowid = const Value.absent(),
+              }) => SalaryDeductionsCompanion.insert(
+                id: id,
+                scheduleId: scheduleId,
+                name: name,
+                kind: kind,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SalaryDeductionsTable, SalaryDeduction>(table),
+                  $$SalaryDeductionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({scheduleId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (scheduleId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.scheduleId,
+                        referencedTable: $$SalaryDeductionsTableReferences
+                            ._scheduleIdTable(db),
+                        referencedColumn: $$SalaryDeductionsTableReferences
+                            ._scheduleIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SalaryDeductionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SalaryDeductionsTable,
+      SalaryDeduction,
+      $$SalaryDeductionsTableFilterComposer,
+      $$SalaryDeductionsTableOrderingComposer,
+      $$SalaryDeductionsTableAnnotationComposer,
+      $$SalaryDeductionsTableCreateCompanionBuilder,
+      $$SalaryDeductionsTableUpdateCompanionBuilder,
+      (SalaryDeduction, $$SalaryDeductionsTableReferences),
+      SalaryDeduction,
+      PrefetchHooks Function({bool scheduleId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9104,4 +9882,6 @@ class $AppDatabaseManager {
       $$CategoryKeywordsTableTableManager(_db, _db.categoryKeywords);
   $$MerchantMemoryTableTableManager get merchantMemory =>
       $$MerchantMemoryTableTableManager(_db, _db.merchantMemory);
+  $$SalaryDeductionsTableTableManager get salaryDeductions =>
+      $$SalaryDeductionsTableTableManager(_db, _db.salaryDeductions);
 }

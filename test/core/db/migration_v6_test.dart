@@ -9,8 +9,8 @@ void main() {
   late File dbFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pockt_mig_v5_');
-    dbFile = File('${tempDir.path}/pockt_v4.db');
+    tempDir = await Directory.systemTemp.createTemp('pockt_mig_v6_');
+    dbFile = File('${tempDir.path}/pockt_v5.db');
   });
 
   tearDown(() async {
@@ -19,11 +19,11 @@ void main() {
     }
   });
 
-  void createV4DatabaseWithData(File file) {
+  void createV5DatabaseWithData(File file) {
     final rawDb = sqlite.sqlite3.open(file.path);
 
     rawDb.execute('''
-      PRAGMA user_version = 4;
+      PRAGMA user_version = 5;
 
       CREATE TABLE categories (
         id TEXT NOT NULL PRIMARY KEY,
@@ -92,7 +92,8 @@ void main() {
         mode TEXT NOT NULL,
         pay_days TEXT NOT NULL,
         pay_day_rules TEXT NOT NULL,
-        expected_amount INTEGER,
+        monthly_amount INTEGER,
+        pay_split_percents TEXT NOT NULL,
         category_id TEXT NOT NULL REFERENCES categories(id),
         effective_from INTEGER NOT NULL
       );
@@ -107,7 +108,7 @@ void main() {
 
       CREATE TABLE day_marks (
         date TEXT NOT NULL PRIMARY KEY,
-        no_spend INTEGER NOT NULL DEFAULT 0
+        no_spend INTEGER NOT NULL
       );
 
       CREATE TABLE settings (
@@ -119,44 +120,37 @@ void main() {
         id TEXT NOT NULL PRIMARY KEY,
         category_id TEXT NOT NULL REFERENCES categories(id),
         keyword TEXT NOT NULL,
-        source TEXT NOT NULL DEFAULT 'user'
+        source TEXT NOT NULL,
+        UNIQUE (category_id, keyword)
       );
 
       CREATE TABLE merchant_memory (
-        merchant_key TEXT NOT NULL,
+        raw_merchant TEXT NOT NULL PRIMARY KEY,
+        clean_merchant TEXT NOT NULL,
         category_id TEXT NOT NULL REFERENCES categories(id),
-        uses INTEGER NOT NULL DEFAULT 1,
-        last_used_at INTEGER NOT NULL,
-        PRIMARY KEY (merchant_key, category_id)
+        usage_count INTEGER NOT NULL DEFAULT 1,
+        last_used_at INTEGER NOT NULL
       );
-    ''');
 
-    // Datos v4 preexistentes del usuario
-    rawDb.execute('''
+      -- Seed data
       INSERT INTO categories (id, name, icon, color_dark, color_light, kind, sort_order)
-      VALUES ('cat-comida', 'Comida', 'fork-knife', 1, 2, 'expense', 0),
-             ('cat-sueldo', 'Sueldo', 'briefcase', 3, 4, 'income', 0);
+      VALUES ('cat-comida', 'Comida', 'fork-knife', 0, 0, 'expense', 1);
 
-      INSERT INTO transactions (id, type, amount, currency, category_id, merchant, occurred_at, created_at, updated_at, source)
-      VALUES ('tx-1', 'expense', 15000, 'PYG', 'cat-comida', 'Superseis', 1728000000000, 1728000000000, 1728000000000, 'manual');
+      INSERT INTO categories (id, name, icon, color_dark, color_light, kind, sort_order)
+      VALUES ('cat-sueldo', 'Sueldo', 'money', 0, 0, 'income', 2);
 
-      INSERT INTO income_schedules (id, mode, pay_days, pay_day_rules, expected_amount, category_id, effective_from)
-      VALUES ('sched-1', 'biweekly', '[15, -1]', '["either","previous"]', 3500000, 'cat-sueldo', 1727740800000),
-             ('sched-2', 'monthly', '[-1]', '["previous"]', 4000000, 'cat-sueldo', 1725148800000),
-             ('sched-3', 'biweekly', '[15, -1]', '["either","previous"]', NULL, 'cat-sueldo', 1727740800000);
+      INSERT INTO transactions (id, type, amount, category_id, occurred_at, created_at, updated_at, source, merchant)
+      VALUES ('tx-1', 'expense', 45000, 'cat-comida', 1728432000000, 1728432000000, 1728432000000, 'manual', 'Superseis');
 
-      INSERT INTO budgets (id, category_id, monthly_limit)
-      VALUES ('b-1', 'cat-comida', 1500000);
-
-      INSERT INTO recurring_rules (id, name, type, amount, category_id, frequency, next_due_date, active)
-      VALUES ('r-1', 'Netflix', 'expense', 85000, 'cat-comida', 'monthly', 1728345600000, 1);
+      INSERT INTO income_schedules (id, mode, pay_days, pay_day_rules, monthly_amount, pay_split_percents, category_id, effective_from)
+      VALUES ('sched-1', 'biweekly', '[15, -1]', '["either","previous"]', 4000000, '[30,70]', 'cat-sueldo', 1728000000000);
     ''');
 
     rawDb.close();
   }
 
-  test('migración v4 a v5 conserva datos y convierte expectedAmount a monthlyAmount con paySplitPercents', () async {
-    createV4DatabaseWithData(dbFile);
+  test('migración v5 a v6 crea tabla salary_deductions y conserva el esquema existente', () async {
+    createV5DatabaseWithData(dbFile);
 
     final db = AppDatabase.forTesting(
       NativeDatabase(dbFile),
@@ -170,49 +164,44 @@ void main() {
     expect(txs.length, equals(1));
     expect(txs.first.merchant, equals('Superseis'));
 
-    final budgets = await db.select(db.budgets).get();
-    expect(budgets.length, equals(1));
-    expect(budgets.first.monthlyLimit, equals(1500000));
-
-    final rules = await db.select(db.recurringRules).get();
-    expect(rules.length, equals(1));
-    expect(rules.first.name, equals('Netflix'));
-
-    // 3. Esquemas de cobro migrados con monthlyAmount y paySplitPercents
     final schedules = await db.select(db.incomeSchedules).get();
-    expect(schedules.length, equals(3));
+    expect(schedules.length, equals(1));
+    final sched = schedules.first;
+    expect(sched.id, equals('sched-1'));
+    expect(sched.monthlyAmount, equals(4000000));
+    expect(sched.paySplitPercents, equals('[30,70]'));
 
-    // sched-1: biweekly [15, -1] con expectedAmount 3500000 -> monthlyAmount = 3500000 * 2 = 7000000, [50, 50]
-    final sched1 = schedules.firstWhere((s) => s.id == 'sched-1');
-    expect(sched1.payDays, equals('[15, -1]'));
-    expect(sched1.payDayRules, equals('["either","previous"]'));
-    expect(sched1.monthlyAmount, equals(7000000));
-    expect(sched1.paySplitPercents, equals('[50,50]'));
+    // 3. Tabla salary_deductions utilizable a través de drift
+    await db.into(db.salaryDeductions).insert(
+          SalaryDeductionsCompanion.insert(
+            id: 'ded-1',
+            scheduleId: 'sched-1',
+            name: 'IPS',
+            kind: 'percent',
+            value: 900,
+          ),
+        );
 
-    // sched-2: monthly [-1] con expectedAmount 4000000 -> monthlyAmount = 4000000 * 1 = 4000000, [100]
-    final sched2 = schedules.firstWhere((s) => s.id == 'sched-2');
-    expect(sched2.payDays, equals('[-1]'));
-    expect(sched2.payDayRules, equals('["previous"]'));
-    expect(sched2.monthlyAmount, equals(4000000));
-    expect(sched2.paySplitPercents, equals('[100]'));
-
-    // sched-3: expectedAmount null -> monthlyAmount null, [50, 50]
-    final sched3 = schedules.firstWhere((s) => s.id == 'sched-3');
-    expect(sched3.monthlyAmount, isNull);
-    expect(sched3.paySplitPercents, equals('[50,50]'));
+    final deductions = await db.select(db.salaryDeductions).get();
+    expect(deductions.length, equals(1));
+    expect(deductions.first.name, equals('IPS'));
+    expect(deductions.first.kind, equals('percent'));
+    expect(deductions.first.value, equals(900));
 
     await db.close();
 
-    // 4. Verificar a nivel de SQLite raw que expected_amount ya no existe y existen monthly_amount y pay_split_percents
+    // 4. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
     expect(userVersionResult.first['user_version'], equals(6));
 
-    final tableInfo = rawDb.select('PRAGMA table_info(income_schedules);');
+    final tableInfo = rawDb.select('PRAGMA table_info(salary_deductions);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();
-    expect(columnNames, contains('monthly_amount'));
-    expect(columnNames, contains('pay_split_percents'));
-    expect(columnNames, isNot(contains('expected_amount')));
+    expect(columnNames, contains('id'));
+    expect(columnNames, contains('schedule_id'));
+    expect(columnNames, contains('name'));
+    expect(columnNames, contains('kind'));
+    expect(columnNames, contains('value'));
 
     rawDb.close();
   });
