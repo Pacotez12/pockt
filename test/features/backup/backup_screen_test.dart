@@ -88,7 +88,7 @@ void main() {
 
     testWidgets('muestra aviso visible cuando el backup está vencido (5 días)', (tester) async {
       // Configurar fecha de más de 5 días atrás
-      final oldDate = DateTime.now().subtract(const Duration(days: 6));
+      final oldDate = currentTime.subtract(const Duration(days: 6));
       await settings.set(
         SettingsKeys.backupLastSuccessAt,
         oldDate.toIso8601String(),

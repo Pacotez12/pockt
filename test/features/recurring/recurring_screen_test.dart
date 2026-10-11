@@ -170,4 +170,96 @@ void main() {
 
     expect(find.text('Gimnasio'), findsNothing);
   });
+
+  testWidgets('crear un recurrente eligiendo Transporte lo guarda con esa categoría', (tester) async {
+    const transporteId = '018f0000-0000-7000-8000-000000000002';
+    await pumpRecurringScreen(tester);
+
+    // Abrir formulario de creación
+    await tester.tap(find.byKey(const ValueKey('add-recurring-button')));
+    await tester.pumpAndSettle();
+
+    // Nombre
+    await tester.enterText(
+      find.byKey(const ValueKey('recurring-name-input')),
+      'Pase mensual bus',
+    );
+    await tester.pumpAndSettle();
+
+    // Categoría: abrir selector y elegir Transporte
+    await tester.tap(find.byKey(const ValueKey('recurring-category-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transporte'), findsWidgets);
+    await tester.tap(find.text('Transporte').last);
+    await tester.pumpAndSettle();
+
+    // Monto usando el teclado
+    await tester.tap(find.byKey(const ValueKey('recurring-amount-button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1'));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.text('0'));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.text('0'));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    // Guardar regla recurrente
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('save-recurring-button')));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final rules = await tester.runAsync(() => recurringRepo.watchAll().first);
+    expect(rules, isNotEmpty);
+    final savedRule = rules!.firstWhere((r) => r.name == 'Pase mensual bus');
+    expect(savedRule.categoryId, equals(transporteId));
+  });
+
+  testWidgets('al editar una regla existente muestra su categoría', (tester) async {
+    const transporteId = '018f0000-0000-7000-8000-000000000002';
+    await tester.runAsync(() async {
+      await recurringRepo.add(
+        name: 'Colectivo',
+        type: TxType.expense,
+        amount: 50000,
+        categoryId: transporteId,
+        frequency: RecurrenceFrequency.monthly,
+        dayOfMonth: 10,
+      );
+    });
+
+    await pumpRecurringScreen(tester);
+    expect(find.text('Colectivo'), findsOneWidget);
+
+    // Abrir edición tocando la tarjeta
+    await tester.tap(find.text('Colectivo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar recurrente'), findsOneWidget);
+    // Debe mostrar Transporte en el selector de categoría
+    expect(find.text('Transporte'), findsOneWidget);
+  });
+
+  testWidgets('al cambiar el tipo resetea a una categoría válida de ese tipo', (tester) async {
+    await pumpRecurringScreen(tester);
+
+    await tester.tap(find.byKey(const ValueKey('add-recurring-button')));
+    await tester.pumpAndSettle();
+
+    // Por defecto es gasto: categoría Comida
+    expect(find.text('Comida'), findsOneWidget);
+
+    // Cambiar tipo a Ingreso
+    await tester.tap(find.text('Ingreso'));
+    await tester.pumpAndSettle();
+
+    // Debe haberse reseteado a una categoría de ingreso válida (ej. Sueldo)
+    expect(find.text('Sueldo'), findsOneWidget);
+    expect(find.text('Comida'), findsNothing);
+  });
 }

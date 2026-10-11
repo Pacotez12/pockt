@@ -21,7 +21,11 @@ Origen de los colores: **ninguno copiado de possible_rfid**. Coincidencias con e
 5. **Marca dispersa sin regla:** unas 90 apariciones de `brandStart/brandEnd`; correctas en botones principales, selección, sliders, interruptores, calendario y logo; incorrectas como color de texto/íconos informativos sueltos (p. ej. `income_schedule_screen.dart` l.663, l.729, l.1166; `recurring_screen.dart` l.128, l.195, l.230, l.742; `reminders_screen.dart` l.515, l.567; `backup_screen.dart` l.521; `restore_flow.dart` l.269). Cada uso se decide con la tabla de §6.2b: si es acción/selección queda; si es información, pasa a texto 1/2.
 6. **Colores escritos a mano fuera de tokens:** `month_glow.dart` (`glowAmber` = `#FF9F43`, `glowRedPink`), `pockt_splash.dart` l.241-243, `tx_row.dart` l.249 (grises), `amount_keypad.dart` l.126 (`Colors.red.shade900`) y l.276, `entry_flow.dart` l.438 y l.645 (`#141414`).
 7. **Íconos de Material** en `restore_flow.dart` (8) y `backup_screen.dart` (2): deben ser Phosphor.
-8. **Ajustes sin regla de color** (opción B): las filas mezclan marca, positivo y aviso al azar.
+8. **Calendarios:**
+   - Calendario de calor (`heat_calendar.dart` + `tokens.dart` `heat`): la escala usa naranjas sueltos que no son la marca (`#FF7A45`, `#FF645F`; en claro `#FFB08A`, `#FF8A5C`, `#F2603F`, `#E8306F`) y el nivel 4 lleva degradé solo en modo oscuro (en claro es plano): la escala tiene que salir de los 4 pasos de `brandAt` (niveles 1–3 con opacidad creciente, nivel 4 con el degradé completo) igual en ambos temas.
+   - "Hoy" se marca distinto en cada calendario: en el de calor con un anillo blanco/texto, en el selector de fecha (`theme.dart` `datePickerTheme`) con anillo y número en marca. Regla: **hoy = anillo de texto 1** en ambos (la marca queda para lo seleccionado), y el día elegido en el selector = relleno de marca con número blanco (ya está).
+   - Leyenda del calendario de calor (l.78–81) con los mismos pasos que las celdas; celdas futuras con borde punteado escrito con `Colors.white/black` sueltos → tokens.
+9. **Ajustes sin regla de color** (opción B): las filas mezclan marca, positivo y aviso al azar.
 
 ---
 
@@ -42,10 +46,13 @@ Puntos 6 de la auditoría: todos pasan a tokens (`warning`, `brandEnd`, `brandSt
 Puntos 2, 3 y 4: gastos en marca y no en peligro en Evolución (leyenda incluida); ahorro neto positivo/peligro; íconos decorativos de restauración/backup fuera de positivo. Tests de widget de leyenda y del color del ahorro.
 
 ### Task 5: Marca solo como acción, selección o sección
-Punto 5: recorrer cada uso listado y aplicar §6.2b. Ajustes (punto 8): cada sección toma un paso de `brandAt` (Tu dinero 0, Carga 1, Inicio y apariencia 2, Avisos y Privacidad 3) en encabezado e ícono; el aviso de backup atrasado sigue en `warning`. Skills: `impeccable`, `emil-design-eng`.
+Punto 5: recorrer cada uso listado y aplicar §6.2b. Ajustes (punto 9): cada sección toma un paso de `brandAt` (Tu dinero 0, Carga 1, Inicio y apariencia 2, Avisos y Privacidad 3) en encabezado e ícono; el aviso de backup atrasado sigue en `warning`. Skills: `impeccable`, `emil-design-eng`.
+
+### Task 5b: Calendarios
+Punto 8: escala `heat` derivada de `brandAt` en ambos temas (nivel 4 con degradé también en claro), "hoy" con anillo de texto 1 en el calendario de calor y en el selector de fecha, leyenda igual a las celdas, punteado de días futuros con tokens. Tests: la escala `heat` de cada tema sale de la marca (mismo matiz que `brandAt`); el selector marca hoy con `textPrimary`; contraste del número sobre cada nivel ≥ 4,5:1 (si no llega, número en blanco desde el nivel que haga falta).
 
 ### Task 6: Íconos de Phosphor
-Punto 7: reemplazar los `Icons.*` por equivalentes de `uiIcon(...)`/Phosphor.
+Punto 7 de la auditoría: reemplazar los `Icons.*` por equivalentes de `uiIcon(...)`/Phosphor.
 
 ### Task 7: Verificación (orquestador)
 Capturas de Inicio, Carga, Reportes, Presupuestos y Ajustes en oscuro y claro en el A54; revisión con `impeccable` (critique); commit.

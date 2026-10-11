@@ -437,6 +437,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
   int? _dayOfMonth;
   Category? _selectedCategory;
   bool _initialized = false;
+  bool _initializing = false;
 
   @override
   void initState() {
@@ -451,6 +452,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
           )
         : RecurrenceFrequency.monthly;
     _dayOfMonth = widget.rule?.dayOfMonth ?? DateTime.now().day;
+    Future.microtask(_initCategory);
   }
 
   @override
@@ -460,7 +462,8 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
   }
 
   Future<void> _initCategory() async {
-    if (_initialized) return;
+    if (_initialized || _initializing) return;
+    _initializing = true;
     final db = ref.read(databaseProvider);
     if (widget.rule?.categoryId != null) {
       _selectedCategory = await (db.select(db.categories)
@@ -478,8 +481,41 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
           .get();
       if (list.isNotEmpty) _selectedCategory = list.first;
     }
+    _initializing = false;
     if (mounted) {
       setState(() => _initialized = true);
+    }
+  }
+
+  Future<void> _onTypeChanged(TxType newType) async {
+    if (_type == newType) return;
+    Haptics.tick();
+    final db = ref.read(databaseProvider);
+    final list = await (db.select(db.categories)
+          ..where((c) => c.kind.equalsValue(
+                newType == TxType.income
+                    ? CategoryKind.income
+                    : CategoryKind.expense,
+              ))
+          ..limit(1))
+        .get();
+    if (mounted) {
+      setState(() {
+        _type = newType;
+        if (list.isNotEmpty) {
+          _selectedCategory = list.first;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickCategory() async {
+    Haptics.tick();
+    final cat = await showCategoryPickerSheet(context, type: _type);
+    if (cat != null && mounted) {
+      setState(() {
+        _selectedCategory = cat;
+      });
     }
   }
 
@@ -558,6 +594,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (!_initialized) {
       _initCategory();
     }
@@ -604,6 +641,10 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                       ),
                     ),
                   ),
+                  TypeToggle(
+                    currentType: _type,
+                    onTypeChanged: _onTypeChanged,
+                  ),
                 ],
               ),
             ),
@@ -636,6 +677,78 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                           color: colors.textTertiary,
                         ),
                         border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Categoría
+                  Pressable(
+                    key: const ValueKey('recurring-category-button'),
+                    onTap: _pickCategory,
+                    child: GlassCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Categoría',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_selectedCategory != null) ...[
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(
+                                  isDark
+                                      ? _selectedCategory!.colorDark
+                                      : _selectedCategory!.colorLight,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: categoryIcon(
+                                _selectedCategory!.icon,
+                                size: 14,
+                                color: const Color(0xFF141414),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _selectedCategory!.name,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ] else
+                            Text(
+                              'Seleccionar',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: colors.brandStart,
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            uiIcon('caret-right'),
+                            size: 16,
+                            color: colors.textTertiary,
+                          ),
+                        ],
                       ),
                     ),
                   ),

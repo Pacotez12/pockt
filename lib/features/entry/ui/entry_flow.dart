@@ -132,6 +132,62 @@ Future<void> showEntryFlow(
   );
 }
 
+Future<Category?> showCategoryPickerSheet(
+  BuildContext context, {
+  required TxType type,
+}) {
+  return showModalBottomSheet<Category>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      final colors = sheetContext.pockt;
+      return Container(
+        height: MediaQuery.of(sheetContext).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: colors.sheetSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.textTertiary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              type == TxType.expense
+                  ? 'Categoría de gasto'
+                  : 'Categoría de ingreso',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: CategoryGrid(
+                currentType: type,
+                onCategorySelected: (cat) {
+                  Haptics.tick();
+                  Navigator.of(sheetContext).pop(cat);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 class EntryCategoryPickerScreen extends ConsumerStatefulWidget {
   final TxType initialType;
 
@@ -299,7 +355,7 @@ class _EntryCategoryPickerScreenState
                         color: colors.textSecondary,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      _TypeToggle(
+                      TypeToggle(
                         currentType: _currentType,
                         onTypeChanged: (type) {
                           Haptics.tick();
@@ -496,7 +552,7 @@ class _EntryCategoryPickerScreenState
                 const SizedBox(height: 12),
                 // Category Grid
                 Expanded(
-                  child: _CategoryGrid(
+                  child: CategoryGrid(
                     currentType: _currentType,
                     onCategorySelected: (category) async {
                       Haptics.tick();
@@ -541,20 +597,21 @@ class _EntryCategoryPickerScreenState
   }
 }
 
-class _CategoryGrid extends ConsumerStatefulWidget {
+class CategoryGrid extends ConsumerStatefulWidget {
   final TxType currentType;
   final ValueChanged<Category> onCategorySelected;
 
-  const _CategoryGrid({
+  const CategoryGrid({
+    super.key,
     required this.currentType,
     required this.onCategorySelected,
   });
 
   @override
-  ConsumerState<_CategoryGrid> createState() => _CategoryGridState();
+  ConsumerState<CategoryGrid> createState() => _CategoryGridState();
 }
 
-class _CategoryGridState extends ConsumerState<_CategoryGrid> {
+class _CategoryGridState extends ConsumerState<CategoryGrid> {
   StreamSubscription<List<Category>>? _subscription;
   List<Category> _categories = const [];
 
@@ -565,7 +622,7 @@ class _CategoryGridState extends ConsumerState<_CategoryGrid> {
   }
 
   @override
-  void didUpdateWidget(_CategoryGrid oldWidget) {
+  void didUpdateWidget(CategoryGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentType != widget.currentType) {
       _subscribe();
@@ -669,11 +726,12 @@ class _CategoryGridState extends ConsumerState<_CategoryGrid> {
   }
 }
 
-class _TypeToggle extends StatelessWidget {
+class TypeToggle extends StatelessWidget {
   final TxType currentType;
   final ValueChanged<TxType> onTypeChanged;
 
-  const _TypeToggle({
+  const TypeToggle({
+    super.key,
     required this.currentType,
     required this.onTypeChanged,
   });
