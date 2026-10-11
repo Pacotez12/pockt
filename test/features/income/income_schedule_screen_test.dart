@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
@@ -233,5 +234,19 @@ void main() {
     expect(savedDeds, hasLength(1));
     expect(savedDeds!.first.name, 'IPS');
     expect(savedDeds.first.value, 900);
+  });
+
+  testWidgets('íconos informativos usan colores neutros y no colores de marca', (tester) async {
+    await pumpIncomeScheduleScreen(tester);
+
+    final coinsIcon = tester.widget<Icon>(find.descendant(
+      of: find.ancestor(
+        of: find.byKey(const ValueKey('schedule-split-preview-text')),
+        matching: find.byType(Row),
+      ),
+      matching: find.byType(Icon),
+    ));
+    expect(coinsIcon.color, equals(PocktColors.dark.textSecondary));
+    expect(coinsIcon.color, isNot(equals(PocktColors.dark.brandStart)));
   });
 }

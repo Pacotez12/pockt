@@ -518,7 +518,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(uiIcon('tag'), size: 18, color: colors.brandStart),
+              Icon(uiIcon('tag'), size: 18, color: colors.textSecondary),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

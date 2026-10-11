@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/notifications/notifier.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
@@ -32,6 +34,7 @@ void main() {
   });
 
   Future<void> pumpSettingsScreen(WidgetTester tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -114,5 +117,65 @@ void main() {
         reason: 'Un ícono en settings_screen cayó al fallback question mark',
       );
     }
+  });
+
+  testWidgets('SettingsScreen organiza las secciones con brandAt en encabezados e íconos', (tester) async {
+    await pumpSettingsScreen(tester);
+
+    final darkColors = PocktColors.dark;
+
+    // Encabezados de sección
+    final tuDineroText = tester.widget<Text>(find.text('Tu dinero'));
+    expect(tuDineroText.style?.color, equals(darkColors.brandAt(0)));
+
+    final inicioAparienciaText = tester.widget<Text>(find.text('Inicio y apariencia'));
+    expect(inicioAparienciaText.style?.color, equals(darkColors.brandAt(2)));
+
+    final avisosPrivacidadText = tester.widget<Text>(find.text('Avisos y Privacidad'));
+    expect(avisosPrivacidadText.style?.color, equals(darkColors.brandAt(3)));
+
+    // Íconos por sección
+    // Categorías: brandAt(0)
+    final catTile = find.byKey(const ValueKey('settings-categories-tile'));
+    final catIcon = tester.widget<Icon>(find.descendant(of: catTile, matching: find.byType(Icon)).first);
+    expect(catIcon.color, equals(darkColors.brandAt(0)));
+
+    // Esquema de cobro: brandAt(0)
+    final incomeTile = find.byKey(const ValueKey('settings-income-schedule-tile'));
+    final incomeIcon = tester.widget<Icon>(find.descendant(of: incomeTile, matching: find.byType(Icon)).first);
+    expect(incomeIcon.color, equals(darkColors.brandAt(0)));
+
+    // Recurrentes: brandAt(0)
+    final recTile = find.byKey(const ValueKey('settings-recurring-tile'));
+    final recIcon = tester.widget<Icon>(find.descendant(of: recTile, matching: find.byType(Icon)).first);
+    expect(recIcon.color, equals(darkColors.brandAt(0)));
+
+    // Apariencia: brandAt(2)
+    final appTile = find.byKey(const ValueKey('settings-appearance-tile'));
+    final appIcon = tester.widget<Icon>(find.descendant(of: appTile, matching: find.byType(Icon)).first);
+    expect(appIcon.color, equals(darkColors.brandAt(2)));
+
+    // Recordatorios: brandAt(3)
+    final remTile = find.byKey(const ValueKey('settings-reminders-tile'));
+    final remIcon = tester.widget<Icon>(find.descendant(of: remTile, matching: find.byType(Icon)).first);
+    expect(remIcon.color, equals(darkColors.brandAt(3)));
+
+    // Copia de seguridad: brandAt(3) cuando no está atrasada
+    final backupTile = find.byKey(const ValueKey('settings-backup-tile'));
+    final backupIcon = tester.widget<Icon>(find.descendant(of: backupTile, matching: find.byType(Icon)).first);
+    expect(backupIcon.color, equals(darkColors.brandAt(3)));
+  });
+
+  testWidgets('Copia de seguridad muestra color warning cuando el backup está atrasado', (tester) async {
+    final settingsRepo = SettingsRepository(testDb);
+    // Configurar último backup hace 10 días para que esté overdue
+    final tenDaysAgo = DateTime.now().subtract(const Duration(days: 10)).toIso8601String();
+    await settingsRepo.set(SettingsKeys.backupLastSuccessAt, tenDaysAgo);
+
+    await pumpSettingsScreen(tester);
+
+    final backupTile = find.byKey(const ValueKey('settings-backup-tile'));
+    final backupIcon = tester.widget<Icon>(find.descendant(of: backupTile, matching: find.byType(Icon)).first);
+    expect(backupIcon.color, equals(PocktColors.dark.warning));
   });
 }

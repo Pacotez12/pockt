@@ -564,7 +564,7 @@ class _TimePickerRow extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: colors.brandStart,
+                    color: colors.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 6),

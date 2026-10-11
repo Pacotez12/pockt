@@ -34,7 +34,7 @@ class SettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   Pressable(
@@ -84,18 +84,22 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
+                  _SectionHeader(
+                    title: 'Tu dinero',
+                    color: colors.brandAt(0),
+                  ),
                   _SettingsTile(
                     key: const ValueKey('settings-categories-tile'),
                     icon: 'tag',
                     title: 'Categorías',
                     subtitle: 'Personalizar y palabras clave',
-                    iconColor: colors.brandStart,
+                    iconColor: colors.brandAt(0),
                     onTap: () {
                       Haptics.tick();
                       Navigator.of(context).push(
@@ -105,7 +109,7 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   StreamBuilder(
                     stream: scheduleAsync,
                     builder: (context, snapshot) {
@@ -119,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
                         icon: 'calendar',
                         title: 'Esquema de cobro',
                         subtitle: subtitle,
-                        iconColor: colors.brandStart,
+                        iconColor: colors.brandAt(0),
                         onTap: () {
                           Haptics.tick();
                           Navigator.of(context).push(
@@ -131,13 +135,13 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   _SettingsTile(
                     key: const ValueKey('settings-recurring-tile'),
                     icon: 'sparkle',
                     title: 'Recurrentes',
                     subtitle: 'Gastos fijos y suscripciones',
-                    iconColor: colors.brandEnd,
+                    iconColor: colors.brandAt(0),
                     onTap: () {
                       Haptics.tick();
                       Navigator.of(context).push(
@@ -147,7 +151,11 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  _SectionHeader(
+                    title: 'Inicio y apariencia',
+                    color: colors.brandAt(2),
+                  ),
                   Consumer(
                     builder: (context, ref, _) {
                       final appearanceAsync = ref.watch(appearanceProvider);
@@ -163,7 +171,7 @@ class SettingsScreen extends ConsumerWidget {
                         icon: 'paint-brush',
                         title: 'Apariencia',
                         subtitle: subtitle,
-                        iconColor: colors.brandStart,
+                        iconColor: colors.brandAt(2),
                         onTap: () {
                           Haptics.tick();
                           Navigator.of(context).push(
@@ -175,7 +183,11 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  _SectionHeader(
+                    title: 'Avisos y Privacidad',
+                    color: colors.brandAt(3),
+                  ),
                   Consumer(
                     builder: (context, ref, _) {
                       final repo = ref.watch(settingsRepositoryProvider);
@@ -195,7 +207,7 @@ class SettingsScreen extends ConsumerWidget {
                             icon: 'bell',
                             title: 'Recordatorios',
                             subtitle: subtitle,
-                            iconColor: colors.brandStart,
+                            iconColor: colors.brandAt(3),
                             onTap: () {
                               Haptics.tick();
                               Navigator.of(context).push(
@@ -209,7 +221,7 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Consumer(
                     builder: (context, ref, _) {
                       final service = ref.watch(backupServiceProvider);
@@ -217,6 +229,7 @@ class SettingsScreen extends ConsumerWidget {
                         stream: service.watchStatus(),
                         builder: (context, snapshot) {
                           final status = snapshot.data;
+                          final isOverdue = status?.isOverdue ?? false;
                           final subtitle = status?.lastSuccessAt != null
                               ? 'Último: ${DateFormat('dd/MM/yyyy').format(status!.lastSuccessAt!)}'
                               : 'Respaldo automático y cifrado';
@@ -226,7 +239,7 @@ class SettingsScreen extends ConsumerWidget {
                             icon: 'cloud-arrow-up',
                             title: 'Copia de seguridad',
                             subtitle: subtitle,
-                            iconColor: colors.brandEnd,
+                            iconColor: isOverdue ? colors.warning : colors.brandAt(3),
                             onTap: () {
                               Haptics.tick();
                               Navigator.of(context).push(
@@ -240,12 +253,39 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   const _LockSettingsTile(),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final Color color;
+
+  const _SectionHeader({
+    required this.title,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 4, bottom: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
@@ -276,7 +316,7 @@ class _SettingsTile extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         borderRadius: BorderRadius.circular(20),
         child: Row(
           children: [
@@ -391,14 +431,14 @@ class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: colors.brandStart.withValues(alpha: 0.15),
+              color: colors.brandAt(3).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: Icon(
                 uiIcon('fingerprint'),
                 size: 20,
-                color: colors.brandStart,
+                color: colors.brandAt(3),
               ),
             ),
           ),

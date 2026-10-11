@@ -192,7 +192,7 @@ class RecurringScreen extends ConsumerWidget {
                 child: Icon(
                   uiIcon('sparkle'),
                   size: 28,
-                  color: colors.brandStart,
+                  color: colors.textSecondary,
                 ),
               ),
             ),
@@ -739,7 +739,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                                 fontFamily: 'Inter',
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: colors.brandStart,
+                                color: colors.textTertiary,
                               ),
                             ),
                           const SizedBox(width: 8),

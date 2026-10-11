@@ -7,6 +7,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/theme.dart';
+import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/entry/ui/amount_keypad.dart';
@@ -261,5 +262,17 @@ void main() {
     // Debe haberse reseteado a una categoría de ingreso válida (ej. Sueldo)
     expect(find.text('Sueldo'), findsOneWidget);
     expect(find.text('Comida'), findsNothing);
+  });
+
+  testWidgets('estado vacío usa color neutro y no marca en el ícono decorativo', (tester) async {
+    await pumpRecurringScreen(tester);
+
+    expect(find.text('Sin recurrentes'), findsOneWidget);
+    final sparkleIcon = tester.widget<Icon>(find.descendant(
+      of: find.ancestor(of: find.text('Sin recurrentes'), matching: find.byType(Column)),
+      matching: find.byType(Icon),
+    ).first);
+    expect(sparkleIcon.color, equals(PocktColors.dark.textSecondary));
+    expect(sparkleIcon.color, isNot(equals(PocktColors.dark.brandStart)));
   });
 }

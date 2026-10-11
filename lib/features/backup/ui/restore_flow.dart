@@ -266,7 +266,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.history, color: colors.brandStart, size: 20),
+                          Icon(Icons.history, color: colors.textSecondary, size: 20),
                           const SizedBox(width: 10),
                           Text(
                             'Fecha: $dateStr',
@@ -568,11 +568,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: colors.brandStart.withValues(alpha: 0.15),
+                                    color: colors.textSecondary.withValues(alpha: 0.12),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
-                                    child: Icon(Icons.history, color: colors.brandStart, size: 22),
+                                    child: Icon(Icons.history, color: colors.textSecondary, size: 22),
                                   ),
                                 ),
                                 const SizedBox(width: 14),

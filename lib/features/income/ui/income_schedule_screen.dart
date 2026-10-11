@@ -660,7 +660,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 Icon(
                   uiIcon('coins'),
                   size: 16,
-                  color: colors.brandStart,
+                  color: colors.textSecondary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -789,13 +789,13 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: colors.brandEnd.withValues(alpha: 0.12),
+            color: colors.textSecondary.withValues(alpha: 0.12),
           ),
           child: Center(
             child: Icon(
               uiIcon('tag'),
               size: 15,
-              color: colors.brandEnd,
+              color: colors.textSecondary,
             ),
           ),
         ),
@@ -1249,8 +1249,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: colors.brandEnd.withValues(alpha: 0.12),
+                    color: colors.glassFill,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: colors.glassBorder),
                   ),
                   child: Text(
                     '−${formatGs(totalDeductions)} en desc.',
@@ -1258,7 +1259,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                       fontFamily: 'Inter',
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: colors.brandEnd,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ),
