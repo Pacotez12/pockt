@@ -204,7 +204,6 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
   Widget build(BuildContext context) {
     if (_gone) return const SizedBox.shrink();
     final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final BorderRadius rowRadius;
     if (widget.isFirst == null && widget.isLast == null) {
@@ -246,7 +245,7 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
       background: actionBackground(
         key: const ValueKey('tx-action-bg-edit'),
         alignment: Alignment.centerLeft,
-        color: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+        color: colors.keypadKey,
         icon: uiIcon('pencil-simple'),
         iconColor: colors.textPrimary,
       ),

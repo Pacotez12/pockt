@@ -164,4 +164,6 @@ class PocktColors extends ThemeExtension<PocktColors> {
 extension PocktTheme on BuildContext {
   PocktColors get pockt =>
       Theme.of(this).extension<PocktColors>() ?? PocktColors.dark;
+
+  PocktColors get pocktColors => pockt;
 }

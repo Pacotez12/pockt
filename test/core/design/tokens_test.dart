@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show DatabaseConnection;
+import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,5 +181,46 @@ void main() {
     );
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.borderRadius, BorderRadius.circular(24));
+  });
+
+  test('no hay colores escritos a mano (Color(0x...)) ni Colors.<tono> fuera de tokens y wordmark', () {
+    final libDir = Directory('lib');
+    final prohibitedPattern = RegExp(
+      r'Color\(0x|Colors\.(red|green|blue|orange|amber|grey|purple|pink|teal|cyan|yellow|lime|indigo|brown|blueGrey)',
+    );
+
+    final allowedFiles = {
+      'lib/core/design/tokens.dart',
+      'lib/core/design/wordmark.dart',
+    };
+
+    final violations = <String>[];
+
+    for (final entity in libDir.listSync(recursive: true)) {
+      if (entity is File && entity.path.endsWith('.dart')) {
+        final normalizedPath = entity.path.replaceAll('\\', '/');
+        if (allowedFiles.any((allowed) => normalizedPath.endsWith(allowed))) {
+          continue;
+        }
+
+        final lines = entity.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          final trimmed = line.trim();
+          if (trimmed.startsWith('//') || trimmed.startsWith('///')) {
+            continue;
+          }
+          if (prohibitedPattern.hasMatch(line)) {
+            violations.add('${entity.path}:${i + 1}: $trimmed');
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      isEmpty,
+      reason: 'Se encontraron colores fuera de tokens:\n${violations.join('\n')}',
+    );
   });
 }

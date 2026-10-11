@@ -719,7 +719,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                               child: categoryIcon(
                                 _selectedCategory!.icon,
                                 size: 14,
-                                color: const Color(0xFF141414),
+                                color: colors.keypadKey,
                               ),
                             ),
                             const SizedBox(width: 8),

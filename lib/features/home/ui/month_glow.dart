@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/core/design/tokens.dart';
 
-const Color glowAmber = Color(0xFFFF9F43);
-const Color glowRedPink = Color(0xFFFF3D7F);
+final Color glowAmber = PocktColors.dark.warning;
+final Color glowRedPink = PocktColors.dark.brandEnd;
 
 @visibleForTesting
 bool debugDisableAuroraDrift = false;
@@ -12,15 +13,22 @@ bool debugDisableAuroraDrift = false;
 /// - `< 0.8` o `null` (sin presupuestos): devuelve [base] sin mezcla.
 /// - `0.8` a `1.0`: se mezcla gradualmente hacia ámbar ([glowAmber]).
 /// - `>= 1.0`: devuelve rojo-rosa ([glowRedPink]).
-Color glowTint(Color base, double? spentRatio) {
+Color glowTint(
+  Color base,
+  double? spentRatio, {
+  Color? warningColor,
+  Color? brandEndColor,
+}) {
+  final warning = warningColor ?? glowAmber;
+  final end = brandEndColor ?? glowRedPink;
   if (spentRatio == null || spentRatio < 0.8) {
     return base;
   }
   if (spentRatio >= 1.0) {
-    return glowRedPink;
+    return end;
   }
   final t = (spentRatio - 0.8) / 0.2;
-  return Color.lerp(base, glowAmber, t)!;
+  return Color.lerp(base, warning, t)!;
 }
 
 final monthGlowPulseProvider =

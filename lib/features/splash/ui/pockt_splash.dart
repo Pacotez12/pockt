@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/design/wordmark.dart';
 
 /// Controlador y overlay de la animación de apertura (Apertura 2: "El orbe se convierte en el Inicio").
@@ -179,6 +180,7 @@ class _PocktSplashState extends State<PocktSplash>
 
     final media = MediaQuery.of(context);
     final screenSize = media.size;
+    final colors = context.pocktColors;
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -238,9 +240,9 @@ class _PocktSplashState extends State<PocktSplash>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            const Color(0xFFFF8A3D)
+                            colors.brandStart
                                 .withValues(alpha: 0.65 * glowOpacity),
-                            const Color(0xFFFF3D7F)
+                            colors.brandEnd
                                 .withValues(alpha: 0.25 * glowOpacity),
                             Colors.transparent,
                           ],

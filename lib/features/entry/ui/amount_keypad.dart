@@ -123,7 +123,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
-            backgroundColor: Colors.red.shade900,
+            backgroundColor: context.pockt.danger,
           ),
         );
       }
@@ -273,7 +273,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                                         child: categoryIcon(
                                           _category.icon,
                                           size: 28,
-                                          color: const Color(0xFF141414),
+                                          color: colors.keypadKey,
                                         ),
                                       ),
                                     ),

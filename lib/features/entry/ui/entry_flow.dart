@@ -491,7 +491,7 @@ class _EntryCategoryPickerScreenState
                                     child: categoryIcon(
                                       proposedCategory.icon,
                                       size: 22,
-                                      color: const Color(0xFF141414),
+                                      color: colors.keypadKey,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -699,7 +699,7 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
                           child: categoryIcon(
                             cat.icon,
                             size: 28,
-                            color: const Color(0xFF141414),
+                            color: colors.keypadKey,
                           ),
                         ),
                       ),
