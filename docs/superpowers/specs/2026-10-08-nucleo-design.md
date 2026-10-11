@@ -212,6 +212,21 @@ Leve por tecla, medio al guardar, patrón distinto al cruzar 80 % y 100 % de un 
 - `BackdropFilter` solo en la barra de navegación y en las hojas. Tarjetas en reposo con vidrio sin desenfoque.
 - **Meta**: 120 fps; ningún frame por encima de 8 ms (build + raster) durante las transiciones principales, medido con `integration_test` + `traceAction` en modo profile en el dispositivo (`dumpsys gfxinfo` no ve los frames de Flutter) (carga, detalle del día, cambio de mes, cambio de pestaña).
 
+## 6.2b Paleta y reglas de uso del color (decidido 2026-10-11, opción B)
+
+Principio: **cada color tiene un solo rol**. Definido con las skills `ui-ux-pro-max` e `impeccable` (en pantallas de uso, el color codifica orientación, acción o estado; nunca decoración suelta). Todo color sale de `PocktColors`; ningún `Color(0x…)` ni `Colors.<tono>` fuera de `tokens.dart` (excepto el logotipo y el blanco/negro/transparente).
+
+| Familia | Valores (oscuro / claro) | Dónde se usa | Dónde NO |
+|---|---|---|---|
+| **Neutros** | fondo `#000000` / `#F7F7F8`, hoja `#18181B` / `#FFFFFF`, vidrio blanco 7 % borde 9 %, textos 1-2-3 | superficies, textos, separadores, íconos de navegación inactivos | — |
+| **Marca** (degradé) | `brandStart #FF8A3D` → `#FF7053` → `#FF5769` → `brandEnd #FF3D7F` (los dos intermedios son `brandRamp`) | botón ＋ y botón principal de cada pantalla, selección y foco (chips, interruptores, sliders, día de hoy), logo, aurora, calendario de calor, íconos y encabezados de **secciones de Ajustes** (cada sección un paso del degradé, de naranja a rosa), totales destacados y "ahorro" neutral en reportes | estados (bien/aviso/error), ni para marcar gastos como algo malo |
+| **Estados** | positivo `#4AD496` / `#008856`, aviso `#F7B83D` / `#B07100`, peligro `#F4514F` / `#CC272E` | positivo: ingresos, "a favor", éxito; aviso: cerca del límite (≥ 80 %), algo pendiente o atrasado; peligro: límite pasado, error, borrar, ahorro negativo | decoración de íconos o filas, series de gastos en gráficos |
+| **Categorías** | paleta propia OKLCH (L≈0,76 C≈0,11 oscuro / L≈0,52 C≈0,12 claro), matices separados de los estados | burbujas de carga, chips/filas de movimientos, gráficos por categoría, presupuestos, resplandor base | iconografía de la interfaz o estados |
+
+Paleta de categorías (oscuro / claro): Comida `#E4A067`/`#9A5505`, Transporte `#6BBAF0`/`#0070A6`, Hogar `#93C179`/`#49782A`, Salud `#49C7C0`/`#007E78`, Ocio `#C19FE9`/`#7955A0`, Servicios `#8FB0F8`/`#4665AE`, Educación `#AAA7F4`/`#635DAB`, Regalos `#DD96CD`/`#924B84`, Ropa `#C1B35B`/`#796900`, Otros `#9BA6B1`/`#606A74`, Sueldo `#74C692`/`#187C49`, Extra `#47C5D2`/`#007B89`, Otros ingresos `#9BA6B1`/`#606A74`. Las categorías que el usuario ya personalizó no se tocan.
+
+Reglas complementarias: en gráficos de Evolución los gastos van en marca y los ingresos en positivo; el ahorro neto en positivo si es ≥ 0 y en peligro si es < 0; el color nunca es el único código (siempre hay etiqueta, ícono o signo). Íconos solo de Phosphor (nada de `Icons.*` de Material).
+
 ## 6.6 Marca
 
 - Nombre: **Pockt** (así, sin la "e").
