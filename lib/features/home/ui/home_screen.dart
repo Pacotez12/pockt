@@ -12,6 +12,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/backup/ui/backup_screen.dart';
@@ -89,6 +90,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<SuggestionView> _pendingSuggestions = const [];
   List<BudgetView> _budgets = const [];
   StreamSubscription<List<BudgetView>>? _budgetsSub;
+  MonthStartMode _monthStartMode = MonthStartMode.calendar;
+  StreamSubscription<MonthStartMode>? _monthStartSub;
 
   DateTime _getNow() => widget.nowLocal ?? toLocal(DateTime.now());
 
@@ -127,6 +130,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payExpenseSub?.cancel();
     _budgetsSub?.cancel();
     _deductionsSub?.cancel();
+    _monthStartSub?.cancel();
     super.dispose();
   }
 
@@ -218,10 +222,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  void _initSubscriptions() {
+  DatePeriod get _currentPeriod {
+    final now = _getNow();
+    final isCurrent = _year == now.year && _month == now.month;
+    final day = isCurrent ? now : DateTime(_year, _month, 15);
+    return periodFor(day, mode: _monthStartMode, schedule: _schedule);
+  }
+
+  void _initMonthDataSubscriptions() {
     _monthTotalSub?.cancel();
     _categoryTotalsSub?.cancel();
     _dailyTotalsSub?.cancel();
+
+    final repo = ref.read(transactionsRepositoryProvider);
+    final period = _currentPeriod;
+
+    _monthTotalSub = repo
+        .watchMonthTotal(_year, _month, TxType.expense, period: period)
+        .listen((total) {
+      if (mounted) {
+        setState(() {
+          _previousTotal = _monthTotal;
+          _monthTotal = total;
+        });
+      }
+    });
+
+    _categoryTotalsSub = repo
+        .watchMonthCategoryTotals(_year, _month, period: period)
+        .listen((totals) {
+      if (mounted) {
+        setState(() {
+          _categoryTotals = totals;
+        });
+      }
+    });
+
+    _dailyTotalsSub = repo
+        .watchDailyExpenseTotals(_year, _month, period: period)
+        .listen((daily) {
+      if (mounted) {
+        setState(() {
+          _dailyTotals = daily;
+        });
+      }
+    });
+  }
+
+  void _initSubscriptions() {
     _recentSub?.cancel();
     _suggestionsSub?.cancel();
     _scheduleSub?.cancel();
@@ -229,11 +277,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
     _budgetsSub?.cancel();
+    _monthStartSub?.cancel();
 
     final repo = ref.read(transactionsRepositoryProvider);
     final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
     final scheduleRepo = ref.read(incomeScheduleRepositoryProvider);
     final budgetsRepo = ref.read(budgetsRepositoryProvider);
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+
+    _monthStartSub = settingsRepo
+        .watch(SettingsKeys.periodMonthStart)
+        .map(MonthStartMode.parse)
+        .listen((mode) {
+      if (mounted && mode != _monthStartMode) {
+        setState(() {
+          _monthStartMode = mode;
+        });
+        _initMonthDataSubscriptions();
+      }
+    });
 
     _budgetsSub = budgetsRepo.watchAll().listen((budgets) {
       if (mounted) {
@@ -245,10 +307,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
       if (mounted) {
+        final schedChanged = _schedule?.id != sched?.id ||
+            _schedule?.payDays != sched?.payDays ||
+            _schedule?.payDayRules != sched?.payDayRules;
         setState(() {
           _schedule = sched;
         });
         _updatePaySubscriptions(sched);
+        if (schedChanged && _monthStartMode == MonthStartMode.payday) {
+          _initMonthDataSubscriptions();
+        }
       }
     });
 
@@ -260,30 +328,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    _monthTotalSub = repo.watchMonthTotal(_year, _month, TxType.expense).listen((total) {
-      if (mounted) {
-        setState(() {
-          _previousTotal = _monthTotal;
-          _monthTotal = total;
-        });
-      }
-    });
-
-    _categoryTotalsSub = repo.watchMonthCategoryTotals(_year, _month).listen((totals) {
-      if (mounted) {
-        setState(() {
-          _categoryTotals = totals;
-        });
-      }
-    });
-
-    _dailyTotalsSub = repo.watchDailyExpenseTotals(_year, _month).listen((daily) {
-      if (mounted) {
-        setState(() {
-          _dailyTotals = daily;
-        });
-      }
-    });
+    _initMonthDataSubscriptions();
 
     _recentSub = repo.watchRecent(limit: 5).listen((recent) {
       if (mounted) {
@@ -308,7 +353,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
       _month = newMonth;
       _year = newYear;
-      _initSubscriptions();
+      _initMonthDataSubscriptions();
     });
   }
 
@@ -439,7 +484,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Haptics.tick();
               setState(() {
                 _month = m;
-                _initSubscriptions();
+                _initMonthDataSubscriptions();
               });
             }
           },

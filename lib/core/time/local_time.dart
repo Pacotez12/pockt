@@ -1,4 +1,7 @@
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:pockt/core/time/date_period.dart';
+
+export 'package:pockt/core/time/date_period.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 const kFallbackZone = 'America/Asuncion';
@@ -42,12 +45,8 @@ DateTime toLocal(DateTime utc) {
 }
 
 ({DateTime startUtc, DateTime endUtc}) monthRangeUtc(int year, int month) {
-  final loc = _localLocation;
-  final startLocal = tz.TZDateTime(loc, year, month, 1, 0, 0);
-  final nextMonth = month == 12 ? 1 : month + 1;
-  final nextYear = month == 12 ? year + 1 : year;
-  final endLocal = tz.TZDateTime(loc, nextYear, nextMonth, 1, 0, 0);
-  return (startUtc: startLocal.toUtc(), endUtc: endLocal.toUtc());
+  final period = periodFor(DateTime(year, month, 1));
+  return (startUtc: period.startUtc, endUtc: period.endUtc);
 }
 
 ({DateTime startUtc, DateTime endUtc}) dayRangeUtc(DateTime localDay) {

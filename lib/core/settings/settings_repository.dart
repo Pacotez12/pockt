@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/time/date_period.dart';
+
+export 'package:pockt/core/time/date_period.dart';
 
 /// Nombres de claves canónicas en la tabla `settings` (Plan 3 Global Constraints).
 abstract class SettingsKeys {
@@ -15,6 +18,7 @@ abstract class SettingsKeys {
   static const backupFolderName = 'backup.folderName';
   static const backupGoogleAccount = 'backup.googleAccount';
   static const securityLock = 'security.lock';
+  static const periodMonthStart = 'period.monthStart';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -71,3 +75,12 @@ final appearanceProvider = StreamProvider<ThemeMode>((ref) {
     }
   });
 });
+
+/// Proveedor reactivo del modo de inicio de mes ('calendar' | 'payday').
+final monthStartModeProvider = StreamProvider<MonthStartMode>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.periodMonthStart)
+      .map((val) => MonthStartMode.parse(val));
+});
+

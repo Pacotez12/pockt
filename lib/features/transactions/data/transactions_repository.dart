@@ -217,16 +217,16 @@ class TransactionsRepository {
     );
   }
 
-  Stream<int> watchMonthTotal(int year, int month, TxType type) {
-    final range = monthRangeUtc(year, month);
+  Stream<int> watchMonthTotal(int year, int month, TxType type, {DatePeriod? period}) {
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
     final query = db.selectOnly(db.transactions)
       ..addColumns([sumAmount])
       ..where(
         db.transactions.deletedAt.isNull() &
             db.transactions.type.equalsValue(type) &
-            db.transactions.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(range.endUtc),
+            db.transactions.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            db.transactions.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
       );
 
     return query.watchSingle().map((row) => row.read(sumAmount) ?? 0);
@@ -267,8 +267,8 @@ class TransactionsRepository {
     return query.watchSingleOrNull().map((tx) => tx != null ? toLocal(tx.occurredAt) : null);
   }
 
-  Stream<List<CategoryTotal>> watchMonthCategoryTotals(int year, int month) {
-    final range = monthRangeUtc(year, month);
+  Stream<List<CategoryTotal>> watchMonthCategoryTotals(int year, int month, {DatePeriod? period}) {
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
 
     final query = db.select(db.categories).join([
@@ -277,8 +277,8 @@ class TransactionsRepository {
         db.transactions.categoryId.equalsExp(db.categories.id) &
             db.transactions.deletedAt.isNull() &
             db.transactions.type.equalsValue(TxType.expense) &
-            db.transactions.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(range.endUtc),
+            db.transactions.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            db.transactions.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
       ),
     ])
       ..addColumns([sumAmount])
@@ -294,14 +294,14 @@ class TransactionsRepository {
     });
   }
 
-  Stream<Map<int, int>> watchDailyExpenseTotals(int year, int month) {
-    final range = monthRangeUtc(year, month);
+  Stream<Map<int, int>> watchDailyExpenseTotals(int year, int month, {DatePeriod? period}) {
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final query = db.select(db.transactions)
       ..where((t) =>
           t.deletedAt.isNull() &
           t.type.equalsValue(TxType.expense) &
-          t.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-          t.occurredAt.isSmallerThanValue(range.endUtc));
+          t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+          t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc));
 
     return query.watch().map((txs) {
       final map = <int, int>{};

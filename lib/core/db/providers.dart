@@ -37,6 +37,10 @@ final incomeScheduleRepositoryProvider =
   return IncomeScheduleRepository(ref.watch(databaseProvider));
 });
 
+final currentIncomeScheduleProvider = StreamProvider<IncomeSchedule?>((ref) {
+  return ref.watch(incomeScheduleRepositoryProvider).watchCurrent();
+});
+
 final recurringRepositoryProvider = Provider<RecurringRepository>((ref) {
   return RecurringRepository(
     ref.watch(databaseProvider),

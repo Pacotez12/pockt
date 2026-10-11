@@ -3,6 +3,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/notifications/notifier.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 
 enum BudgetLevel { ok, warning, over }
 
@@ -41,6 +42,7 @@ Future<void> evaluateBudgetAlerts(
   required DateTime nowLocal,
   required AppDatabase db,
   required Notifier notifier,
+  DatePeriod? period,
 }) async {
   final budget = await (db.select(db.budgets)
         ..where((b) => b.categoryId.equals(categoryId)))
@@ -53,16 +55,26 @@ Future<void> evaluateBudgetAlerts(
       .getSingleOrNull();
   final categoryName = category?.name ?? 'Categoría';
 
-  final startOfMonth = DateTime(nowLocal.year, nowLocal.month, 1);
-  final endOfMonth = DateTime(nowLocal.year, nowLocal.month + 1, 1);
+  final effectivePeriod = period ??
+      await () async {
+        final setting = await (db.select(db.settings)
+              ..where((s) => s.key.equals(SettingsKeys.periodMonthStart)))
+            .getSingleOrNull();
+        final mode = MonthStartMode.parse(setting?.value);
+        final sched = await (db.select(db.incomeSchedules)
+              ..orderBy([(t) => OrderingTerm.desc(t.effectiveFrom)])
+              ..limit(1))
+            .getSingleOrNull();
+        return periodFor(nowLocal, mode: mode, schedule: sched);
+      }();
 
   final txs = await (db.select(db.transactions)
         ..where((t) =>
             t.categoryId.equals(categoryId) &
             t.type.equalsValue(TxType.expense) &
             t.deletedAt.isNull() &
-            t.occurredAt.isBiggerOrEqualValue(startOfMonth) &
-            t.occurredAt.isSmallerThanValue(endOfMonth)))
+            t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc)))
       .get();
 
   final totalSpent = txs.fold<int>(0, (sum, t) => sum + t.amount);

@@ -75,8 +75,12 @@ class ReportsRepository {
 
   /// Emite los totales de gasto agrupados por categoría para [year] y [month],
   /// ordenados de mayor a menor total.
-  Stream<List<CategoryTotal>> watchMonthByCategory(int year, int month) {
-    final range = monthRangeUtc(year, month);
+  Stream<List<CategoryTotal>> watchMonthByCategory(
+    int year,
+    int month, {
+    DatePeriod? period,
+  }) {
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
 
     final query = db.select(db.categories).join([
@@ -85,8 +89,10 @@ class ReportsRepository {
         db.transactions.categoryId.equalsExp(db.categories.id) &
             db.transactions.deletedAt.isNull() &
             db.transactions.type.equalsValue(TxType.expense) &
-            db.transactions.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(range.endUtc),
+            db.transactions.occurredAt
+                .isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            db.transactions.occurredAt
+                .isSmallerThanValue(effectivePeriod.endUtc),
       ),
     ])
       ..addColumns([sumAmount])
@@ -168,16 +174,17 @@ class ReportsRepository {
     int year,
     int month, {
     int limit = 10,
+    DatePeriod? period,
   }) {
-    final range = monthRangeUtc(year, month);
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
 
     final query = db.select(db.transactions)
       ..where((t) =>
           t.deletedAt.isNull() &
           t.type.equalsValue(TxType.expense) &
           t.merchant.isNotNull() &
-          t.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-          t.occurredAt.isSmallerThanValue(range.endUtc));
+          t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+          t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc));
 
     return query.watch().map((txs) {
       final groups = <String, ({int total, Map<String, int> spellings})>{};

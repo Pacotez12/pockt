@@ -12,6 +12,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/budgets/domain/budget_status.dart';
@@ -242,6 +243,10 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
 
   StreamSubscription<List<BudgetView>>? _budgetsSub;
   StreamSubscription<List<CategoryTotal>>? _totalsSub;
+  MonthStartMode _monthStartMode = MonthStartMode.calendar;
+  StreamSubscription<MonthStartMode>? _monthStartSub;
+  IncomeSchedule? _schedule;
+  StreamSubscription<IncomeSchedule?>? _scheduleSub;
 
   List<BudgetView> _budgets = const [];
   List<CategoryTotal> _categoryTotals = const [];
@@ -250,6 +255,13 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   bool _hasInitialData = false;
 
   DateTime _getNow() => widget.nowLocal ?? toLocal(DateTime.now());
+
+  DatePeriod get _currentPeriod {
+    final now = _getNow();
+    final isCurrent = _year == now.year && _month == now.month;
+    final day = isCurrent ? now : DateTime(_year, _month, 15);
+    return periodFor(day, mode: _monthStartMode, schedule: _schedule);
+  }
 
   @override
   void initState() {
@@ -276,23 +288,61 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   void dispose() {
     _budgetsSub?.cancel();
     _totalsSub?.cancel();
+    _monthStartSub?.cancel();
+    _scheduleSub?.cancel();
     super.dispose();
+  }
+
+  void _initMonthDataSubscriptions() {
+    _totalsSub?.cancel();
+    final txRepo = ref.read(transactionsRepositoryProvider);
+    _totalsSub = txRepo
+        .watchMonthCategoryTotals(_year, _month, period: _currentPeriod)
+        .listen((totals) {
+      _handleDataUpdate(totals: totals);
+    });
   }
 
   void _initSubscriptions() {
     _budgetsSub?.cancel();
-    _totalsSub?.cancel();
+    _monthStartSub?.cancel();
+    _scheduleSub?.cancel();
 
     final budgetsRepo = ref.read(budgetsRepositoryProvider);
-    final txRepo = ref.read(transactionsRepositoryProvider);
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+    final scheduleRepo = ref.read(incomeScheduleRepositoryProvider);
+
+    _monthStartSub = settingsRepo
+        .watch(SettingsKeys.periodMonthStart)
+        .map(MonthStartMode.parse)
+        .listen((mode) {
+      if (mounted && mode != _monthStartMode) {
+        setState(() {
+          _monthStartMode = mode;
+        });
+        _initMonthDataSubscriptions();
+      }
+    });
+
+    _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
+      if (mounted) {
+        final schedChanged = _schedule?.id != sched?.id ||
+            _schedule?.payDays != sched?.payDays ||
+            _schedule?.payDayRules != sched?.payDayRules;
+        setState(() {
+          _schedule = sched;
+        });
+        if (schedChanged && _monthStartMode == MonthStartMode.payday) {
+          _initMonthDataSubscriptions();
+        }
+      }
+    });
 
     _budgetsSub = budgetsRepo.watchAll().listen((budgets) {
       _handleDataUpdate(budgets: budgets);
     });
 
-    _totalsSub = txRepo.watchMonthCategoryTotals(_year, _month).listen((totals) {
-      _handleDataUpdate(totals: totals);
-    });
+    _initMonthDataSubscriptions();
   }
 
   void _handleDataUpdate({
@@ -363,6 +413,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
       spent: spent,
       year: _year,
       month: _month,
+      period: _currentPeriod,
     );
   }
 
@@ -683,12 +734,14 @@ class _BudgetDetailSheet extends ConsumerStatefulWidget {
   final int spent;
   final int year;
   final int month;
+  final DatePeriod? period;
 
   const _BudgetDetailSheet({
     required this.budgetView,
     required this.spent,
     required this.year,
     required this.month,
+    this.period,
   });
 
   @override
@@ -729,8 +782,10 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
       isDark,
     );
     final monthLabel = '${_kMonthNames[widget.month - 1]} ${widget.year}';
-    final startOfMonth = DateTime(widget.year, widget.month, 1);
-    final endOfMonth = DateTime(widget.year, widget.month + 1, 1);
+    final effectivePeriod =
+        widget.period ?? periodFor(DateTime(widget.year, widget.month, 15));
+    final startOfMonth = effectivePeriod.start;
+    final endOfMonth = effectivePeriod.end;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1588,6 +1643,7 @@ Future<bool?> showBudgetDetailSheet(
   required int spent,
   required int year,
   required int month,
+  DatePeriod? period,
 }) {
   return Navigator.of(context).push<bool>(
     PageRouteBuilder<bool>(
@@ -1601,6 +1657,7 @@ Future<bool?> showBudgetDetailSheet(
         spent: spent,
         year: year,
         month: month,
+        period: period,
       ),
       transitionsBuilder: (context, animation, _, child) {
         if (MediaQuery.disableAnimationsOf(context)) return child;

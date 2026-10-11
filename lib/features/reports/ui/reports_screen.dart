@@ -11,6 +11,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/reports/data/reports_repository.dart';
 import 'package:pockt/features/reports/domain/compare.dart';
@@ -358,9 +359,18 @@ class _CategoriesView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.pockt;
     final repo = ref.watch(reportsRepositoryProvider);
+    final mode =
+        ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar;
+    final schedule = ref.watch(currentIncomeScheduleProvider).value;
+    final isCurrent = year == nowLocal.year && month == nowLocal.month;
+    final period = periodFor(
+      isCurrent ? nowLocal : DateTime(year, month, 15),
+      mode: mode,
+      schedule: schedule,
+    );
 
     return StreamBuilder<List<CategoryTotal>>(
-      stream: repo.watchMonthByCategory(year, month),
+      stream: repo.watchMonthByCategory(year, month, period: period),
       builder: (context, snapshot) {
         final totals = snapshot.data ?? const [];
         final totalExpense = totals.fold<int>(0, (sum, t) => sum + t.total);
@@ -562,13 +572,17 @@ class _CategoryTransactionsSheet extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final catColor =
         Color(isDark ? category.colorDark : category.colorLight);
-
-    final startOfMonth = DateTime(year, month, 1);
-    final endOfMonth = DateTime(
-      month == 12 ? year + 1 : year,
-      month == 12 ? 1 : month + 1,
-      1,
+    final mode =
+        ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar;
+    final schedule = ref.watch(currentIncomeScheduleProvider).value;
+    final isCurrent = year == nowLocal.year && month == nowLocal.month;
+    final period = periodFor(
+      isCurrent ? nowLocal : DateTime(year, month, 15),
+      mode: mode,
+      schedule: schedule,
     );
+    final startOfMonth = period.start;
+    final endOfMonth = period.end;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1404,9 +1418,19 @@ class _MerchantsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.pockt;
     final repo = ref.watch(reportsRepositoryProvider);
+    final mode =
+        ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar;
+    final schedule = ref.watch(currentIncomeScheduleProvider).value;
+    final nowLocal = toLocal(DateTime.now());
+    final isCurrent = year == nowLocal.year && month == nowLocal.month;
+    final period = periodFor(
+      isCurrent ? nowLocal : DateTime(year, month, 15),
+      mode: mode,
+      schedule: schedule,
+    );
 
     return StreamBuilder<List<MerchantTotal>>(
-      stream: repo.watchByMerchant(year, month),
+      stream: repo.watchByMerchant(year, month, period: period),
       builder: (context, snapshot) {
         final list = snapshot.data ?? const [];
         if (list.isEmpty) {

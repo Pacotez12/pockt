@@ -110,4 +110,37 @@ void main() {
       expect(mode, equals(ThemeMode.light));
     });
   });
+
+  group('monthStartModeProvider', () {
+    test('por defecto devuelve MonthStartMode.calendar', () async {
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(monthStartModeProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      final mode = await container.read(monthStartModeProvider.future);
+      expect(mode, equals(MonthStartMode.calendar));
+    });
+
+    test('con payday en settings devuelve MonthStartMode.payday', () async {
+      await repo.set(SettingsKeys.periodMonthStart, 'payday');
+
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(monthStartModeProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      final mode = await container.read(monthStartModeProvider.future);
+      expect(mode, equals(MonthStartMode.payday));
+    });
+  });
 }
+
