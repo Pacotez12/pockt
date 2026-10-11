@@ -51,7 +51,7 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 
 ## Diseño
 
-Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y modo claro), un resplandor que toma el color de la categoría donde más gastaste, superficies de vidrio y animaciones con física.
+Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y modo claro), un resplandor tipo aurora que toma el color de la categoría donde más gastaste y se tiñe de ámbar o rojo si te acercás al presupuesto, superficies de vidrio y animaciones con física.
 
 ## Privacidad
 

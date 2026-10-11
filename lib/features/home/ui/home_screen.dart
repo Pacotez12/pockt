@@ -13,6 +13,7 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
@@ -82,6 +83,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Map<int, int> _dailyTotals = const {};
   List<TxView> _recentTxs = const [];
   List<SuggestionView> _pendingSuggestions = const [];
+  List<BudgetView> _budgets = const [];
+  StreamSubscription<List<BudgetView>>? _budgetsSub;
 
   DateTime _getNow() => widget.nowLocal ?? toLocal(DateTime.now());
 
@@ -118,6 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _lastSalarySub?.cancel();
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
+    _budgetsSub?.cancel();
     super.dispose();
   }
 
@@ -207,10 +211,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _lastSalarySub?.cancel();
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
+    _budgetsSub?.cancel();
 
     final repo = ref.read(transactionsRepositoryProvider);
     final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
     final scheduleRepo = ref.read(incomeScheduleRepositoryProvider);
+    final budgetsRepo = ref.read(budgetsRepositoryProvider);
+
+    _budgetsSub = budgetsRepo.watchAll().listen((budgets) {
+      if (mounted) {
+        setState(() {
+          _budgets = budgets;
+        });
+      }
+    });
 
     _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
       if (mounted) {
@@ -295,13 +309,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final glowColor = _categoryTotals.isNotEmpty
+    final baseColor = _categoryTotals.isNotEmpty
         ? Color(
             isDark
                 ? _categoryTotals.first.category.colorDark
                 : _categoryTotals.first.category.colorLight,
           )
         : colors.brandStart;
+
+    final totalBudget = _budgets.fold<int>(0, (sum, b) => sum + b.budget.monthlyLimit);
+    final spentRatio = totalBudget > 0 ? _monthTotal / totalBudget : null;
+    final glowColor = glowTint(baseColor, spentRatio);
 
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -324,7 +342,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Positioned(
             top: -140,
             left: (screenWidth - 470) / 2,
-            child: MonthGlow(color: glowColor),
+            child: MonthGlow(
+              color: glowColor,
+              pulseTrigger: ref.watch(monthGlowPulseProvider),
+            ),
           ),
           // Contenido con scroll
           SafeArea(

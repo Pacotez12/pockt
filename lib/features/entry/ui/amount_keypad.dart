@@ -9,6 +9,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
 class AmountKeypadScreen extends ConsumerStatefulWidget {
@@ -112,6 +113,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
         }
       }
       Haptics.save();
+      ref.read(monthGlowPulseProvider.notifier).pulse();
       if (mounted) {
         Navigator.of(context).pop(true);
       }

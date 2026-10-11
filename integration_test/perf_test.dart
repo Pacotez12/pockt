@@ -13,6 +13,18 @@ import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/splash/ui/pockt_splash.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
+Future<void> settle(
+  WidgetTester t, [
+  Duration d = const Duration(milliseconds: 900),
+]) async {
+  const step = Duration(milliseconds: 16);
+  var elapsed = Duration.zero;
+  while (elapsed < d) {
+    await t.pump(step);
+    elapsed += step;
+  }
+}
+
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   // Captura todos los frames reales (no solo los de cada pump).
@@ -32,7 +44,7 @@ void main() {
       overrides: [databaseProvider.overrideWithValue(db)],
       child: const PocktApp(),
     ));
-    await tester.pumpAndSettle();
+    await settle(tester, const Duration(milliseconds: 1200));
 
     // 1. Escenario: apertura (arranque con la animación del orbe y logotipo)
     PocktSplash.resetForTesting();
@@ -42,7 +54,7 @@ void main() {
           overrides: [databaseProvider.overrideWithValue(db)],
           child: PocktApp(key: UniqueKey()),
         ));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 1200));
       },
       reportKey: 'apertura',
     );
@@ -52,22 +64,22 @@ void main() {
       () async {
         final plusButton = find.byKey(const ValueKey('shell-plus-button'));
         await tester.tap(plusButton);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
 
         final categoryBubble = find.text('Comida');
         await tester.tap(categoryBubble);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
 
         await tester.tap(find.text('2'));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 100));
         await tester.tap(find.text('5'));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 100));
         await tester.tap(find.text('000'));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 100));
 
         final saveButton = find.text('Guardar');
         await tester.tap(saveButton);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 600));
       },
       reportKey: 'carga',
     );
@@ -77,11 +89,11 @@ void main() {
       () async {
         final dayCell = find.text('1');
         await tester.tap(dayCell);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
 
         // Cerrar la hoja de detalle tocando el fondo exterior
         await tester.tapAt(const Offset(20, 20));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
       },
       reportKey: 'detalle_dia',
     );
@@ -92,7 +104,7 @@ void main() {
         final calendarArea = find.byType(HeatCalendar);
         for (var i = 0; i < 3; i++) {
           await tester.drag(calendarArea, const Offset(-300, 0));
-          await tester.pumpAndSettle();
+          await settle(tester, const Duration(milliseconds: 400));
         }
       },
       reportKey: 'cambio_mes',
@@ -103,18 +115,18 @@ void main() {
       () async {
         final reportesTab = find.text('Reportes');
         await tester.tap(reportesTab);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
 
         final reportsPageView = find.byType(PageView);
         for (var i = 0; i < 3; i++) {
           await tester.drag(reportsPageView, const Offset(-400, 0));
-          await tester.pumpAndSettle();
+          await settle(tester, const Duration(milliseconds: 400));
         }
 
         // Volver a la pestaña Inicio
         final inicioTab = find.text('Inicio');
         await tester.tap(inicioTab);
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 400));
       },
       reportKey: 'reportes',
     );
@@ -124,9 +136,9 @@ void main() {
       () async {
         final scrollable = find.byType(SingleChildScrollView);
         await tester.drag(scrollable, const Offset(0, -350));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 600));
         await tester.drag(scrollable, const Offset(0, 350));
-        await tester.pumpAndSettle();
+        await settle(tester, const Duration(milliseconds: 600));
       },
       reportKey: 'scroll_inicio',
     );
