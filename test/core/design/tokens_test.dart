@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/design/glass.dart';
+import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/design/tokens.dart';
 
 void main() {
@@ -38,19 +39,44 @@ void main() {
 
     expect(PocktColors.dark.heat, [
       const Color(0x0DFFFFFF),
-      const Color(0x38FF7A45),
-      const Color(0x73FF7A45),
-      const Color(0xB8FF645F),
+      const Color(0x38FF8A3D),
+      const Color(0x73FF7053),
+      const Color(0xB8FF5769),
       const Color(0xFFFF3D7F),
     ]);
 
     expect(PocktColors.light.heat, [
       const Color(0x0D000000),
-      const Color(0xFFFFB08A),
-      const Color(0xFFFF8A5C),
-      const Color(0xFFF2603F),
-      const Color(0xFFE8306F),
+      const Color(0x38FF8A3D),
+      const Color(0x73FF7053),
+      const Color(0xB8FF5769),
+      const Color(0xFFFF3D7F),
     ]);
+  });
+
+  test('la escala heat de cada tema sale de la marca (mismo matiz que brandAt)', () {
+    for (var i = 1; i <= 4; i++) {
+      final darkHeatHue = HSVColor.fromColor(PocktColors.dark.heat[i]).hue;
+      final darkBrandHue = HSVColor.fromColor(PocktColors.dark.brandAt(i - 1)).hue;
+      expect((darkHeatHue - darkBrandHue).abs(), lessThan(0.1),
+          reason: 'heat[$i] oscuro (${PocktColors.dark.heat[i]}) no tiene el mismo matiz que brandAt(${i - 1})');
+
+      final lightHeatHue = HSVColor.fromColor(PocktColors.light.heat[i]).hue;
+      final lightBrandHue = HSVColor.fromColor(PocktColors.light.brandAt(i - 1)).hue;
+      expect((lightHeatHue - lightBrandHue).abs(), lessThan(0.1),
+          reason: 'heat[$i] claro (${PocktColors.light.heat[i]}) no tiene el mismo matiz que brandAt(${i - 1})');
+    }
+  });
+
+  test('el selector de fecha marca hoy con textPrimary', () {
+    final darkTheme = buildDarkTheme();
+    final lightTheme = buildLightTheme();
+
+    expect(darkTheme.datePickerTheme.todayForegroundColor?.resolve({}), equals(PocktColors.dark.textPrimary));
+    expect(darkTheme.datePickerTheme.todayBorder?.color, equals(PocktColors.dark.textPrimary));
+
+    expect(lightTheme.datePickerTheme.todayForegroundColor?.resolve({}), equals(PocktColors.light.textPrimary));
+    expect(lightTheme.datePickerTheme.todayBorder?.color, equals(PocktColors.light.textPrimary));
   });
 
   test('estados nuevos de §6.2b en oscuro y claro', () {

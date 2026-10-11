@@ -25,7 +25,6 @@ class HeatCalendar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final firstDayOfMonth = DateTime(year, month, 1);
     final daysInMonth = DateTime(year, month + 1, 0).day;
@@ -76,7 +75,7 @@ class HeatCalendar extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3),
                         color: colors.heat[i],
-                        gradient: i == 4 && isDark
+                        gradient: i == 4
                             ? LinearGradient(
                                 colors: [colors.brandStart, colors.brandEnd],
                                 begin: Alignment.topLeft,
@@ -218,13 +217,26 @@ class HeatCalendarDayCell extends StatelessWidget {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final Color textColor;
+    if (isFuture) {
+      textColor = colors.textTertiary.withValues(alpha: 0.35);
+    } else if (level == 4) {
+      textColor = Colors.black;
+    } else if (isDark && level == 3) {
+      textColor = Colors.white;
+    } else {
+      textColor = isDark
+          ? colors.textPrimary.withValues(alpha: 0.85)
+          : colors.textPrimary;
+    }
+
     Widget cellContent = Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(7),
         color: isFuture
             ? Colors.transparent
             : colors.heat[level.clamp(0, 4)],
-        gradient: !isFuture && level == 4 && isDark
+        gradient: !isFuture && level == 4
             ? LinearGradient(
                 colors: [colors.brandStart, colors.brandEnd],
                 begin: Alignment.topLeft,
@@ -233,7 +245,7 @@ class HeatCalendarDayCell extends StatelessWidget {
             : null,
         border: isToday
             ? Border.all(
-                color: isDark ? Colors.white : colors.textPrimary,
+                color: colors.textPrimary,
                 width: 2.0,
               )
             : null,
@@ -246,9 +258,7 @@ class HeatCalendarDayCell extends StatelessWidget {
           fontFamily: 'Inter',
           fontSize: 9,
           fontWeight: isToday || level == 4 ? FontWeight.w700 : FontWeight.w500,
-          color: isFuture
-              ? colors.textTertiary.withValues(alpha: 0.35)
-              : (level == 4 ? Colors.white : colors.textPrimary.withValues(alpha: 0.85)),
+          color: textColor,
         ),
       ),
     );
@@ -256,9 +266,7 @@ class HeatCalendarDayCell extends StatelessWidget {
     if (isFuture) {
       cellContent = CustomPaint(
         foregroundPainter: _DashedBorderPainter(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.12)
-              : Colors.black.withValues(alpha: 0.10),
+          color: colors.glassBorder,
           radius: 7,
         ),
         child: cellContent,

@@ -87,9 +87,9 @@ DatePickerThemeData _buildDatePickerTheme(PocktColors colors) {
       if (states.contains(WidgetState.selected)) {
         return Colors.white;
       }
-      return colors.brandStart;
+      return colors.textPrimary;
     }),
-    todayBorder: BorderSide(color: colors.brandStart),
+    todayBorder: BorderSide(color: colors.textPrimary),
     cancelButtonStyle: TextButton.styleFrom(
       foregroundColor: colors.textSecondary,
       textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
