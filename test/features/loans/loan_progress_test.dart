@@ -132,5 +132,18 @@ void main() {
       expect(progress.balance, equals(300000));
       expect(progress.isClosed, isFalse);
     });
-  });
+  
+    test('si la cuota del mes ya está pagada, el próximo vencimiento pasa al mes siguiente', () {
+      final payments = [
+        makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 10, 3)),
+      ];
+      final progress = calculateLoanProgress(
+        loan: baseLoan,
+        payments: payments,
+        now: DateTime(2026, 10, 12),
+      );
+      expect(progress.nextDueDate, DateTime(2026, 11, 15));
+      expect(progress.daysUntilNextDue, 34);
+    });
+});
 }

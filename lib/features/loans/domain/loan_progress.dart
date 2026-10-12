@@ -90,7 +90,12 @@ LoanProgress calculateLoanProgress({
     }
 
     final currentMonthDue = makeDate(today.year, today.month, dueDay);
-    if (!currentMonthDue.isBefore(today)) {
+    // Misma regla que el aviso: una cuota regular pagada este mes la cubre.
+    final paidThisMonth = relevantPayments.any((p) =>
+        !isLoanExtraPayment(p) &&
+        p.occurredAt.year == today.year &&
+        p.occurredAt.month == today.month);
+    if (!currentMonthDue.isBefore(today) && !paidThisMonth) {
       nextDueDate = currentMonthDue;
     } else {
       nextDueDate = makeDate(today.year, today.month + 1, dueDay);
