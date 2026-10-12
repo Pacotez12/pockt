@@ -39,7 +39,7 @@ class HeatCalendar extends StatelessWidget {
 
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -66,7 +66,7 @@ class HeatCalendar extends StatelessWidget {
                     'menos',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10,
+                      fontSize: 12,
                       color: colors.textTertiary,
                     ),
                   ),
@@ -94,7 +94,7 @@ class HeatCalendar extends StatelessWidget {
                     'más',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10,
+                      fontSize: 12,
                       color: colors.textTertiary,
                     ),
                   ),
@@ -149,10 +149,12 @@ class HeatCalendar extends StatelessWidget {
               }
 
               final day = index - leadingEmptyCount + 1;
-              final isToday = year == todayLocal.year &&
+              final isToday =
+                  year == todayLocal.year &&
                   month == todayLocal.month &&
                   day == todayLocal.day;
-              final isFuture = year > todayLocal.year ||
+              final isFuture =
+                  year > todayLocal.year ||
                   (year == todayLocal.year && month > todayLocal.month) ||
                   (year == todayLocal.year &&
                       month == todayLocal.month &&
@@ -191,7 +193,7 @@ class _WeekdayHeader extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 10,
+            fontSize: 12,
             color: colors.textTertiary,
             fontWeight: FontWeight.w500,
           ),
@@ -246,10 +248,8 @@ class HeatCalendarDayCell extends StatelessWidget {
 
     Widget cellContent = Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(7),
-        color: isFuture
-            ? Colors.transparent
-            : colors.heat[level.clamp(0, 4)],
+        borderRadius: BorderRadius.circular(PocktRadii.s),
+        color: isFuture ? Colors.transparent : colors.heat[level.clamp(0, 4)],
         gradient: !isFuture && level == 4
             ? LinearGradient(
                 colors: [colors.brandStart, colors.brandEnd],
@@ -258,10 +258,7 @@ class HeatCalendarDayCell extends StatelessWidget {
               )
             : null,
         border: isToday
-            ? Border.all(
-                color: colors.textPrimary,
-                width: 2.0,
-              )
+            ? Border.all(color: colors.textPrimary, width: 2.0)
             : null,
       ),
       alignment: Alignment.bottomRight,
@@ -270,7 +267,7 @@ class HeatCalendarDayCell extends StatelessWidget {
         '$day',
         style: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: isToday || level == 4 ? FontWeight.w700 : FontWeight.w500,
           color: textColor,
         ),
@@ -293,35 +290,30 @@ class HeatCalendarDayCell extends StatelessWidget {
         enabled: !MediaQuery.disableAnimationsOf(context),
         child: Hero(
           tag: 'day-sheet-$year-$month-$day',
-          createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
-          flightShuttleBuilder: (
-            flightContext,
-            animation,
-            flightDirection,
-            fromHeroContext,
-            toHeroContext,
-          ) =>
-              buildDayDetailFlightShuttle(
-            flightContext,
-            animation,
-            flightDirection,
-            fromHeroContext,
-            toHeroContext,
-            colors,
-            isDark,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: cellWidget,
-          ),
+          createRectTween: (begin, end) =>
+              SpringRectTween(begin: begin, end: end),
+          flightShuttleBuilder:
+              (
+                flightContext,
+                animation,
+                flightDirection,
+                fromHeroContext,
+                toHeroContext,
+              ) => buildDayDetailFlightShuttle(
+                flightContext,
+                animation,
+                flightDirection,
+                fromHeroContext,
+                toHeroContext,
+                colors,
+                isDark,
+              ),
+          child: Material(color: Colors.transparent, child: cellWidget),
         ),
       );
     }
 
-    return Pressable(
-      onTap: onTap,
-      child: cellWidget,
-    );
+    return Pressable(onTap: onTap, child: cellWidget);
   }
 }
 
@@ -333,10 +325,7 @@ class _DashedBorderPainter extends CustomPainter {
   static const double _dashWidth = 3.0;
   static const double _dashSpace = 3.0;
 
-  _DashedBorderPainter({
-    required this.color,
-    this.radius = 7,
-  });
+  _DashedBorderPainter({required this.color, this.radius = 7});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -346,10 +335,9 @@ class _DashedBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        Offset.zero & size,
-        Radius.circular(radius),
-      ));
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+      );
 
     final metrics = path.computeMetrics();
     for (final metric in metrics) {

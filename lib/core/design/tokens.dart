@@ -167,3 +167,19 @@ extension PocktTheme on BuildContext {
 
   PocktColors get pocktColors => pockt;
 }
+
+/// Escala de radios de esquina (spec §6.2b): chips, controles, filas/tarjetas y tarjetas grandes.
+abstract final class PocktRadii {
+  static const double s = 8;
+  static const double m = 12;
+  static const double l = 16;
+  static const double xl = 24;
+}
+
+/// Escala tipográfica mínima: nada informativo por debajo de [caption].
+abstract final class PocktType {
+  static const double caption = 12;
+  static const double body = 14;
+  static const double title = 20; // subpantallas
+  static const double tabTitle = 24; // pestañas principales
+}

@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
@@ -174,11 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final payDays = parsePayDays(sched.payDays);
     final rules = parsePayDayRules(sched.payDayRules, payDays);
 
-    final prevWindow = previousPayWindow(
-      _getNow(),
-      payDays,
-      rules,
-    );
+    final prevWindow = previousPayWindow(_getNow(), payDays, rules);
 
     if (prevWindow == null) {
       if (mounted) {
@@ -198,34 +195,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           beforeOrOnLocalDay: _getNow(),
         )
         .listen((salaryDate) {
-      _lastSalaryDate = salaryDate;
-      DateTime periodStart = prevWindow.earliest;
-      if (salaryDate != null) {
-        final cleanSalary = DateTime(salaryDate.year, salaryDate.month, salaryDate.day);
-        if (!cleanSalary.isBefore(prevWindow.earliest)) {
-          periodStart = cleanSalary;
-        }
-      }
+          _lastSalaryDate = salaryDate;
+          DateTime periodStart = prevWindow.earliest;
+          if (salaryDate != null) {
+            final cleanSalary = DateTime(
+              salaryDate.year,
+              salaryDate.month,
+              salaryDate.day,
+            );
+            if (!cleanSalary.isBefore(prevWindow.earliest)) {
+              periodStart = cleanSalary;
+            }
+          }
 
-      _payIncomeSub?.cancel();
-      _payExpenseSub?.cancel();
+          _payIncomeSub?.cancel();
+          _payExpenseSub?.cancel();
 
-      _payIncomeSub = repo.watchTotalSince(periodStart, TxType.income).listen((income) {
-        if (mounted) {
-          setState(() {
-            _incomeSincePay = income;
-          });
-        }
-      });
+          _payIncomeSub = repo
+              .watchTotalSince(periodStart, TxType.income)
+              .listen((income) {
+                if (mounted) {
+                  setState(() {
+                    _incomeSincePay = income;
+                  });
+                }
+              });
 
-      _payExpenseSub = repo.watchTotalSince(periodStart, TxType.expense).listen((expense) {
-        if (mounted) {
-          setState(() {
-            _expenseSincePay = expense;
-          });
-        }
-      });
-    });
+          _payExpenseSub = repo
+              .watchTotalSince(periodStart, TxType.expense)
+              .listen((expense) {
+                if (mounted) {
+                  setState(() {
+                    _expenseSincePay = expense;
+                  });
+                }
+              });
+        });
   }
 
   DatePeriod get _currentPeriod {
@@ -246,33 +251,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _monthTotalSub = repo
         .watchMonthTotal(_year, _month, TxType.expense, period: period)
         .listen((total) {
-      if (mounted) {
-        setState(() {
-          _previousTotal = _monthTotal;
-          _monthTotal = total;
+          if (mounted) {
+            setState(() {
+              _previousTotal = _monthTotal;
+              _monthTotal = total;
+            });
+          }
         });
-      }
-    });
 
     _categoryTotalsSub = repo
         .watchMonthCategoryTotals(_year, _month, period: period)
         .listen((totals) {
-      if (mounted) {
-        setState(() {
-          _categoryTotals = totals;
+          if (mounted) {
+            setState(() {
+              _categoryTotals = totals;
+            });
+          }
         });
-      }
-    });
 
     _dailyTotalsSub = repo
         .watchDailyExpenseTotals(_year, _month, period: period)
         .listen((daily) {
-      if (mounted) {
-        setState(() {
-          _dailyTotals = daily;
+          if (mounted) {
+            setState(() {
+              _dailyTotals = daily;
+            });
+          }
         });
-      }
-    });
   }
 
   void _initSubscriptions() {
@@ -296,13 +301,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .watch(SettingsKeys.periodMonthStart)
         .map(MonthStartMode.parse)
         .listen((mode) {
-      if (mounted && mode != _monthStartMode) {
-        setState(() {
-          _monthStartMode = mode;
+          if (mounted && mode != _monthStartMode) {
+            setState(() {
+              _monthStartMode = mode;
+            });
+            _initMonthDataSubscriptions();
+          }
         });
-        _initMonthDataSubscriptions();
-      }
-    });
 
     _budgetsSub = budgetsRepo.watchAll().listen((budgets) {
       if (mounted) {
@@ -314,7 +319,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
       if (mounted) {
-        final schedChanged = _schedule?.id != sched?.id ||
+        final schedChanged =
+            _schedule?.id != sched?.id ||
             _schedule?.payDays != sched?.payDays ||
             _schedule?.payDayRules != sched?.payDayRules;
         setState(() {
@@ -341,17 +347,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .watch(SettingsKeys.homeRecentCount)
         .map((v) => int.tryParse(v ?? '') ?? 5)
         .listen((count) {
-      if (mounted) {
-        _recentSub?.cancel();
-        _recentSub = repo.watchRecent(limit: count).listen((recent) {
           if (mounted) {
-            setState(() {
-              _recentTxs = recent;
+            _recentSub?.cancel();
+            _recentSub = repo.watchRecent(limit: count).listen((recent) {
+              if (mounted) {
+                setState(() {
+                  _recentTxs = recent;
+                });
+              }
             });
           }
         });
-      }
-    });
   }
 
   void _changeMonth(int delta) {
@@ -389,7 +395,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final glowMode = ref.watch(glowModeProvider).value ?? GlowMode.subtle;
     final reactsToBudget = ref.watch(glowReactsToBudgetProvider).value ?? true;
     final weekStart = ref.watch(weekStartProvider).value ?? WeekStart.monday;
-    final cardsConfig = ref.watch(homeCardsConfigProvider).value ?? defaultHomeCards;
+    final cardsConfig =
+        ref.watch(homeCardsConfigProvider).value ?? defaultHomeCards;
 
     final baseColor = _categoryTotals.isNotEmpty
         ? Color(
@@ -399,8 +406,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           )
         : colors.brandStart;
 
-    final totalBudget = _budgets.fold<int>(0, (sum, b) => sum + b.budget.monthlyLimit);
-    final spentRatio = (reactsToBudget && totalBudget > 0) ? _monthTotal / totalBudget : null;
+    final totalBudget = _budgets.fold<int>(
+      0,
+      (sum, b) => sum + b.budget.monthlyLimit,
+    );
+    final spentRatio = (reactsToBudget && totalBudget > 0)
+        ? _monthTotal / totalBudget
+        : null;
     final glowColor = glowTint(baseColor, spentRatio);
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -413,7 +425,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       lastConfirmedSalaryDate: _lastSalaryDate,
       deductions: _deductions,
       expectedForPeriod: _schedule != null
-          ? expectedAmountForPeriod(_schedule!, _getNow(), deductions: _deductions)
+          ? expectedAmountForPeriod(
+              _schedule!,
+              _getNow(),
+              deductions: _deductions,
+            )
           : null,
     );
 
@@ -460,12 +476,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   ...cardsConfig
                       .where((item) => item.visible)
-                      .map((item) => _buildCardById(
-                            context,
-                            item.id,
-                            pLine: pLine,
-                            weekStart: weekStart,
-                          ))
+                      .map(
+                        (item) => _buildCardById(
+                          context,
+                          item.id,
+                          pLine: pLine,
+                          weekStart: weekStart,
+                        ),
+                      )
                       .whereType<Widget>(),
                   const SizedBox(height: 110),
                 ],
@@ -545,11 +563,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
         }
 
-        final dues = loansWithProgress
-            .where((item) => item.loan.dueDay != null)
-            .toList()
-          ..sort((a, b) => (a.progress.daysUntilNextDue ?? 99999)
-              .compareTo(b.progress.daysUntilNextDue ?? 99999));
+        final dues =
+            loansWithProgress.where((item) => item.loan.dueDay != null).toList()
+              ..sort(
+                (a, b) => (a.progress.daysUntilNextDue ?? 99999).compareTo(
+                  b.progress.daysUntilNextDue ?? 99999,
+                ),
+              );
         final topDues = dues.take(3).toList();
 
         return Padding(
@@ -558,12 +578,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             key: const ValueKey('home-loans-card'),
             onTap: () {
               Haptics.tick();
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LoansScreen()),
-              );
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LoansScreen()));
             },
             child: GlassCard(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(PocktRadii.xl),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,7 +593,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: colors.brandAt(0).withValues(alpha: isDark ? 0.2 : 0.12),
+                          color: colors
+                              .brandAt(0)
+                              .withValues(alpha: isDark ? 0.2 : 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -615,7 +636,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 'Debés',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: colors.textSecondary,
                                 ),
                               ),
@@ -642,7 +663,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 'Te deben',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: colors.textSecondary,
                                 ),
                               ),
@@ -690,7 +711,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         dueBadge = 'Día ${item.loan.dueDay}';
                       }
 
-                      final installment = item.loan.installmentAmount ?? item.progress.balance;
+                      final installment =
+                          item.loan.installmentAmount ?? item.progress.balance;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -711,16 +733,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: isDark ? 0.15 : 0.08),
-                                borderRadius: BorderRadius.circular(6),
+                                color: badgeColor.withValues(
+                                  alpha: isDark ? 0.15 : 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  PocktRadii.s,
+                                ),
                               ),
                               child: Text(
                                 dueBadge,
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: badgeColor,
                                 ),
@@ -785,7 +814,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(PocktRadii.l),
               color: colors.glassFill,
               border: Border.all(color: colors.glassBorder),
             ),
@@ -801,14 +830,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
         Pressable(
+          semanticLabel: 'Ajustes',
           key: const ValueKey('home-settings-button'),
           onTap: () {
             Haptics.tick();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const SettingsScreen(),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
           },
           child: Container(
             width: 34,
@@ -819,11 +847,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               border: Border.all(color: colors.glassBorder),
             ),
             child: Center(
-              child: Icon(
-                uiIcon('gear'),
-                size: 16,
-                color: colors.textPrimary,
-              ),
+              child: Icon(uiIcon('gear'), size: 16, color: colors.textPrimary),
             ),
           ),
         ),
@@ -971,7 +995,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         TxGroupCard(
           items: _recentTxs,
           cardRadius: 24,
-          subtitleBuilder: (item) => formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
+          subtitleBuilder: (item) =>
+              formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
           emptyPlaceholder: Text(
             'Sin movimientos aún',
             style: TextStyle(
@@ -989,9 +1014,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colors = context.pockt;
     final count = _pendingSuggestions.length;
     final names = _pendingSuggestions
-        .map((s) => (s.suggestion.merchant?.isNotEmpty == true)
-            ? s.suggestion.merchant!
-            : (s.category?.name ?? ''))
+        .map(
+          (s) => (s.suggestion.merchant?.isNotEmpty == true)
+              ? s.suggestion.merchant!
+              : (s.category?.name ?? ''),
+        )
         .where((name) => name.isNotEmpty)
         .take(2)
         .join(', ');
@@ -1002,15 +1029,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       key: const ValueKey('pending-suggestions-card'),
       onTap: () {
         Haptics.tick();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const InboxScreen(),
-          ),
-        );
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const InboxScreen()));
       },
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         child: Row(
           children: [
             Container(
@@ -1055,11 +1079,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(width: 6),
-            Icon(
-              uiIcon('chevron-right'),
-              size: 16,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('chevron-right'), size: 16, color: colors.textTertiary),
           ],
         ),
       ),
@@ -1073,15 +1093,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       key: const ValueKey('backup-overdue-banner'),
       onTap: () {
         Haptics.tick();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const BackupScreen(),
-          ),
-        );
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const BackupScreen()));
       },
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         child: Row(
           children: [
             Container(
@@ -1112,11 +1129,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(width: 6),
-            Icon(
-              uiIcon('caret-right'),
-              size: 16,
-              color: colors.warning,
-            ),
+            Icon(uiIcon('caret-right'), size: 16, color: colors.warning),
           ],
         ),
       ),
@@ -1181,4 +1194,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-

@@ -86,7 +86,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                           vertical: 6,
                           horizontal: 8,
                         ),
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(PocktRadii.xl),
                         child: Column(
                           children: [
                             _IntensityTile(
@@ -152,7 +152,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                               vertical: 4,
                               horizontal: 16,
                             ),
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(PocktRadii.xl),
                             child: Column(
                               children: [
                                 _TimePickerRow(
@@ -202,7 +202,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(PocktRadii.xl),
                       child: Row(
                         children: [
                           Icon(
@@ -250,6 +250,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       child: Row(
         children: [
           Pressable(
+            semanticLabel: 'Volver',
             onTap: () => Navigator.of(context).pop(),
             child: Container(
               width: 36,
@@ -315,7 +316,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colors.warning.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         border: Border.all(color: colors.warning.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -355,7 +356,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: colors.warning,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
               ),
               child: const Text(
                 'Activar notificaciones',
@@ -455,7 +456,9 @@ class _IntensityTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(PocktRadii.l),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

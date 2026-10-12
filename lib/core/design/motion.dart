@@ -22,11 +22,15 @@ class Pressable extends StatefulWidget {
   final VoidCallback? onTap;
   final HitTestBehavior behavior;
 
+  /// Texto que lee TalkBack; obligatorio en la práctica cuando el hijo es solo un ícono.
+  final String? semanticLabel;
+
   const Pressable({
     super.key,
     required this.child,
     this.onTap,
     this.behavior = HitTestBehavior.opaque,
+    this.semanticLabel,
   });
 
   @override
@@ -41,10 +45,7 @@ class _PressableState extends State<Pressable>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController.unbounded(
-      vsync: this,
-      value: 1.0,
-    );
+    _controller = AnimationController.unbounded(vsync: this, value: 1.0);
   }
 
   @override
@@ -81,25 +82,29 @@ class _PressableState extends State<Pressable>
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: widget.behavior,
-      onPointerDown: (_) => _animateTo(0.96),
-      onPointerUp: (_) => _animateTo(1.0),
-      onPointerCancel: (_) => _animateTo(1.0),
-      child: GestureDetector(
+    return Semantics(
+      button: widget.onTap != null,
+      label: widget.semanticLabel,
+      child: Listener(
         behavior: widget.behavior,
-        onTap: widget.onTap,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final scale = _reduceMotion ? 1.0 : _controller.value;
-            return Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.diagonal3Values(scale, scale, scale),
-              child: child,
-            );
-          },
-          child: widget.child,
+        onPointerDown: (_) => _animateTo(0.96),
+        onPointerUp: (_) => _animateTo(1.0),
+        onPointerCancel: (_) => _animateTo(1.0),
+        child: GestureDetector(
+          behavior: widget.behavior,
+          onTap: widget.onTap,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final scale = _reduceMotion ? 1.0 : _controller.value;
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.diagonal3Values(scale, scale, scale),
+                child: child,
+              );
+            },
+            child: widget.child,
+          ),
         ),
       ),
     );
@@ -111,10 +116,7 @@ class SpringCurve extends Curve {
   final SpringDescription spring;
   final double durationSeconds;
 
-  const SpringCurve({
-    required this.spring,
-    this.durationSeconds = 0.35,
-  });
+  const SpringCurve({required this.spring, this.durationSeconds = 0.35});
 
   @override
   double transformInternal(double t) {

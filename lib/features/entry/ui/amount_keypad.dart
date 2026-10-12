@@ -27,7 +27,8 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
     required DateTime occurredAt,
     String? merchant,
     String? note,
-  })? onSaveOverride;
+  })?
+  onSaveOverride;
 
   const AmountKeypadScreen({
     super.key,
@@ -248,164 +249,176 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                     tag: 'cat-${_category.id}',
                     createRectTween: (begin, end) =>
                         SpringRectTween(begin: begin, end: end),
-                    flightShuttleBuilder: (
-                      flightContext,
-                      animation,
-                      flightDirection,
-                      fromHeroContext,
-                      toHeroContext,
-                    ) {
-                      final catColor = Color(
-                        isDark ? _category.colorDark : _category.colorLight,
-                      );
-                      final pillBg = categoryColor.withValues(
-                        alpha: isDark ? 0.22 : 0.14,
-                      );
-                      final targetBorderAlpha = isDark ? 0.6 : 0.4;
-                      final targetShadowAlpha = isDark ? 0.35 : 0.20;
+                    flightShuttleBuilder:
+                        (
+                          flightContext,
+                          animation,
+                          flightDirection,
+                          fromHeroContext,
+                          toHeroContext,
+                        ) {
+                          final catColor = Color(
+                            isDark ? _category.colorDark : _category.colorLight,
+                          );
+                          final pillBg = categoryColor.withValues(
+                            alpha: isDark ? 0.22 : 0.14,
+                          );
+                          final targetBorderAlpha = isDark ? 0.6 : 0.4;
+                          final targetShadowAlpha = isDark ? 0.35 : 0.20;
 
-                      return AnimatedBuilder(
-                        animation: animation,
-                        builder: (context, _) {
-                          final t = animation.value.clamp(0.0, 1.0);
-                          final bg = Color.lerp(catColor, pillBg, t)!;
-                          final radius = BorderRadius.circular(29.0 - 9.0 * t);
-                          final borderAlpha = targetBorderAlpha * t;
-                          final shadowAlpha = targetShadowAlpha * (1.0 - t);
-                          final shadowBlur = 14.0 * (1.0 - t);
-                          final shadowOffset = Offset(0, 4.0 * (1.0 - t));
+                          return AnimatedBuilder(
+                            animation: animation,
+                            builder: (context, _) {
+                              final t = animation.value.clamp(0.0, 1.0);
+                              final bg = Color.lerp(catColor, pillBg, t)!;
+                              final radius = BorderRadius.circular(
+                                29.0 - 9.0 * t,
+                              );
+                              final borderAlpha = targetBorderAlpha * t;
+                              final shadowAlpha = targetShadowAlpha * (1.0 - t);
+                              final shadowBlur = 14.0 * (1.0 - t);
+                              final shadowOffset = Offset(0, 4.0 * (1.0 - t));
 
-                          // Cross-fade: Version A (icono centrado oscuro) se desvanece de 0 a 0.45;
-                          // Version B (fila con icono y texto nítido) entra de 0.35 a 0.8.
-                          final alphaA = ((0.45 - t) / 0.45).clamp(0.0, 1.0);
-                          final alphaB = ((t - 0.35) / 0.45).clamp(0.0, 1.0);
+                              // Cross-fade: Version A (icono centrado oscuro) se desvanece de 0 a 0.45;
+                              // Version B (fila con icono y texto nítido) entra de 0.35 a 0.8.
+                              final alphaA = ((0.45 - t) / 0.45).clamp(
+                                0.0,
+                                1.0,
+                              );
+                              final alphaB = ((t - 0.35) / 0.45).clamp(
+                                0.0,
+                                1.0,
+                              );
 
-                          return Material(
-                            type: MaterialType.transparency,
-                            child: Container(
-                              key: ValueKey('hero-flight-cat-${_category.id}'),
-                              decoration: BoxDecoration(
-                                color: bg,
-                                borderRadius: radius,
-                                border: borderAlpha > 0.01
-                                    ? Border.all(
-                                        color: categoryColor.withValues(
-                                          alpha: borderAlpha,
-                                        ),
-                                        width: 1,
-                                      )
-                                    : null,
-                                boxShadow: shadowAlpha > 0.01
-                                    ? [
-                                        BoxShadow(
-                                          color: catColor.withValues(
-                                            alpha: shadowAlpha,
-                                          ),
-                                          blurRadius: shadowBlur,
-                                          offset: shadowOffset,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                alignment: Alignment.center,
-                                children: [
-                                  if (alphaA > 0.01)
-                                    Opacity(
-                                      opacity: alphaA,
-                                      child: Center(
-                                        child: categoryIcon(
-                                          _category.icon,
-                                          size: 28,
-                                          color: colors.keypadKey,
-                                        ),
-                                      ),
-                                    ),
-                                  if (alphaB > 0.01)
-                                    Opacity(
-                                      opacity: alphaB,
-                                      child: Center(
-                                        child: OverflowBox(
-                                          maxWidth: double.infinity,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              categoryIcon(
-                                                _category.icon,
-                                                size: 20,
-                                                color: colors.textPrimary,
+                              return Material(
+                                type: MaterialType.transparency,
+                                child: Container(
+                                  key: ValueKey(
+                                    'hero-flight-cat-${_category.id}',
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: bg,
+                                    borderRadius: radius,
+                                    border: borderAlpha > 0.01
+                                        ? Border.all(
+                                            color: categoryColor.withValues(
+                                              alpha: borderAlpha,
+                                            ),
+                                            width: 1,
+                                          )
+                                        : null,
+                                    boxShadow: shadowAlpha > 0.01
+                                        ? [
+                                            BoxShadow(
+                                              color: catColor.withValues(
+                                                alpha: shadowAlpha,
                                               ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                _category.name,
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: colors.textPrimary,
-                                                ),
-                                              ),
-                                            ],
+                                              blurRadius: shadowBlur,
+                                              offset: shadowOffset,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    alignment: Alignment.center,
+                                    children: [
+                                      if (alphaA > 0.01)
+                                        Opacity(
+                                          opacity: alphaA,
+                                          child: Center(
+                                            child: categoryIcon(
+                                              _category.icon,
+                                              size: 28,
+                                              color: colors.keypadKey,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                                      if (alphaB > 0.01)
+                                        Opacity(
+                                          opacity: alphaB,
+                                          child: Center(
+                                            child: OverflowBox(
+                                              maxWidth: double.infinity,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  categoryIcon(
+                                                    _category.icon,
+                                                    size: 20,
+                                                    color: colors.textPrimary,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    _category.name,
+                                                    style: TextStyle(
+                                                      fontFamily: 'Inter',
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: colors.textPrimary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: categoryColor.withValues(
-                          alpha: isDark ? 0.22 : 0.14,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                        decoration: BoxDecoration(
                           color: categoryColor.withValues(
-                            alpha: isDark ? 0.6 : 0.4,
+                            alpha: isDark ? 0.22 : 0.14,
                           ),
-                          width: 1,
-                        ),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            categoryIcon(
-                              _category.icon,
-                              size: 20,
-                              color: colors.textPrimary,
+                          borderRadius: BorderRadius.circular(PocktRadii.xl),
+                          border: Border.all(
+                            color: categoryColor.withValues(
+                              alpha: isDark ? 0.6 : 0.4,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _category.name,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                            width: 1,
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              categoryIcon(
+                                _category.icon,
+                                size: 20,
                                 color: colors.textPrimary,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Text(
+                                _category.name,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
                 // Formatted Amount Display
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -459,7 +472,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                       disabledBackgroundColor: colors.glassFill,
                       disabledForegroundColor: colors.textTertiary,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26),
+                        borderRadius: BorderRadius.circular(PocktRadii.xl),
                       ),
                       minimumSize: const Size.fromHeight(52),
                     ),
@@ -487,18 +500,23 @@ class _AmountKeypadGrid extends StatelessWidget {
   final ValueChanged<String> onKey;
   final String quickKey;
 
-  const _AmountKeypadGrid({
-    required this.onKey,
-    this.quickKey = '000',
-  });
+  const _AmountKeypadGrid({required this.onKey, this.quickKey = '000'});
 
   @override
   Widget build(BuildContext context) {
     final keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      quickKey, '0', '⌫',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      quickKey,
+      '0',
+      '⌫',
     ];
 
     return Column(
@@ -543,7 +561,7 @@ class _KeypadButton extends StatelessWidget {
           color: isDark
               ? Colors.white.withValues(alpha: 0.08)
               : Colors.black.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -613,7 +631,7 @@ class _DateSelector extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: colors.glassFill,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           border: Border.all(color: colors.glassBorder, width: 1),
         ),
         child: Text(
@@ -737,7 +755,7 @@ class _ChipButton extends StatelessWidget {
           color: isActive
               ? colors.textPrimary.withValues(alpha: 0.12)
               : colors.glassFill,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           border: Border.all(
             color: isActive ? colors.textSecondary : colors.glassBorder,
             width: 1,

@@ -27,6 +27,7 @@ class AppearanceScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -85,8 +86,11 @@ class AppearanceScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       GlassCard(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                        borderRadius: BorderRadius.circular(22),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
+                        borderRadius: BorderRadius.circular(PocktRadii.xl),
                         child: Column(
                           children: [
                             _AppearanceOptionTile(
@@ -98,7 +102,10 @@ class AppearanceScreen extends ConsumerWidget {
                               isSelected: currentSetting == 'system',
                               onTap: () async {
                                 Haptics.tick();
-                                await repo.set(SettingsKeys.appearance, 'system');
+                                await repo.set(
+                                  SettingsKeys.appearance,
+                                  'system',
+                                );
                               },
                             ),
                             Divider(color: colors.glassBorder, height: 1),
@@ -111,7 +118,10 @@ class AppearanceScreen extends ConsumerWidget {
                               isSelected: currentSetting == 'light',
                               onTap: () async {
                                 Haptics.tick();
-                                await repo.set(SettingsKeys.appearance, 'light');
+                                await repo.set(
+                                  SettingsKeys.appearance,
+                                  'light',
+                                );
                               },
                             ),
                             Divider(color: colors.glassBorder, height: 1),
@@ -170,7 +180,7 @@ class _AppearanceOptionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
         ),
         child: Row(
           children: [
@@ -179,7 +189,9 @@ class _AppearanceOptionTile extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: colors.brandStart.withValues(alpha: isDark ? 0.16 : 0.12),
+                color: colors.brandStart.withValues(
+                  alpha: isDark ? 0.16 : 0.12,
+                ),
               ),
               child: Center(
                 child: Icon(

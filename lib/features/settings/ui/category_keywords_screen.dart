@@ -29,6 +29,7 @@ class CategoryKeywordsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -102,7 +103,10 @@ class CategoryKeywordsScreen extends ConsumerWidget {
 
                       return ListView.builder(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         itemCount: allCats.length,
                         itemBuilder: (context, index) {
                           final cat = allCats[index];
@@ -148,7 +152,7 @@ class _CategoryTile extends ConsumerWidget {
       },
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Row(
           children: [
             Container(
@@ -189,11 +193,7 @@ class _CategoryTile extends ConsumerWidget {
               },
             ),
             const SizedBox(width: 6),
-            Icon(
-              uiIcon('caret-right'),
-              size: 16,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('caret-right'), size: 16, color: colors.textTertiary),
           ],
         ),
       ),
@@ -253,6 +253,7 @@ class _CategoryKeywordsDetailScreenState
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -280,7 +281,11 @@ class _CategoryKeywordsDetailScreenState
                       color: catColor.withValues(alpha: isDark ? 0.16 : 0.12),
                     ),
                     child: Center(
-                      child: categoryIcon(widget.category.icon, size: 17, color: catColor),
+                      child: categoryIcon(
+                        widget.category.icon,
+                        size: 17,
+                        color: catColor,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -316,8 +321,11 @@ class _CategoryKeywordsDetailScreenState
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                borderRadius: BorderRadius.circular(PocktRadii.l),
                 child: Row(
                   children: [
                     Expanded(
@@ -339,11 +347,14 @@ class _CategoryKeywordsDetailScreenState
                           ),
                           border: InputBorder.none,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),
                     Pressable(
+                      semanticLabel: 'Agregar palabra clave',
                       key: const ValueKey('add-keyword-button'),
                       onTap: _submit,
                       child: Container(
@@ -352,11 +363,7 @@ class _CategoryKeywordsDetailScreenState
                           shape: BoxShape.circle,
                           color: catColor.withValues(alpha: 0.15),
                         ),
-                        child: Icon(
-                          uiIcon('plus'),
-                          size: 16,
-                          color: catColor,
-                        ),
+                        child: Icon(uiIcon('plus'), size: 16, color: catColor),
                       ),
                     ),
                   ],
@@ -386,7 +393,10 @@ class _CategoryKeywordsDetailScreenState
 
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 10,
@@ -418,10 +428,7 @@ class _KeywordChip extends StatelessWidget {
   final CategoryKeyword keyword;
   final VoidCallback? onDelete;
 
-  const _KeywordChip({
-    required this.keyword,
-    this.onDelete,
-  });
+  const _KeywordChip({required this.keyword, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +440,7 @@ class _KeywordChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         border: Border.all(
           color: isUser
               ? colors.brandStart.withValues(alpha: 0.35)
@@ -456,7 +463,7 @@ class _KeywordChip extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(PocktRadii.s),
               color: isUser
                   ? colors.brandStart.withValues(alpha: 0.15)
                   : colors.textTertiary.withValues(alpha: 0.12),
@@ -465,7 +472,7 @@ class _KeywordChip extends StatelessWidget {
               isUser ? 'tuya' : 'seed',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isUser ? colors.brandStart : colors.textTertiary,
               ),
@@ -476,11 +483,7 @@ class _KeywordChip extends StatelessWidget {
             GestureDetector(
               key: ValueKey('delete-keyword-${keyword.keyword}'),
               onTap: onDelete,
-              child: Icon(
-                uiIcon('x'),
-                size: 14,
-                color: colors.textSecondary,
-              ),
+              child: Icon(uiIcon('x'), size: 14, color: colors.textSecondary),
             ),
           ],
         ],

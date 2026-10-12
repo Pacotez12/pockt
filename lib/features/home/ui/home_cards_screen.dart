@@ -23,7 +23,9 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final currentCards =
-        _cards ?? ref.watch(homeCardsConfigProvider).value ?? HomeCardItem.defaultCards();
+        _cards ??
+        ref.watch(homeCardsConfigProvider).value ??
+        HomeCardItem.defaultCards();
     final recentCount = ref.watch(recentCountProvider).value ?? 5;
 
     return Scaffold(
@@ -52,7 +54,7 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
             // Nota fija: El total del mes siempre está primero
             GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(PocktRadii.l),
               child: Row(
                 children: [
                   Icon(uiIcon('sparkle'), size: 18, color: colors.brandStart),
@@ -76,7 +78,7 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
               'ORDEN Y VISIBILIDAD',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: colors.textTertiary,
@@ -95,7 +97,10 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
                 updated.insert(newIndex, item);
                 setState(() => _cards = updated);
                 final repo = ref.read(settingsRepositoryProvider);
-                await repo.set(SettingsKeys.homeCards, HomeCardItem.encode(updated));
+                await repo.set(
+                  SettingsKeys.homeCards,
+                  HomeCardItem.encode(updated),
+                );
               },
               itemBuilder: (context, index) {
                 final card = currentCards[index];
@@ -103,8 +108,11 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
                   key: ValueKey('card-${card.id}'),
                   padding: const EdgeInsets.only(bottom: 8),
                   child: GlassCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    borderRadius: BorderRadius.circular(16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     child: Row(
                       children: [
                         ReorderableDragStartListener(
@@ -126,7 +134,9 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
                               fontFamily: 'Inter',
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: card.visible ? colors.textPrimary : colors.textTertiary,
+                              color: card.visible
+                                  ? colors.textPrimary
+                                  : colors.textTertiary,
                             ),
                           ),
                         ),
@@ -134,12 +144,16 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
                           value: card.visible,
                           onChanged: (val) async {
                             Haptics.tick();
-                            final updated = List<HomeCardItem>.from(currentCards);
+                            final updated = List<HomeCardItem>.from(
+                              currentCards,
+                            );
                             updated[index] = card.copyWith(visible: val);
                             setState(() => _cards = updated);
                             final repo = ref.read(settingsRepositoryProvider);
                             await repo.set(
-                                SettingsKeys.homeCards, HomeCardItem.encode(updated));
+                              SettingsKeys.homeCards,
+                              HomeCardItem.encode(updated),
+                            );
                           },
                         ),
                       ],
@@ -153,7 +167,7 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
               'MOVIMIENTOS RECIENTES',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: colors.textTertiary,
@@ -162,7 +176,7 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
             const SizedBox(height: 8),
             GlassCard(
               padding: const EdgeInsets.all(16),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(PocktRadii.l),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -188,8 +202,13 @@ class _HomeCardsScreenState extends ConsumerState<HomeCardsScreen> {
                             onSelected: (selected) async {
                               if (selected) {
                                 Haptics.tick();
-                                final repo = ref.read(settingsRepositoryProvider);
-                                await repo.set(SettingsKeys.homeRecentCount, '$count');
+                                final repo = ref.read(
+                                  settingsRepositoryProvider,
+                                );
+                                await repo.set(
+                                  SettingsKeys.homeRecentCount,
+                                  '$count',
+                                );
                               }
                             },
                           ),

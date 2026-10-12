@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/glass.dart';
@@ -43,14 +44,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     } catch (_) {}
 
     try {
-      _widgetClickSub = platform.widgetClicks.listen(
-        (uri) async {
-          if (uri != null && mounted) {
-            await handleWidgetLaunchUri(context, uri);
-          }
-        },
-        onError: (_) {},
-      );
+      _widgetClickSub = platform.widgetClicks.listen((uri) async {
+        if (uri != null && mounted) {
+          await handleWidgetLaunchUri(context, uri);
+        }
+      }, onError: (_) {});
     } catch (_) {}
   }
 
@@ -112,11 +110,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 height: 52,
                 child: Row(
                   children: [
-                    _buildNavItem(
-                      index: 0,
-                      label: 'Inicio',
-                      iconKey: 'house',
-                    ),
+                    _buildNavItem(index: 0, label: 'Inicio', iconKey: 'house'),
                     _buildNavItem(
                       key: const ValueKey('tab-movimientos'),
                       index: 1,
@@ -170,12 +164,16 @@ class _AppShellState extends ConsumerState<AppShell> {
                 size: 20,
                 color: isSelected ? colors.textPrimary : colors.textTertiary,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                softWrap: false,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 10,
+                  fontSize: 12,
+                  height: 1.0,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected ? colors.textPrimary : colors.textTertiary,
                 ),
@@ -193,6 +191,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Pressable(
+        semanticLabel: 'Cargar movimiento',
         key: const ValueKey('shell-plus-button'),
         onTap: () => showEntryFlow(context),
         child: Container(
@@ -214,11 +213,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             ],
           ),
           child: Center(
-            child: Icon(
-              uiIcon('plus'),
-              size: 24,
-              color: Colors.white,
-            ),
+            child: Icon(uiIcon('plus'), size: 24, color: Colors.white),
           ),
         ),
       ),

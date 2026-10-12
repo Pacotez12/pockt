@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -148,7 +149,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     months: _evolutionMonths,
                     todayLocal: _activeReferenceDate,
                     isDark: isDark,
-                    onMonthsChanged: (m) => setState(() => _evolutionMonths = m),
+                    onMonthsChanged: (m) =>
+                        setState(() => _evolutionMonths = m),
                   ),
                   _ComparisonView(
                     year: _year,
@@ -156,11 +158,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     todayLocal: _activeReferenceDate,
                     isDark: isDark,
                   ),
-                  _MerchantsView(
-                    year: _year,
-                    month: _month,
-                    isDark: isDark,
-                  ),
+                  _MerchantsView(year: _year, month: _month, isDark: isDark),
                 ],
               ),
             ),
@@ -190,6 +188,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Pressable(
+                semanticLabel: 'Mes anterior',
                 onTap: () => _changeMonth(-1),
                 child: Container(
                   width: 32,
@@ -228,17 +227,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         '${_kMonthNames[m - 1]} $_year',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontWeight:
-                              m == _month ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: m == _month
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                         ),
                       ),
                     ),
                 ],
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     color: colors.glassFill,
                     border: Border.all(color: colors.glassBorder),
                   ),
@@ -255,6 +257,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
               const SizedBox(width: 6),
               Pressable(
+                semanticLabel: 'Mes siguiente',
                 onTap: () => _changeMonth(1),
                 child: Container(
                   width: 32,
@@ -287,7 +290,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           color: colors.glassFill,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
           border: Border.all(color: colors.glassBorder),
         ),
         child: Row(
@@ -318,7 +321,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         _tabTitles[i],
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: _currentPage == i
                               ? FontWeight.w600
                               : FontWeight.w500,
@@ -482,8 +485,9 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
-    final catColor =
-        Color(isDark ? item.category.colorDark : item.category.colorLight);
+    final catColor = Color(
+      isDark ? item.category.colorDark : item.category.colorLight,
+    );
     final pct = totalExpense > 0
         ? (item.total / totalExpense * 100).toStringAsFixed(1)
         : '0.0';
@@ -502,7 +506,11 @@ class _CategoryRow extends StatelessWidget {
                 color: catColor.withValues(alpha: isDark ? 0.20 : 0.14),
               ),
               child: Center(
-                child: categoryIcon(item.category.icon, size: 16, color: catColor),
+                child: categoryIcon(
+                  item.category.icon,
+                  size: 16,
+                  color: catColor,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -523,7 +531,7 @@ class _CategoryRow extends StatelessWidget {
                     '$pct %',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 11,
+                      fontSize: 12,
                       color: colors.textTertiary,
                     ),
                   ),
@@ -541,11 +549,7 @@ class _CategoryRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              uiIcon('caret-right'),
-              size: 14,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('caret-right'), size: 14, color: colors.textTertiary),
           ],
         ),
       ),
@@ -570,8 +574,7 @@ class _CategoryTransactionsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final catColor =
-        Color(isDark ? category.colorDark : category.colorLight);
+    final catColor = Color(isDark ? category.colorDark : category.colorLight);
     final mode =
         ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar;
     final schedule = ref.watch(currentIncomeScheduleProvider).value;
@@ -602,8 +605,9 @@ class _CategoryTransactionsSheet extends ConsumerWidget {
               ),
               decoration: BoxDecoration(
                 color: colors.sheetSurface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(top: BorderSide(color: colors.glassBorder)),
               ),
               child: SafeArea(
@@ -712,9 +716,11 @@ class _CategoryTransactionsSheet extends ConsumerWidget {
                                 const SizedBox(height: 6),
                             itemBuilder: (context, index) {
                               final item = txs[index];
-                              final hasMerchant = item.tx.merchant != null &&
+                              final hasMerchant =
+                                  item.tx.merchant != null &&
                                   item.tx.merchant!.trim().isNotEmpty;
-                              final hasNote = item.tx.note != null &&
+                              final hasNote =
+                                  item.tx.note != null &&
                                   item.tx.note!.trim().isNotEmpty;
 
                               final subtitle = (hasMerchant && hasNote)
@@ -792,7 +798,7 @@ class _EvolutionView extends ConsumerWidget {
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     color: colors.glassFill,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     border: Border.all(color: colors.glassBorder),
                   ),
                   child: Row(
@@ -846,10 +852,7 @@ class _EvolutionView extends ConsumerWidget {
                 ),
               )
             else ...[
-              EvolutionChart(
-                totals: totals,
-                isDark: isDark,
-              ),
+              EvolutionChart(totals: totals, isDark: isDark),
               const SizedBox(height: 16),
               _buildEvolutionSummary(colors, totals),
             ],
@@ -859,10 +862,7 @@ class _EvolutionView extends ConsumerWidget {
     );
   }
 
-  Widget _buildEvolutionSummary(
-    PocktColors colors,
-    List<MonthTotals> totals,
-  ) {
+  Widget _buildEvolutionSummary(PocktColors colors, List<MonthTotals> totals) {
     var sumExp = 0;
     var sumInc = 0;
     for (final m in totals) {
@@ -979,14 +979,14 @@ class _PeriodChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(PocktRadii.m),
           color: selected ? colors.glassBorder : Colors.transparent,
         ),
         child: Text(
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: selected ? colors.textPrimary : colors.textTertiary,
           ),
@@ -1027,11 +1027,7 @@ class _ComparisonView extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  uiIcon('trend-up'),
-                  size: 44,
-                  color: colors.textTertiary,
-                ),
+                Icon(uiIcon('trend-up'), size: 44, color: colors.textTertiary),
                 const SizedBox(height: 12),
                 Text(
                   'Sin datos para comparar',
@@ -1165,7 +1161,7 @@ class _StatPill extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         border: Border.all(color: colors.glassBorder),
       ),
       child: Column(
@@ -1177,7 +1173,7 @@ class _StatPill extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11,
+              fontSize: 12,
               color: colors.textTertiary,
             ),
           ),
@@ -1253,7 +1249,9 @@ class _CategoryComparisonSection extends ConsumerWidget {
             }
 
             final items = map.values.toList()
-              ..sort((a, b) => max(b.cur, b.prev).compareTo(max(a.cur, a.prev)));
+              ..sort(
+                (a, b) => max(b.cur, b.prev).compareTo(max(a.cur, a.prev)),
+              );
 
             if (items.isEmpty) {
               return const SizedBox.shrink();
@@ -1362,7 +1360,7 @@ class _CategoryComparisonRow extends StatelessWidget {
                   'Antes: ${formatGs(prev)}',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -1386,7 +1384,7 @@ class _CategoryComparisonRow extends StatelessWidget {
                 changeLabel,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: changeColor,
                 ),

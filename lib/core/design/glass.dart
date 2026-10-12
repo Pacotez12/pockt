@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:pockt/core/design/tokens.dart';
 
@@ -20,17 +21,14 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = borderRadius ?? BorderRadius.circular(24);
+    final radius = borderRadius ?? BorderRadius.circular(PocktRadii.xl);
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         color: colors.glassFill,
         borderRadius: radius,
-        border: Border.all(
-          color: colors.glassBorder,
-          width: 1.0,
-        ),
+        border: Border.all(color: colors.glassBorder, width: 1.0),
         boxShadow: isDark
             ? null
             : [
@@ -43,10 +41,7 @@ class GlassCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: radius,
-        child: Padding(
-          padding: padding ?? EdgeInsets.zero,
-          child: child,
-        ),
+        child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
       ),
     );
   }
@@ -81,11 +76,8 @@ class GlassBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.glassFill,
               borderRadius: radius,
-              border: border ??
-                  Border.all(
-                    color: colors.glassBorder,
-                    width: 1.0,
-                  ),
+              border:
+                  border ?? Border.all(color: colors.glassBorder, width: 1.0),
             ),
             child: child,
           ),

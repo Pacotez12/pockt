@@ -18,9 +18,14 @@ const double _kSnackBottomClearance = 96;
 /// el [ScaffoldMessenger] raíz, para que el aviso sobreviva a cambios de
 /// pestaña y al cierre de hojas. El repositorio se captura antes del `await`
 /// para que "Deshacer" funcione aunque el widget que borró ya no exista.
-Future<void> deleteWithUndo(BuildContext context, WidgetRef ref, String txId) async {
+Future<void> deleteWithUndo(
+  BuildContext context,
+  WidgetRef ref,
+  String txId,
+) async {
   final repo = ref.read(transactionsRepositoryProvider);
-  final messenger = context.findRootAncestorStateOfType<ScaffoldMessengerState>() ??
+  final messenger =
+      context.findRootAncestorStateOfType<ScaffoldMessengerState>() ??
       ScaffoldMessenger.of(context);
   final colors = context.pockt;
 
@@ -38,7 +43,7 @@ Future<void> deleteWithUndo(BuildContext context, WidgetRef ref, String txId) as
         elevation: 0,
         backgroundColor: Color.alphaBlend(colors.glassFill, colors.background),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           side: BorderSide(color: colors.glassBorder),
         ),
         content: Row(
@@ -96,7 +101,9 @@ class TxRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final catColor = Color(isDark ? view.category.colorDark : view.category.colorLight);
+    final catColor = Color(
+      isDark ? view.category.colorDark : view.category.colorLight,
+    );
     final isIncome = view.tx.type == TxType.income;
 
     return Padding(
@@ -111,7 +118,11 @@ class TxRow extends StatelessWidget {
               color: catColor.withValues(alpha: isDark ? 0.16 : 0.12),
             ),
             child: Center(
-              child: categoryIcon(view.category.icon, size: 17, color: catColor),
+              child: categoryIcon(
+                view.category.icon,
+                size: 17,
+                color: catColor,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -138,7 +149,7 @@ class TxRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -207,11 +218,15 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
 
     final BorderRadius rowRadius;
     if (widget.isFirst == null && widget.isLast == null) {
-      rowRadius = BorderRadius.circular(16);
+      rowRadius = BorderRadius.circular(PocktRadii.l);
     } else {
       rowRadius = BorderRadius.vertical(
-        top: (widget.isFirst ?? false) ? Radius.circular(widget.cardRadius) : Radius.zero,
-        bottom: (widget.isLast ?? false) ? Radius.circular(widget.cardRadius) : Radius.zero,
+        top: (widget.isFirst ?? false)
+            ? Radius.circular(widget.cardRadius)
+            : Radius.zero,
+        bottom: (widget.isLast ?? false)
+            ? Radius.circular(widget.cardRadius)
+            : Radius.zero,
       );
     }
 
@@ -224,10 +239,7 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
     }) {
       return Container(
         key: key,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: rowRadius,
-        ),
+        decoration: BoxDecoration(color: color, borderRadius: rowRadius),
         alignment: alignment,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Icon(icon, size: 20, color: iconColor),
@@ -277,7 +289,9 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
         child: TxRow(
           view: widget.view,
           subtitle: widget.subtitle,
-          padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding:
+              widget.padding ??
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         ),
       ),
     );

@@ -11,8 +11,18 @@ import 'package:pockt/features/backup/domain/backup_format.dart';
 import 'package:pockt/features/backup/domain/restore_service.dart';
 
 const _kMonths = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
 ];
 
 String _formatBackupDate(DateTime dt) {
@@ -74,7 +84,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
             ),
             decoration: BoxDecoration(
               color: colors.sheetSurface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -119,7 +131,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                     labelText: 'Contraseña',
                     errorText: errorMessage,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(PocktRadii.m),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -153,8 +165,13 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                           });
 
                           try {
-                            final restoreService = ref.read(restoreServiceProvider);
-                            final preview = await restoreService.preview(backup.id, password);
+                            final restoreService = ref.read(
+                              restoreServiceProvider,
+                            );
+                            final preview = await restoreService.preview(
+                              backup.id,
+                              password,
+                            );
 
                             if (!context.mounted) return;
                             Navigator.of(sheetContext).pop();
@@ -164,11 +181,13 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             setSheetState(() {
                               isVerifying = false;
                               if (e is WrongPasswordException) {
-                                errorMessage = 'Contraseña incorrecta o copia alterada';
+                                errorMessage =
+                                    'Contraseña incorrecta o copia alterada';
                               } else if (e is BadBackupFormatException) {
                                 errorMessage = 'Formato de archivo inválido';
                               } else {
-                                errorMessage = 'Error al verificar la copia: $e';
+                                errorMessage =
+                                    'Error al verificar la copia: $e';
                               }
                             });
                           }
@@ -180,7 +199,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       gradient: LinearGradient(
                         colors: [colors.brandStart, colors.brandEnd],
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(PocktRadii.l),
                     ),
                     child: Center(
                       child: isVerifying
@@ -189,7 +208,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -232,7 +253,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             decoration: BoxDecoration(
               color: colors.sheetSurface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -261,12 +284,16 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                 const SizedBox(height: 14),
                 GlassCard(
                   padding: const EdgeInsets.all(16),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
                   child: Column(
                     children: [
                       Row(
                         children: [
-                          Icon(uiIcon('clock-counter-clockwise'), color: colors.textSecondary, size: 20),
+                          Icon(
+                            uiIcon('clock-counter-clockwise'),
+                            color: colors.textSecondary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             'Fecha: $dateStr',
@@ -282,7 +309,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(uiIcon('receipt'), color: colors.textSecondary, size: 20),
+                          Icon(
+                            uiIcon('receipt'),
+                            color: colors.textSecondary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             '${formatGs(preview.transactionCount, symbol: false)} movimientos',
@@ -298,7 +329,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(uiIcon('stack'), color: colors.textSecondary, size: 20),
+                          Icon(
+                            uiIcon('stack'),
+                            color: colors.textSecondary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             'Esquema: v${preview.schemaVersion}',
@@ -318,7 +353,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: colors.warning.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(PocktRadii.m),
                   ),
                   child: Row(
                     children: [
@@ -356,7 +391,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Copia de seguridad restaurada con éxito'),
+                                content: Text(
+                                  'Copia de seguridad restaurada con éxito',
+                                ),
                               ),
                             );
                           } catch (e) {
@@ -367,7 +404,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('No se pudo restaurar la copia: $e'),
+                                content: Text(
+                                  'No se pudo restaurar la copia: $e',
+                                ),
                               ),
                             );
                           }
@@ -379,7 +418,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                       gradient: LinearGradient(
                         colors: [colors.brandStart, colors.brandEnd],
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(PocktRadii.l),
                     ),
                     child: Center(
                       child: isRestoring
@@ -388,7 +427,9 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -425,6 +466,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 40,
@@ -461,9 +503,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                 future: _backupsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   if (snapshot.hasError) {
@@ -473,7 +513,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(uiIcon('warning-circle'), size: 48, color: colors.danger),
+                            Icon(
+                              uiIcon('warning-circle'),
+                              size: 48,
+                              color: colors.danger,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'No se pudieron cargar las copias',
@@ -517,7 +561,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(uiIcon('cloud-slash'), size: 56, color: colors.textTertiary),
+                            Icon(
+                              uiIcon('cloud-slash'),
+                              size: 56,
+                              color: colors.textTertiary,
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               'No encontramos copias en tu Google Drive.',
@@ -548,12 +596,17 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
 
                   return ListView.builder(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: backups.length,
                     itemBuilder: (context, index) {
                       final backup = backups[index];
                       final dateStr = _formatBackupDate(backup.createdAt);
-                      final sizeKb = (backup.sizeBytes / 1024).toStringAsFixed(1);
+                      final sizeKb = (backup.sizeBytes / 1024).toStringAsFixed(
+                        1,
+                      );
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -561,24 +614,31 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                           onTap: () => _onSelectBackup(backup),
                           child: GlassCard(
                             padding: const EdgeInsets.all(16),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(PocktRadii.l),
                             child: Row(
                               children: [
                                 Container(
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: colors.textSecondary.withValues(alpha: 0.12),
+                                    color: colors.textSecondary.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
-                                    child: Icon(uiIcon('clock-counter-clockwise'), color: colors.textSecondary, size: 22),
+                                    child: Icon(
+                                      uiIcon('clock-counter-clockwise'),
+                                      color: colors.textSecondary,
+                                      size: 22,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         backup.name,

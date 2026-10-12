@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -84,11 +85,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   }
 
   PayWindow? get _nextPayWindow {
-    return nextPayWindow(
-      _today,
-      _payDays,
-      _payDayRules,
-    );
+    return nextPayWindow(_today, _payDays, _payDayRules);
   }
 
   String get _splitPreviewText {
@@ -96,7 +93,10 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     final day2Label = _day2 == -1 ? 'a fin de mes' : 'el $_day2';
 
     if (_monthlyAmount != null && _monthlyAmount! > 0) {
-      final splits = splitAmounts(_monthlyAmount!, [_splitPercent1, 100 - _splitPercent1]);
+      final splits = splitAmounts(_monthlyAmount!, [
+        _splitPercent1,
+        100 - _splitPercent1,
+      ]);
       return '$d1 cobrás ~${formatGs(splits[0])} · $day2Label ~${formatGs(splits[1])}';
     } else {
       return '$d1: $_splitPercent1 % · $day2Label: ${100 - _splitPercent1} %';
@@ -125,46 +125,61 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    _scheduleSub = ref.read(incomeScheduleRepositoryProvider).watchCurrent().listen((schedule) async {
-      if (!mounted || schedule == null) return;
-      try {
-        final parsedDays = parsePayDays(schedule.payDays);
-        final parsedRules = parsePayDayRules(schedule.payDayRules, parsedDays);
-        final parsedSplits = parsePaySplitPercents(schedule.paySplitPercents, count: parsedDays.length);
-        final deds = await ref.read(incomeScheduleRepositoryProvider).getDeductionsFor(schedule.id);
-        if (!mounted) return;
-        setState(() {
-          _mode = schedule.mode == 'monthly' ? PayMode.monthly : PayMode.biweekly;
-          _monthlyAmount = schedule.monthlyAmount;
-          _incomeCategoryId = schedule.categoryId;
-          _deductions = deds
-              .map((d) => SalaryDeductionItem(
-                    id: d.id,
-                    scheduleId: d.scheduleId,
-                    name: d.name,
-                    kind: d.kind,
-                    value: d.value,
-                  ))
-              .toList();
-          if (parsedSplits.isNotEmpty) {
-            _splitPercent1 = parsedSplits[0];
-          }
-          if (_mode == PayMode.biweekly && parsedDays.length >= 2) {
-            _day1 = parsedDays[0];
-            _day2 = parsedDays[1];
-            if (parsedRules.length >= 2) {
-              _day1Rule = parsedRules[0];
-              _day2Rule = parsedRules[1];
-            }
-          } else if (parsedDays.isNotEmpty) {
-            _monthlyDay = parsedDays[0];
-            if (parsedRules.isNotEmpty) {
-              _monthlyRule = parsedRules[0];
-            }
-          }
+    _scheduleSub = ref
+        .read(incomeScheduleRepositoryProvider)
+        .watchCurrent()
+        .listen((schedule) async {
+          if (!mounted || schedule == null) return;
+          try {
+            final parsedDays = parsePayDays(schedule.payDays);
+            final parsedRules = parsePayDayRules(
+              schedule.payDayRules,
+              parsedDays,
+            );
+            final parsedSplits = parsePaySplitPercents(
+              schedule.paySplitPercents,
+              count: parsedDays.length,
+            );
+            final deds = await ref
+                .read(incomeScheduleRepositoryProvider)
+                .getDeductionsFor(schedule.id);
+            if (!mounted) return;
+            setState(() {
+              _mode = schedule.mode == 'monthly'
+                  ? PayMode.monthly
+                  : PayMode.biweekly;
+              _monthlyAmount = schedule.monthlyAmount;
+              _incomeCategoryId = schedule.categoryId;
+              _deductions = deds
+                  .map(
+                    (d) => SalaryDeductionItem(
+                      id: d.id,
+                      scheduleId: d.scheduleId,
+                      name: d.name,
+                      kind: d.kind,
+                      value: d.value,
+                    ),
+                  )
+                  .toList();
+              if (parsedSplits.isNotEmpty) {
+                _splitPercent1 = parsedSplits[0];
+              }
+              if (_mode == PayMode.biweekly && parsedDays.length >= 2) {
+                _day1 = parsedDays[0];
+                _day2 = parsedDays[1];
+                if (parsedRules.length >= 2) {
+                  _day1Rule = parsedRules[0];
+                  _day2Rule = parsedRules[1];
+                }
+              } else if (parsedDays.isNotEmpty) {
+                _monthlyDay = parsedDays[0];
+                if (parsedRules.isNotEmpty) {
+                  _monthlyRule = parsedRules[0];
+                }
+              }
+            });
+          } catch (_) {}
         });
-      } catch (_) {}
-    });
   }
 
   @override
@@ -185,7 +200,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       } on ArgumentError {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Los descuentos superan el cobro de fin de mes. Ajustá el sueldo, el reparto o los descuentos.'),
+            content: Text(
+              'Los descuentos superan el cobro de fin de mes. Ajustá el sueldo, el reparto o los descuentos.',
+            ),
           ),
         );
         return;
@@ -210,14 +227,15 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
 
   Future<void> _editMonthlyAmount() async {
     final db = ref.read(databaseProvider);
-    var cat = await (db.select(db.categories)
-          ..where((c) => c.id.equals(_incomeCategoryId)))
-        .getSingleOrNull();
+    var cat = await (db.select(
+      db.categories,
+    )..where((c) => c.id.equals(_incomeCategoryId))).getSingleOrNull();
     if (cat == null) {
-      final list = await (db.select(db.categories)
-            ..where((c) => c.kind.equalsValue(CategoryKind.income))
-            ..limit(1))
-          .get();
+      final list =
+          await (db.select(db.categories)
+                ..where((c) => c.kind.equalsValue(CategoryKind.income))
+                ..limit(1))
+              .get();
       if (list.isNotEmpty) cat = list.first;
     }
     if (cat == null || !mounted) return;
@@ -227,18 +245,19 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       category: cat,
       type: TxType.income,
       initialAmount: _monthlyAmount,
-      onSaveOverride: ({
-        required int amount,
-        required Category category,
-        required DateTime occurredAt,
-        String? merchant,
-        String? note,
-      }) async {
-        setState(() {
-          _monthlyAmount = amount;
-          _incomeCategoryId = category.id;
-        });
-      },
+      onSaveOverride:
+          ({
+            required int amount,
+            required Category category,
+            required DateTime occurredAt,
+            String? merchant,
+            String? note,
+          }) async {
+            setState(() {
+              _monthlyAmount = amount;
+              _incomeCategoryId = category.id;
+            });
+          },
     );
   }
 
@@ -256,6 +275,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -342,7 +362,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         border: Border.all(color: colors.glassBorder),
       ),
       child: Row(
@@ -380,7 +400,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     if (_mode == PayMode.biweekly) {
       return GlassCard(
         padding: const EdgeInsets.all(16),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -476,7 +496,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     } else {
       return GlassCard(
         padding: const EdgeInsets.all(16),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -534,7 +554,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       onTap: _editMonthlyAmount,
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Row(
           children: [
             Expanded(
@@ -564,11 +584,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 ],
               ),
             ),
-            Icon(
-              uiIcon('caret-right'),
-              size: 16,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('caret-right'), size: 16, color: colors.textTertiary),
           ],
         ),
       ),
@@ -581,7 +597,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     return GlassCard(
       key: const ValueKey('schedule-split-section'),
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -645,7 +661,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   '${_day1 == -1 ? "Fin de mes" : "Día $_day1"}: $_splitPercent1 %',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -653,7 +669,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   '${_day2 == -1 ? "Fin de mes" : "Día $_day2"}: ${100 - _splitPercent1} %',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -665,16 +681,12 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: colors.glassFill,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(PocktRadii.m),
               border: Border.all(color: colors.glassBorder),
             ),
             child: Row(
               children: [
-                Icon(
-                  uiIcon('coins'),
-                  size: 16,
-                  color: colors.textSecondary,
-                ),
+                Icon(uiIcon('coins'), size: 16, color: colors.textSecondary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -701,7 +713,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -712,7 +724,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   'DESCUENTOS',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.8,
                     color: colors.textTertiary,
@@ -723,10 +735,13 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 key: const ValueKey('add-deduction-button'),
                 onTap: () => _showDeductionDialog(),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.brandStart.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(PocktRadii.m),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -780,7 +795,11 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     );
   }
 
-  Widget _buildDeductionRow(BuildContext context, SalaryDeductionItem d, int index) {
+  Widget _buildDeductionRow(
+    BuildContext context,
+    SalaryDeductionItem d,
+    int index,
+  ) {
     final colors = context.pockt;
 
     final String subtitle;
@@ -790,7 +809,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       final approx = _monthlyAmount != null && _monthlyAmount! > 0
           ? (_monthlyAmount! * (d.value / 10000.0)).round()
           : null;
-      subtitle = '$pctStr % del bruto${approx != null ? ' (~${formatGs(approx)})' : ''}';
+      subtitle =
+          '$pctStr % del bruto${approx != null ? ' (~${formatGs(approx)})' : ''}';
     } else {
       subtitle = '${formatGs(d.value)} fijo';
     }
@@ -805,11 +825,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             color: colors.textSecondary.withValues(alpha: 0.12),
           ),
           child: Center(
-            child: Icon(
-              uiIcon('tag'),
-              size: 15,
-              color: colors.textSecondary,
-            ),
+            child: Icon(uiIcon('tag'), size: 15, color: colors.textSecondary),
           ),
         ),
         const SizedBox(width: 12),
@@ -839,6 +855,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
           ),
         ),
         Pressable(
+          semanticLabel: 'Editar descuento',
           key: ValueKey('edit-deduction-$index'),
           onTap: () => _showDeductionDialog(initial: d, index: index),
           child: Padding(
@@ -852,6 +869,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
         ),
         const SizedBox(width: 4),
         Pressable(
+          semanticLabel: 'Borrar descuento',
           key: ValueKey('delete-deduction-$index'),
           onTap: () {
             Haptics.tick();
@@ -861,11 +879,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
           },
           child: Padding(
             padding: const EdgeInsets.all(6),
-            child: Icon(
-              uiIcon('trash'),
-              size: 16,
-              color: colors.danger,
-            ),
+            child: Icon(uiIcon('trash'), size: 16, color: colors.danger),
           ),
         ),
       ],
@@ -906,7 +920,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               final valStr = valueController.text.trim().replaceAll(',', '.');
               final parsed = double.tryParse(valStr);
               if (parsed == null || parsed <= 0) {
-                setDialogState(() => errorMessage = 'Ingresá un valor válido mayor a 0');
+                setDialogState(
+                  () => errorMessage = 'Ingresá un valor válido mayor a 0',
+                );
                 return;
               }
 
@@ -926,7 +942,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               );
 
               if (_monthlyAmount != null && _monthlyAmount! > 0) {
-                final simulatedList = List<SalaryDeductionItem>.from(_deductions);
+                final simulatedList = List<SalaryDeductionItem>.from(
+                  _deductions,
+                );
                 if (index != null && index < simulatedList.length) {
                   simulatedList[index] = newDeduction;
                 } else {
@@ -941,7 +959,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   netPayAmounts(_monthlyAmount!, splits, simulatedList);
                 } catch (e) {
                   setDialogState(() {
-                    errorMessage = 'El descuento deja el cobro de fin de mes en negativo';
+                    errorMessage =
+                        'El descuento deja el cobro de fin de mes en negativo';
                   });
                   return;
                 }
@@ -961,7 +980,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             return AlertDialog(
               backgroundColor: colors.background,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(PocktRadii.xl),
                 side: BorderSide(color: colors.glassBorder),
               ),
               title: Text(
@@ -1005,7 +1024,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                                 color: kind == 'percent'
                                     ? colors.brandStart
                                     : colors.glassFill,
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(
+                                  PocktRadii.m,
+                                ),
                                 border: Border.all(
                                   color: kind == 'percent'
                                       ? Colors.transparent
@@ -1043,7 +1064,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                                 color: kind == 'fixed'
                                     ? colors.brandStart
                                     : colors.glassFill,
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(
+                                  PocktRadii.m,
+                                ),
                                 border: Border.all(
                                   color: kind == 'fixed'
                                       ? Colors.transparent
@@ -1093,20 +1116,25 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                         ),
                         filled: true,
                         fillColor: colors.glassFill,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
                           borderSide: BorderSide(color: colors.glassBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
                           borderSide: BorderSide(color: colors.glassBorder),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      kind == 'percent' ? 'Porcentaje del sueldo bruto' : 'Monto en Guaraníes',
+                      kind == 'percent'
+                          ? 'Porcentaje del sueldo bruto'
+                          : 'Monto en Guaraníes',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
@@ -1118,7 +1146,9 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                     TextField(
                       key: const ValueKey('deduction-value-input'),
                       controller: valueController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       style: TextStyle(
                         fontFamily: 'Inter',
                         color: colors.textPrimary,
@@ -1131,13 +1161,16 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                         ),
                         filled: true,
                         fillColor: colors.glassFill,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
                           borderSide: BorderSide(color: colors.glassBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
                           borderSide: BorderSide(color: colors.glassBorder),
                         ),
                       ),
@@ -1195,7 +1228,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
       return GlassCard(
         key: const ValueKey('schedule-net-summary-card'),
         padding: const EdgeInsets.all(16),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1203,7 +1236,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               'LO QUE COBRÁS',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
                 color: colors.textTertiary,
@@ -1240,7 +1273,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
     return GlassCard(
       key: const ValueKey('schedule-net-summary-card'),
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1251,7 +1284,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   'LO QUE COBRÁS',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.8,
                     color: colors.textTertiary,
@@ -1260,17 +1293,20 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               ),
               if (totalDeductions > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.glassFill,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(PocktRadii.s),
                     border: Border.all(color: colors.glassBorder),
                   ),
                   child: Text(
                     '−${formatGs(totalDeductions)} en desc.',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: colors.textSecondary,
                     ),
@@ -1282,7 +1318,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
           if (_mode == PayMode.biweekly && netList.length >= 2) ...[
             _buildNetRow(
               context,
-              label: '1ª quincena (${_day1 == -1 ? 'Fin de mes' : 'Día $_day1'})',
+              label:
+                  '1ª quincena (${_day1 == -1 ? 'Fin de mes' : 'Día $_day1'})',
               grossAmount: splitAmounts(_monthlyAmount!, splits)[0],
               netAmount: netList[0],
               deductionsApplied: 0,
@@ -1290,7 +1327,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             const SizedBox(height: 10),
             _buildNetRow(
               context,
-              label: '2ª quincena (${_day2 == -1 ? 'Fin de mes' : 'Día $_day2'})',
+              label:
+                  '2ª quincena (${_day2 == -1 ? 'Fin de mes' : 'Día $_day2'})',
               grossAmount: splitAmounts(_monthlyAmount!, splits)[1],
               netAmount: netList[1],
               deductionsApplied: totalDeductions,
@@ -1305,11 +1343,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
             ),
           ],
           const SizedBox(height: 14),
-          Divider(
-            height: 1,
-            thickness: 0.5,
-            color: colors.glassBorder,
-          ),
+          Divider(height: 1, thickness: 0.5, color: colors.glassBorder),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1368,7 +1402,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                 'Bruto ${formatGs(grossAmount)} − ${formatGs(deductionsApplied)}',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11,
+                  fontSize: 12,
                   color: colors.textTertiary,
                 ),
               ),
@@ -1392,7 +1426,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Row(
         children: [
           Container(
@@ -1403,11 +1437,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
               color: colors.positive.withValues(alpha: 0.16),
             ),
             child: Center(
-              child: Icon(
-                uiIcon('calendar'),
-                size: 20,
-                color: colors.positive,
-              ),
+              child: Icon(uiIcon('calendar'), size: 20, color: colors.positive),
             ),
           ),
           const SizedBox(width: 14),
@@ -1438,7 +1468,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
         height: 52,
         decoration: BoxDecoration(
           color: colors.brandStart,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
           boxShadow: [
             BoxShadow(
               color: colors.brandStart.withValues(alpha: 0.35),
@@ -1493,7 +1523,7 @@ class _RuleSelector extends StatelessWidget {
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: colors.glassFill,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(PocktRadii.l),
             border: Border.all(color: colors.glassBorder),
           ),
           child: Row(
@@ -1562,7 +1592,7 @@ class _RulePill extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             color: isSelected ? colors.background : colors.textSecondary,
           ),
@@ -1596,7 +1626,7 @@ class _ModePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? colors.textPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -1633,10 +1663,8 @@ class _DayChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colors.brandStart
-              : colors.glassFill,
-          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? colors.brandStart : colors.glassFill,
+          borderRadius: BorderRadius.circular(PocktRadii.m),
           border: Border.all(
             color: isSelected ? colors.brandStart : colors.glassBorder,
           ),

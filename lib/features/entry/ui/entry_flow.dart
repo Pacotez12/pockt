@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -58,7 +59,8 @@ Future<bool?> showAmountKeypad(
     required DateTime occurredAt,
     String? merchant,
     String? note,
-  })? onSaveOverride,
+  })?
+  onSaveOverride,
 }) {
   return Navigator.of(context).push<bool>(
     PageRouteBuilder<bool>(
@@ -104,15 +106,19 @@ Future<void> showEntryFlow(
   if (initialCategoryId != null) {
     final container = ProviderScope.containerOf(context);
     final db = container.read(databaseProvider);
-    final category = await (db.select(db.categories)
-          ..where((c) => c.id.equals(initialCategoryId)))
-        .getSingleOrNull();
+    final category = await (db.select(
+      db.categories,
+    )..where((c) => c.id.equals(initialCategoryId))).getSingleOrNull();
     if (category != null && context.mounted) {
       String? loanId;
       int? prefilledAmount;
       if (category.name == 'Préstamos') {
-        final activeLoans = await container.read(loansRepositoryProvider).getActive(
-              direction: initialType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+        final activeLoans = await container
+            .read(loansRepositoryProvider)
+            .getActive(
+              direction: initialType == TxType.expense
+                  ? LoanDirection.owe
+                  : LoanDirection.lent,
             );
         if (activeLoans.isNotEmpty && context.mounted) {
           final choice = await showLoanPickerSheet(context, loans: activeLoans);
@@ -146,28 +152,26 @@ Future<void> showEntryFlow(
     PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 350),
       reverseTransitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, _, _) => EntryCategoryPickerScreen(
-        initialType: initialType,
-      ),
+      pageBuilder: (context, _, _) =>
+          EntryCategoryPickerScreen(initialType: initialType),
       transitionsBuilder: entrySpringTransitionsBuilder,
     ),
   );
 }
 
-enum LoanPickerChoiceType {
-  loan,
-  general,
-  cancel,
-}
+enum LoanPickerChoiceType { loan, general, cancel }
 
 class LoanPickerChoice {
   final LoanPickerChoiceType type;
   final Loan? loan;
 
   const LoanPickerChoice._(this.type, this.loan);
-  factory LoanPickerChoice.loan(Loan loan) => LoanPickerChoice._(LoanPickerChoiceType.loan, loan);
-  factory LoanPickerChoice.general() => const LoanPickerChoice._(LoanPickerChoiceType.general, null);
-  factory LoanPickerChoice.cancel() => const LoanPickerChoice._(LoanPickerChoiceType.cancel, null);
+  factory LoanPickerChoice.loan(Loan loan) =>
+      LoanPickerChoice._(LoanPickerChoiceType.loan, loan);
+  factory LoanPickerChoice.general() =>
+      const LoanPickerChoice._(LoanPickerChoiceType.general, null);
+  factory LoanPickerChoice.cancel() =>
+      const LoanPickerChoice._(LoanPickerChoiceType.cancel, null);
 }
 
 Future<LoanPickerChoice> showLoanPickerSheet(
@@ -241,18 +245,24 @@ Future<LoanPickerChoice> showLoanPickerSheet(
                     return Pressable(
                       onTap: () {
                         Haptics.tick();
-                        Navigator.of(sheetContext).pop(LoanPickerChoice.loan(loan));
+                        Navigator.of(sheetContext)
+                            .pop(LoanPickerChoice.loan(loan));
                       },
                       child: GlassCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        borderRadius: BorderRadius.circular(16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        borderRadius: BorderRadius.circular(PocktRadii.l),
                         child: Row(
                           children: [
                             Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: colors.brandAt(0).withValues(alpha: isDark ? 0.2 : 0.12),
+                                color: colors
+                                    .brandAt(0)
+                                    .withValues(alpha: isDark ? 0.2 : 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -310,7 +320,7 @@ Future<LoanPickerChoice> showLoanPickerSheet(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     border: Border.all(color: colors.glassBorder),
                   ),
                   alignment: Alignment.center,
@@ -477,8 +487,12 @@ class _EntryCategoryPickerScreenState
     String? loanId;
     int? amount = proposal.amount > 0 ? proposal.amount : null;
     if (category.name == 'Préstamos') {
-      final activeLoans = await ref.read(loansRepositoryProvider).getActive(
-            direction: _currentType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+      final activeLoans = await ref
+          .read(loansRepositoryProvider)
+          .getActive(
+            direction: _currentType == TxType.expense
+                ? LoanDirection.owe
+                : LoanDirection.lent,
           );
       if (activeLoans.isNotEmpty && mounted) {
         final choice = await showLoanPickerSheet(context, loans: activeLoans);
@@ -498,7 +512,10 @@ class _EntryCategoryPickerScreenState
           category: category,
           type: _currentType,
           initialAmount: amount,
-          initialDate: combineDayWithNow(proposal.occurredLocalDay, DateTime.now()),
+          initialDate: combineDayWithNow(
+            proposal.occurredLocalDay,
+            DateTime.now(),
+          ),
           initialMerchant: proposal.merchant,
           initialLoanId: loanId,
         ),
@@ -511,10 +528,7 @@ class _EntryCategoryPickerScreenState
             curve: SpringCurve(spring: PocktSprings.soft),
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(
-            opacity: curved,
-            child: child,
-          );
+          return FadeTransition(opacity: curved, child: child);
         },
       ),
     );
@@ -528,8 +542,12 @@ class _EntryCategoryPickerScreenState
     String? loanId;
     int? prefilledAmount;
     if (category.name == 'Préstamos') {
-      final activeLoans = await ref.read(loansRepositoryProvider).getActive(
-            direction: _currentType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+      final activeLoans = await ref
+          .read(loansRepositoryProvider)
+          .getActive(
+            direction: _currentType == TxType.expense
+                ? LoanDirection.owe
+                : LoanDirection.lent,
           );
       if (!mounted) return;
       if (activeLoans.isNotEmpty) {
@@ -562,10 +580,7 @@ class _EntryCategoryPickerScreenState
             curve: SpringCurve(spring: PocktSprings.soft),
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(
-            opacity: curved,
-            child: child,
-          );
+          return FadeTransition(opacity: curved, child: child);
         },
       ),
     );
@@ -617,8 +632,10 @@ class _EntryCategoryPickerScreenState
               children: [
                 // Top bar: Close [✕] and Type Toggle [Gasto | Ingreso]
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -669,7 +686,7 @@ class _EntryCategoryPickerScreenState
                       horizontal: 14,
                       vertical: 2,
                     ),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     child: Row(
                       children: [
                         Icon(
@@ -693,13 +710,15 @@ class _EntryCategoryPickerScreenState
                               hintStyle: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 13,
-                                color: colors.textSecondary
-                                    .withValues(alpha: 0.5),
+                                color: colors.textSecondary.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               border: InputBorder.none,
                               isDense: true,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                              ),
                             ),
                             onChanged: _onNaturalInputChanged,
                           ),
@@ -745,7 +764,7 @@ class _EntryCategoryPickerScreenState
                                 horizontal: 16,
                                 vertical: 12,
                               ),
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(PocktRadii.l),
                               child: Row(
                                 children: [
                                   Container(
@@ -791,7 +810,7 @@ class _EntryCategoryPickerScreenState
                                             _proposal!.merchant!,
                                             style: TextStyle(
                                               fontFamily: 'Inter',
-                                              fontSize: 11,
+                                              fontSize: 12,
                                               color: colors.textSecondary,
                                             ),
                                           ),
@@ -879,8 +898,9 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
     final kind = widget.currentType == TxType.expense
         ? CategoryKind.expense
         : CategoryKind.income;
-    _subscription =
-        repo.watchActive(kind, order: effectiveOrder).listen((data) {
+    _subscription = repo.watchActive(kind, order: effectiveOrder).listen((
+      data,
+    ) {
       if (mounted) {
         setState(() => _categories = data);
       }
@@ -897,81 +917,83 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final order = ref.watch(categoryOrderProvider).value ?? CategoryOrder.manual;
+    final order =
+        ref.watch(categoryOrderProvider).value ?? CategoryOrder.manual;
     if (order != _currentOrder) {
       _subscribe(order: order);
     }
     final categories = _categories;
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 20,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.88,
-          ),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final cat = categories[index];
-            final catColor = Color(isDark ? cat.colorDark : cat.colorLight);
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.88,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final cat = categories[index];
+        final catColor = Color(isDark ? cat.colorDark : cat.colorLight);
 
-            return Pressable(
-              onTap: () => widget.onCategorySelected(cat),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  HeroMode(
-                    enabled: !MediaQuery.disableAnimationsOf(context),
-                    child: Hero(
-                      tag: 'cat-${cat.id}',
-                      createRectTween: (begin, end) =>
-                          SpringRectTween(begin: begin, end: end),
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(29),
-                            color: catColor,
-                            boxShadow: [
-                              BoxShadow(
-                                color: catColor.withValues(
-                                    alpha: isDark ? 0.35 : 0.20),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+        return Pressable(
+          onTap: () => widget.onCategorySelected(cat),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              HeroMode(
+                enabled: !MediaQuery.disableAnimationsOf(context),
+                child: Hero(
+                  tag: 'cat-${cat.id}',
+                  createRectTween: (begin, end) =>
+                      SpringRectTween(begin: begin, end: end),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(29),
+                        color: catColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: catColor.withValues(
+                              alpha: isDark ? 0.35 : 0.20,
+                            ),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
                           ),
-                          alignment: Alignment.center,
-                          child: categoryIcon(
-                            cat.icon,
-                            size: 28,
-                            color: colors.keypadKey,
-                          ),
-                        ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: categoryIcon(
+                        cat.icon,
+                        size: 28,
+                        color: colors.keypadKey,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    cat.name,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: colors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
-            );
-          },
+              const SizedBox(height: 8),
+              Text(
+                cat.name,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: colors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         );
+      },
+    );
   }
 }
 
@@ -993,7 +1015,7 @@ class TypeToggle extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         border: Border.all(color: colors.glassBorder, width: 1),
       ),
       child: Row(
@@ -1038,7 +1060,7 @@ class _TypePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? colors.textPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
         ),
         child: Text(
           title,

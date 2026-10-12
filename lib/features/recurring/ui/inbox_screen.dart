@@ -72,6 +72,7 @@ class InboxScreen extends ConsumerWidget {
     return Row(
       children: [
         Pressable(
+          semanticLabel: 'Volver',
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             width: 40,
@@ -100,7 +101,7 @@ class InboxScreen extends ConsumerWidget {
                 'Por confirmar',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 22,
+                  fontSize: PocktType.title,
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
                   letterSpacing: -0.5,
@@ -140,11 +141,7 @@ class InboxScreen extends ConsumerWidget {
                 border: Border.all(color: colors.glassBorder, width: 1),
               ),
               child: Center(
-                child: Icon(
-                  uiIcon('check'),
-                  size: 32,
-                  color: colors.positive,
-                ),
+                child: Icon(uiIcon('check'), size: 32, color: colors.positive),
               ),
             ),
             const SizedBox(height: 20),
@@ -192,8 +189,8 @@ class ConsecutiveConfirmationsNotifier extends Notifier<int> {
 
 final consecutiveConfirmationsProvider =
     NotifierProvider<ConsecutiveConfirmationsNotifier, int>(
-  ConsecutiveConfirmationsNotifier.new,
-);
+      ConsecutiveConfirmationsNotifier.new,
+    );
 
 class _SuggestionCard extends ConsumerWidget {
   final SuggestionView item;
@@ -211,14 +208,17 @@ class _SuggestionCard extends ConsumerWidget {
     Category? category = item.category;
     if (category == null) {
       final db = ref.read(databaseProvider);
-      final catList = await (db.select(db.categories)
-            ..where((c) => c.kind.equalsValue(
-                  item.suggestion.type == TxType.income
-                      ? CategoryKind.income
-                      : CategoryKind.expense,
-                ))
-            ..limit(1))
-          .get();
+      final catList =
+          await (db.select(db.categories)
+                ..where(
+                  (c) => c.kind.equalsValue(
+                    item.suggestion.type == TxType.income
+                        ? CategoryKind.income
+                        : CategoryKind.expense,
+                  ),
+                )
+                ..limit(1))
+              .get();
       if (catList.isNotEmpty) {
         category = catList.first;
       }
@@ -229,26 +229,28 @@ class _SuggestionCard extends ConsumerWidget {
       context,
       category: category,
       type: item.suggestion.type,
-      initialAmount:
-          item.suggestion.amount > 0 ? item.suggestion.amount : null,
+      initialAmount: item.suggestion.amount > 0 ? item.suggestion.amount : null,
       initialDate: toLocal(item.suggestion.occurredAt),
       initialMerchant: item.suggestion.merchant,
-      onSaveOverride: ({
-        required int amount,
-        required Category category,
-        required DateTime occurredAt,
-        String? merchant,
-        String? note,
-      }) async {
-        final repo = ref.read(suggestionsRepositoryProvider);
-        await repo.confirm(
-          item.suggestion.id,
-          amount: amount,
-          categoryId: category.id,
-          occurredAt: occurredAt,
-        );
-        ref.read(consecutiveConfirmationsProvider.notifier).recordConfirmation();
-      },
+      onSaveOverride:
+          ({
+            required int amount,
+            required Category category,
+            required DateTime occurredAt,
+            String? merchant,
+            String? note,
+          }) async {
+            final repo = ref.read(suggestionsRepositoryProvider);
+            await repo.confirm(
+              item.suggestion.id,
+              amount: amount,
+              categoryId: category.id,
+              occurredAt: occurredAt,
+            );
+            ref
+                .read(consecutiveConfirmationsProvider.notifier)
+                .recordConfirmation();
+          },
     );
   }
 
@@ -259,8 +261,8 @@ class _SuggestionCard extends ConsumerWidget {
     final catColor = item.category != null
         ? Color(isDark ? item.category!.colorDark : item.category!.colorLight)
         : (item.suggestion.type == TxType.income
-            ? colors.positive
-            : colors.brandStart);
+              ? colors.positive
+              : colors.brandStart);
     final canConfirmDirectly =
         item.suggestion.amount > 0 && item.category != null;
 
@@ -276,7 +278,7 @@ class _SuggestionCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colors.danger.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
         ),
         alignment: Alignment.centerRight,
         child: Row(
@@ -388,11 +390,8 @@ class _SuggestionCard extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: colors.glassFill,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: colors.glassBorder,
-                        width: 1,
-                      ),
+                      borderRadius: BorderRadius.circular(PocktRadii.l),
+                      border: Border.all(color: colors.glassBorder, width: 1),
                     ),
                     child: Text(
                       'Editar',
@@ -408,7 +407,9 @@ class _SuggestionCard extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Pressable(
                   key: ValueKey('confirm-${item.suggestion.id}'),
-                  onTap: canConfirmDirectly ? () => _confirm(context, ref) : null,
+                  onTap: canConfirmDirectly
+                      ? () => _confirm(context, ref)
+                      : null,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 150),
                     opacity: canConfirmDirectly ? 1.0 : 0.4,
@@ -419,7 +420,7 @@ class _SuggestionCard extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: catColor,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(PocktRadii.l),
                       ),
                       child: Text(
                         'Confirmar',

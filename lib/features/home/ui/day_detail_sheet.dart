@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -22,10 +23,8 @@ Future<void> showDayDetail(BuildContext context, DateTime localDay) {
       barrierColor: Colors.black.withValues(alpha: 0.55),
       transitionDuration: const Duration(milliseconds: 350),
       reverseTransitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation, _) => DayDetailSheet(
-        localDay: localDay,
-        routeAnimation: animation,
-      ),
+      pageBuilder: (context, animation, _) =>
+          DayDetailSheet(localDay: localDay, routeAnimation: animation),
       transitionsBuilder: (context, animation, _, child) {
         if (MediaQuery.disableAnimationsOf(context)) {
           return child;
@@ -96,8 +95,9 @@ Widget buildDayDetailFlightShuttle(
       final t = animation.value.clamp(0.0, 1.0);
 
       // Interpolación de radio: 7 en la celda -> vertical 32 en la hoja
-      final borderRadius = BorderRadius.lerp(
-            BorderRadius.circular(7),
+      final borderRadius =
+          BorderRadius.lerp(
+            BorderRadius.circular(PocktRadii.s),
             const BorderRadius.vertical(top: Radius.circular(32)),
             (t / 0.25).clamp(0.0, 1.0),
           ) ??
@@ -138,9 +138,7 @@ Widget buildDayDetailFlightShuttle(
           child: cellOpacity > 0 && cellDecoration != null
               ? Opacity(
                   opacity: cellOpacity,
-                  child: DecoratedBox(
-                    decoration: cellDecoration,
-                  ),
+                  child: DecoratedBox(decoration: cellDecoration),
                 )
               : null,
         ),
@@ -169,7 +167,10 @@ class DayDetailSheet extends ConsumerWidget {
     final repo = ref.watch(transactionsRepositoryProvider);
 
     final dayStream = repo.watchDay(localDay);
-    final monthDailyStream = repo.watchDailyExpenseTotals(localDay.year, localDay.month);
+    final monthDailyStream = repo.watchDailyExpenseTotals(
+      localDay.year,
+      localDay.month,
+    );
 
     final sheetHeight = min(MediaQuery.of(context).size.height * 0.85, 580.0);
     final anim = routeAnimation ?? ModalRoute.of(context)?.animation;
@@ -204,16 +205,21 @@ class DayDetailSheet extends ConsumerWidget {
           final t = anim.value.clamp(0.0, 1.0);
           final double opacity;
           if (anim.status == AnimationStatus.reverse) {
-            opacity = const Interval(0.85, 1.0, curve: Curves.easeIn).transform(t);
+            opacity = const Interval(
+              0.85,
+              1.0,
+              curve: Curves.easeIn,
+            ).transform(t);
           } else {
-            opacity = const Interval(0.7, 1.0, curve: Curves.easeOut).transform(t);
+            opacity = const Interval(
+              0.7,
+              1.0,
+              curve: Curves.easeOut,
+            ).transform(t);
           }
           return IgnorePointer(
             ignoring: opacity < 1.0,
-            child: Opacity(
-              opacity: opacity,
-              child: child,
-            ),
+            child: Opacity(opacity: opacity, child: child),
           );
         },
       );
@@ -236,24 +242,26 @@ class DayDetailSheet extends ConsumerWidget {
             child: HeroMode(
               enabled: !MediaQuery.disableAnimationsOf(context),
               child: Hero(
-                tag: 'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
-                createRectTween: (begin, end) => SpringRectTween(begin: begin, end: end),
-                flightShuttleBuilder: (
-                  flightContext,
-                  animation,
-                  flightDirection,
-                  fromHeroContext,
-                  toHeroContext,
-                ) =>
-                    buildDayDetailFlightShuttle(
-                  flightContext,
-                  animation,
-                  flightDirection,
-                  fromHeroContext,
-                  toHeroContext,
-                  colors,
-                  isDark,
-                ),
+                tag:
+                    'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
+                createRectTween: (begin, end) =>
+                    SpringRectTween(begin: begin, end: end),
+                flightShuttleBuilder:
+                    (
+                      flightContext,
+                      animation,
+                      flightDirection,
+                      fromHeroContext,
+                      toHeroContext,
+                    ) => buildDayDetailFlightShuttle(
+                      flightContext,
+                      animation,
+                      flightDirection,
+                      fromHeroContext,
+                      toHeroContext,
+                      colors,
+                      isDark,
+                    ),
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
@@ -263,7 +271,9 @@ class DayDetailSheet extends ConsumerWidget {
                       color: colors.sheetSurface.withValues(
                         alpha: isDark ? 0.96 : 0.98,
                       ),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
                       border: Border(
                         top: BorderSide(
                           color: isDark
@@ -300,12 +310,20 @@ class DayDetailSheet extends ConsumerWidget {
   }) {
     // Gastos del día
     final expenses = dayTxs.where((v) => v.tx.type == TxType.expense).toList();
-    final dayExpenseTotal = expenses.fold<int>(0, (sum, v) => sum + v.tx.amount);
+    final dayExpenseTotal = expenses.fold<int>(
+      0,
+      (sum, v) => sum + v.tx.amount,
+    );
 
     // Días del mes con gasto y promedio
-    final positiveDays = monthDailyTotals.entries.where((e) => e.value > 0).toList();
+    final positiveDays = monthDailyTotals.entries
+        .where((e) => e.value > 0)
+        .toList();
     final daysWithExpenseCount = positiveDays.length;
-    final monthExpenseTotal = positiveDays.fold<int>(0, (sum, e) => sum + e.value);
+    final monthExpenseTotal = positiveDays.fold<int>(
+      0,
+      (sum, e) => sum + e.value,
+    );
 
     // Múltiplo y día más caro
     String? comparisonText;
@@ -314,7 +332,9 @@ class DayDetailSheet extends ConsumerWidget {
       if (promedio > 0) {
         final ratio = dayExpenseTotal / promedio;
         final ratioFormatted = ratio.toStringAsFixed(1).replaceAll('.', ',');
-        final maxDayExpense = positiveDays.map((e) => e.value).fold<int>(0, max);
+        final maxDayExpense = positiveDays
+            .map((e) => e.value)
+            .fold<int>(0, max);
         final isMostExpensive = dayExpenseTotal >= maxDayExpense;
 
         final caroSuffix = isMostExpensive ? ' · tu día más caro del mes' : '';
@@ -327,7 +347,10 @@ class DayDetailSheet extends ConsumerWidget {
     for (final v in expenses) {
       final existing = catTotalsMap[v.category.id];
       if (existing == null) {
-        catTotalsMap[v.category.id] = (category: v.category, total: v.tx.amount);
+        catTotalsMap[v.category.id] = (
+          category: v.category,
+          total: v.tx.amount,
+        );
       } else {
         catTotalsMap[v.category.id] = (
           category: v.category,
@@ -458,10 +481,7 @@ class DayDetailSheet extends ConsumerWidget {
                   )
                 else
                   for (final view in dayTxs)
-                    SwipeableTxRow(
-                      view: view,
-                      subtitle: _rowSubtitle(view),
-                    ),
+                    SwipeableTxRow(view: view, subtitle: _rowSubtitle(view)),
                 const SizedBox(height: 24),
               ],
             ),
@@ -477,7 +497,9 @@ class DayDetailSheet extends ConsumerWidget {
     required PocktColors colors,
     required bool isDark,
   }) {
-    final catColor = Color(isDark ? item.category.colorDark : item.category.colorLight);
+    final catColor = Color(
+      isDark ? item.category.colorDark : item.category.colorLight,
+    );
     final ratio = dayTotal > 0 ? (item.total / dayTotal).clamp(0.0, 1.0) : 0.0;
 
     return Column(

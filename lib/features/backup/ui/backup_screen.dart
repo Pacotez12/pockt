@@ -90,7 +90,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           return AlertDialog(
             backgroundColor: colors.sheetSurface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(PocktRadii.xl),
             ),
             title: Text(
               isInitial
@@ -124,7 +124,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: colors.warning.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(PocktRadii.m),
                       ),
                       child: Text(
                         'Advertencia: Las copias creadas anteriormente requerirán la contraseña que tenían al momento del respaldo.',
@@ -143,7 +143,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     decoration: InputDecoration(
                       labelText: 'Contraseña de respaldo',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(PocktRadii.m),
                       ),
                     ),
                   ),
@@ -155,7 +155,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       labelText: 'Confirmar contraseña',
                       errorText: errorText,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(PocktRadii.m),
                       ),
                     ),
                   ),
@@ -165,7 +165,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogCtx).pop(),
-                child: Text('Cancelar', style: TextStyle(color: colors.textSecondary)),
+                child: Text(
+                  'Cancelar',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
               ),
               FilledButton(
                 onPressed: () async {
@@ -222,10 +225,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               child: StreamBuilder<BackupStatus>(
                 stream: service.watchStatus(),
                 builder: (context, snapshot) {
-                  final status = snapshot.data ??
-                      const BackupStatus(
-                        isOverdue: false,
-                      );
+                  final status =
+                      snapshot.data ?? const BackupStatus(isOverdue: false);
 
                   return ListView(
                     physics: const BouncingScrollPhysics(),
@@ -258,6 +259,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return Row(
       children: [
         Pressable(
+          semanticLabel: 'Volver',
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             width: 36,
@@ -314,7 +316,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       formattedDate = 'Sin copias aún';
     } else {
       final now = DateTime.now();
-      final isToday = lastSuccess.year == now.year &&
+      final isToday =
+          lastSuccess.year == now.year &&
           lastSuccess.month == now.month &&
           lastSuccess.day == now.day;
       final timeStr = DateFormat('HH:mm').format(lastSuccess);
@@ -340,7 +343,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -379,18 +382,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: colors.warning.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
                 border: Border.all(
                   color: colors.warning.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    uiIcon('note'),
-                    size: 16,
-                    color: colors.warning,
-                  ),
+                  Icon(uiIcon('note'), size: 16, color: colors.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -413,18 +412,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: colors.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colors.danger.withValues(alpha: 0.3),
-                ),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
+                border: Border.all(color: colors.danger.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    uiIcon('x'),
-                    size: 16,
-                    color: colors.danger,
-                  ),
+                  Icon(uiIcon('x'), size: 16, color: colors.danger),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -457,7 +450,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           gradient: LinearGradient(
             colors: [colors.brandStart, colors.brandEnd],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           boxShadow: [
             BoxShadow(
               color: colors.brandStart.withValues(alpha: 0.3),
@@ -479,7 +472,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(uiIcon('cloud-arrow-up'), color: Colors.white, size: 20),
+                    Icon(
+                      uiIcon('cloud-arrow-up'),
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     const Text(
                       'Respaldar ahora',
@@ -502,7 +499,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -556,7 +553,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -586,7 +583,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: colors.glassFill,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
                 border: Border.all(color: colors.glassBorder),
               ),
               child: Row(
@@ -618,18 +615,19 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return Pressable(
       onTap: () {
         Haptics.tick();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const RestoreFlowScreen(),
-          ),
-        );
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const RestoreFlowScreen()));
       },
       child: GlassCard(
         padding: const EdgeInsets.all(16),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Row(
           children: [
-            Icon(uiIcon('clock-counter-clockwise'), size: 20, color: colors.textPrimary),
+            Icon(
+              uiIcon('clock-counter-clockwise'),
+              size: 20,
+              color: colors.textPrimary,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -655,11 +653,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ],
               ),
             ),
-            Icon(
-              uiIcon('caret-right'),
-              size: 18,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('caret-right'), size: 18, color: colors.textTertiary),
           ],
         ),
       ),

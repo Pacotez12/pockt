@@ -11,11 +11,7 @@ import 'package:pockt/core/design/wordmark.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 
 /// Disponibilidad del bloqueo en el dispositivo (Plan 4, Task 6).
-enum AppLockAvailability {
-  ready,
-  noDeviceLock,
-  unsupported,
-}
+enum AppLockAvailability { ready, noDeviceLock, unsupported }
 
 /// Canal de plataforma nativo para controlar FLAG_SECURE en Android.
 const _kSecurityChannel = MethodChannel('pockt/secure');
@@ -148,8 +144,9 @@ class AppLockController with ChangeNotifier {
 }
 
 /// Provider de Riverpod para [AppLockController].
-final appLockControllerProvider =
-    ChangeNotifierProvider<AppLockController>((ref) {
+final appLockControllerProvider = ChangeNotifierProvider<AppLockController>((
+  ref,
+) {
   final settingsRepo = ref.watch(settingsRepositoryProvider);
   final controller = AppLockController(
     auth: LocalAuthentication(),
@@ -206,7 +203,7 @@ class AppLockScreen extends StatelessWidget {
                           gradient: LinearGradient(
                             colors: [colors.brandStart, colors.brandEnd],
                           ),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(PocktRadii.l),
                           boxShadow: [
                             BoxShadow(
                               color: colors.brandStart.withValues(alpha: 0.35),

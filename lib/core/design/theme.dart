@@ -92,11 +92,17 @@ DatePickerThemeData _buildDatePickerTheme(PocktColors colors) {
     todayBorder: BorderSide(color: colors.textPrimary),
     cancelButtonStyle: TextButton.styleFrom(
       foregroundColor: colors.textSecondary,
-      textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+      textStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.w600,
+      ),
     ),
     confirmButtonStyle: TextButton.styleFrom(
       foregroundColor: colors.brandStart,
-      textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+      textStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.w600,
+      ),
     ),
     dividerColor: colors.glassBorder,
   );
@@ -123,7 +129,17 @@ ThemeData buildDarkTheme() {
       ),
     ),
     datePickerTheme: _buildDatePickerTheme(colors),
-    textTheme: _applyTabularInter(Typography.material2021().white, colors.textPrimary),
+    snackBarTheme: _buildSnackBarTheme(colors),
+    inputDecorationTheme: _buildInputDecorationTheme(colors),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: colors.brandStart,
+      selectionHandleColor: colors.brandStart,
+      selectionColor: colors.brandStart.withValues(alpha: 0.3),
+    ),
+    textTheme: _applyTabularInter(
+      Typography.material2021().white,
+      colors.textPrimary,
+    ),
     extensions: [colors],
   );
 }
@@ -149,7 +165,67 @@ ThemeData buildLightTheme() {
       ),
     ),
     datePickerTheme: _buildDatePickerTheme(colors),
-    textTheme: _applyTabularInter(Typography.material2021().black, colors.textPrimary),
+    snackBarTheme: _buildSnackBarTheme(colors),
+    inputDecorationTheme: _buildInputDecorationTheme(colors),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: colors.brandStart,
+      selectionHandleColor: colors.brandStart,
+      selectionColor: colors.brandStart.withValues(alpha: 0.3),
+    ),
+    textTheme: _applyTabularInter(
+      Typography.material2021().black,
+      colors.textPrimary,
+    ),
     extensions: [colors],
+  );
+}
+
+/// Avisos flotantes con la hoja del sistema de diseño (no el rectángulo gris de Material).
+SnackBarThemeData _buildSnackBarTheme(PocktColors colors) {
+  return SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: colors.sheetSurface,
+    elevation: 0,
+    insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+    contentTextStyle: TextStyle(
+      fontFamily: 'Inter',
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: colors.textPrimary,
+    ),
+    actionTextColor: colors.brandStart,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(PocktRadii.m),
+      side: BorderSide(color: colors.glassBorder),
+    ),
+  );
+}
+
+/// Campos de texto como superficie de vidrio con foco en la marca y error en peligro.
+InputDecorationThemeData _buildInputDecorationTheme(PocktColors colors) {
+  OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(PocktRadii.m),
+    borderSide: BorderSide(color: c, width: w),
+  );
+  return InputDecorationThemeData(
+    filled: true,
+    fillColor: colors.glassFill,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    hintStyle: TextStyle(fontFamily: 'Inter', color: colors.textTertiary),
+    labelStyle: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
+    floatingLabelStyle: TextStyle(
+      fontFamily: 'Inter',
+      color: colors.brandStart,
+    ),
+    border: border(colors.glassBorder),
+    enabledBorder: border(colors.glassBorder),
+    focusedBorder: border(colors.brandStart, 1.5),
+    errorBorder: border(colors.danger),
+    focusedErrorBorder: border(colors.danger, 1.5),
+    errorStyle: TextStyle(
+      fontFamily: 'Inter',
+      fontSize: 12,
+      color: colors.danger,
+    ),
   );
 }

@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
@@ -96,8 +97,8 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
             final progress = _reduceMotion
                 ? 1.0
                 : SpringCurve(spring: PocktSprings.soft)
-                    .transform(_controller.value)
-                    .clamp(0.0, 1.0);
+                      .transform(_controller.value)
+                      .clamp(0.0, 1.0);
 
             return Stack(
               alignment: Alignment.center,
@@ -225,11 +226,7 @@ class EvolutionChart extends StatefulWidget {
   final List<MonthTotals> totals;
   final bool isDark;
 
-  const EvolutionChart({
-    super.key,
-    required this.totals,
-    required this.isDark,
-  });
+  const EvolutionChart({super.key, required this.totals, required this.isDark});
 
   @override
   State<EvolutionChart> createState() => _EvolutionChartState();
@@ -287,7 +284,7 @@ class _EvolutionChartState extends State<EvolutionChart>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         border: Border.all(color: colors.glassBorder),
       ),
       child: Column(
@@ -319,8 +316,8 @@ class _EvolutionChartState extends State<EvolutionChart>
                 final progress = _reduceMotion
                     ? 1.0
                     : SpringCurve(spring: PocktSprings.soft)
-                        .transform(_controller.value)
-                        .clamp(0.0, 1.0);
+                          .transform(_controller.value)
+                          .clamp(0.0, 1.0);
 
                 return CustomPaint(
                   size: const Size.fromHeight(170),
@@ -349,7 +346,7 @@ class _EvolutionChartState extends State<EvolutionChart>
                       _kMonthShort[m.month - 1],
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: colors.textTertiary,
                       ),
@@ -405,7 +402,7 @@ class _LegendItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
+            fontSize: 12,
             color: colors.textSecondary,
           ),
         ),
@@ -459,11 +456,7 @@ class _EvolutionPainter extends CustomPainter {
       Offset(size.width, size.height * 0.5),
       gridPaint,
     );
-    canvas.drawLine(
-      Offset(0, 0),
-      Offset(size.width, 0),
-      gridPaint,
-    );
+    canvas.drawLine(Offset(0, 0), Offset(size.width, 0), gridPaint);
 
     final slotWidth = size.width / totals.length;
     final barWidth = (slotWidth * 0.28).clamp(6.0, 14.0);
@@ -476,8 +469,7 @@ class _EvolutionPainter extends CustomPainter {
       final xCenter = (i + 0.5) * slotWidth;
 
       // Barra de gasto
-      final expHeight =
-          (m.expense / maxVal) * (size.height - 4) * progress;
+      final expHeight = (m.expense / maxVal) * (size.height - 4) * progress;
       final expLeft = xCenter - barWidth - (barSpacing / 2);
       final expRect = Rect.fromLTWH(
         expLeft,
@@ -498,8 +490,7 @@ class _EvolutionPainter extends CustomPainter {
       }
 
       // Barra de ingreso
-      final incHeight =
-          (m.income / maxVal) * (size.height - 4) * progress;
+      final incHeight = (m.income / maxVal) * (size.height - 4) * progress;
       final incLeft = xCenter + (barSpacing / 2);
       final incRect = Rect.fromLTWH(
         incLeft,
@@ -597,7 +588,7 @@ class MerchantBarRow extends StatelessWidget {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(PocktRadii.s),
                   color: colors.glassFill,
                   border: Border.all(color: colors.glassBorder),
                 ),
@@ -606,9 +597,11 @@ class MerchantBarRow extends StatelessWidget {
                     '#$rank',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: rank <= 3 ? colors.brandStart : colors.textTertiary,
+                      color: rank <= 3
+                          ? colors.brandStart
+                          : colors.textTertiary,
                     ),
                   ),
                 ),
@@ -634,7 +627,7 @@ class MerchantBarRow extends StatelessWidget {
                       '${item.count} ${item.count == 1 ? 'compra' : 'compras'}',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11,
+                        fontSize: 12,
                         color: colors.textTertiary,
                       ),
                     ),

@@ -34,20 +34,15 @@ class RecurringScreen extends ConsumerWidget {
 
   void _openAdd(BuildContext context) {
     Haptics.tick();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const RecurringFormScreen(),
-      ),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const RecurringFormScreen()));
   }
 
   void _openEdit(BuildContext context, RecurringRule rule) {
     Haptics.tick();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => RecurringFormScreen(rule: rule),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => RecurringFormScreen(rule: rule)));
   }
 
   @override
@@ -65,6 +60,7 @@ class RecurringScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -109,6 +105,7 @@ class RecurringScreen extends ConsumerWidget {
                     ),
                   ),
                   Pressable(
+                    semanticLabel: 'Agregar recurrente',
                     key: const ValueKey('add-recurring-button'),
                     onTap: () => _openAdd(context),
                     child: Container(
@@ -228,7 +225,7 @@ class RecurringScreen extends ConsumerWidget {
                 ),
                 decoration: BoxDecoration(
                   color: colors.brandStart,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
                 ),
                 child: const Text(
                   'Agregar recurrente',
@@ -252,10 +249,7 @@ class _RecurringRuleCard extends ConsumerWidget {
   final RecurringRule rule;
   final VoidCallback onTap;
 
-  const _RecurringRuleCard({
-    required this.rule,
-    required this.onTap,
-  });
+  const _RecurringRuleCard({required this.rule, required this.onTap});
 
   String _formatNextDue(DateTime date) {
     final local = toLocal(date);
@@ -287,7 +281,7 @@ class _RecurringRuleCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colors.danger.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
         ),
         alignment: Alignment.centerRight,
         child: Row(
@@ -315,7 +309,7 @@ class _RecurringRuleCard extends ConsumerWidget {
         onTap: onTap,
         child: GlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
           child: Row(
             children: [
               Container(
@@ -392,6 +386,7 @@ class _RecurringRuleCard extends ConsumerWidget {
                         },
                       ),
                       Pressable(
+                        semanticLabel: 'Borrar recurrente',
                         key: ValueKey('delete-recurring-${rule.id}'),
                         onTap: () {
                           Haptics.tick();
@@ -466,19 +461,22 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
     _initializing = true;
     final db = ref.read(databaseProvider);
     if (widget.rule?.categoryId != null) {
-      _selectedCategory = await (db.select(db.categories)
-            ..where((c) => c.id.equals(widget.rule!.categoryId)))
-          .getSingleOrNull();
+      _selectedCategory = await (db.select(
+        db.categories,
+      )..where((c) => c.id.equals(widget.rule!.categoryId))).getSingleOrNull();
     }
     if (_selectedCategory == null) {
-      final list = await (db.select(db.categories)
-            ..where((c) => c.kind.equalsValue(
-                  _type == TxType.income
-                      ? CategoryKind.income
-                      : CategoryKind.expense,
-                ))
-            ..limit(1))
-          .get();
+      final list =
+          await (db.select(db.categories)
+                ..where(
+                  (c) => c.kind.equalsValue(
+                    _type == TxType.income
+                        ? CategoryKind.income
+                        : CategoryKind.expense,
+                  ),
+                )
+                ..limit(1))
+              .get();
       if (list.isNotEmpty) _selectedCategory = list.first;
     }
     _initializing = false;
@@ -491,14 +489,17 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
     if (_type == newType) return;
     Haptics.tick();
     final db = ref.read(databaseProvider);
-    final list = await (db.select(db.categories)
-          ..where((c) => c.kind.equalsValue(
-                newType == TxType.income
-                    ? CategoryKind.income
-                    : CategoryKind.expense,
-              ))
-          ..limit(1))
-        .get();
+    final list =
+        await (db.select(db.categories)
+              ..where(
+                (c) => c.kind.equalsValue(
+                  newType == TxType.income
+                      ? CategoryKind.income
+                      : CategoryKind.expense,
+                ),
+              )
+              ..limit(1))
+            .get();
     if (mounted) {
       setState(() {
         _type = newType;
@@ -528,18 +529,19 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
       category: cat,
       type: _type,
       initialAmount: _amount > 0 ? _amount : null,
-      onSaveOverride: ({
-        required int amount,
-        required Category category,
-        required DateTime occurredAt,
-        String? merchant,
-        String? note,
-      }) async {
-        setState(() {
-          _amount = amount;
-          _selectedCategory = category;
-        });
-      },
+      onSaveOverride:
+          ({
+            required int amount,
+            required Category category,
+            required DateTime occurredAt,
+            String? merchant,
+            String? note,
+          }) async {
+            setState(() {
+              _amount = amount;
+              _selectedCategory = category;
+            });
+          },
     );
   }
 
@@ -550,14 +552,17 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
     var cat = _selectedCategory;
     if (cat == null) {
       final db = ref.read(databaseProvider);
-      final list = await (db.select(db.categories)
-            ..where((c) => c.kind.equalsValue(
-                  _type == TxType.income
-                      ? CategoryKind.income
-                      : CategoryKind.expense,
-                ))
-            ..limit(1))
-          .get();
+      final list =
+          await (db.select(db.categories)
+                ..where(
+                  (c) => c.kind.equalsValue(
+                    _type == TxType.income
+                        ? CategoryKind.income
+                        : CategoryKind.expense,
+                  ),
+                )
+                ..limit(1))
+              .get();
       if (list.isNotEmpty) cat = list.first;
     }
     if (cat == null) return;
@@ -609,6 +614,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -641,10 +647,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                       ),
                     ),
                   ),
-                  TypeToggle(
-                    currentType: _type,
-                    onTypeChanged: _onTypeChanged,
-                  ),
+                  TypeToggle(currentType: _type, onTypeChanged: _onTypeChanged),
                 ],
               ),
             ),
@@ -660,7 +663,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                       horizontal: 14,
                       vertical: 6,
                     ),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(PocktRadii.l),
                     child: TextField(
                       key: const ValueKey('recurring-name-input'),
                       controller: _nameController,
@@ -690,7 +693,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(PocktRadii.l),
                       child: Row(
                         children: [
                           Text(
@@ -762,7 +765,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(PocktRadii.l),
                       child: Row(
                         children: [
                           Text(
@@ -800,7 +803,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                   // Frecuencia
                   GlassCard(
                     padding: const EdgeInsets.all(16),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(PocktRadii.xl),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -823,8 +826,8 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                                 isSelected:
                                     _frequency == RecurrenceFrequency.monthly,
                                 onTap: () => setState(
-                                  () => _frequency =
-                                      RecurrenceFrequency.monthly,
+                                  () =>
+                                      _frequency = RecurrenceFrequency.monthly,
                                 ),
                               ),
                             ),
@@ -836,8 +839,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                                 isSelected:
                                     _frequency == RecurrenceFrequency.weekly,
                                 onTap: () => setState(
-                                  () => _frequency =
-                                      RecurrenceFrequency.weekly,
+                                  () => _frequency = RecurrenceFrequency.weekly,
                                 ),
                               ),
                             ),
@@ -849,8 +851,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                                 isSelected:
                                     _frequency == RecurrenceFrequency.yearly,
                                 onTap: () => setState(
-                                  () => _frequency =
-                                      RecurrenceFrequency.yearly,
+                                  () => _frequency = RecurrenceFrequency.yearly,
                                 ),
                               ),
                             ),
@@ -883,7 +884,9 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                                     color: sel
                                         ? colors.brandStart
                                         : colors.glassFill,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(
+                                      PocktRadii.m,
+                                    ),
                                     border: Border.all(
                                       color: sel
                                           ? colors.brandStart
@@ -918,7 +921,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
                       height: 52,
                       decoration: BoxDecoration(
                         color: colors.brandStart,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(PocktRadii.xl),
                         boxShadow: [
                           BoxShadow(
                             color: colors.brandStart.withValues(alpha: 0.35),
@@ -976,7 +979,7 @@ class _FreqPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? colors.textPrimary : colors.glassFill,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(PocktRadii.m),
           border: Border.all(
             color: isSelected ? colors.textPrimary : colors.glassBorder,
           ),

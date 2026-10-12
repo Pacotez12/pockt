@@ -74,7 +74,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.glassFill,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
                   border: Border.all(color: colors.glassBorder),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -109,7 +109,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           ),
                           border: InputBorder.none,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -235,7 +237,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? colors.glassBorder : colors.glassFill,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           border: Border.all(
             color: isSelected ? colors.textSecondary : colors.glassBorder,
           ),

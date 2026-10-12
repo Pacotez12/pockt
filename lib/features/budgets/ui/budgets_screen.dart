@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -132,7 +133,9 @@ class _BudgetRingState extends State<BudgetRing>
         child: AnimatedBuilder(
           animation: _animation,
           builder: (context, _) {
-            final effectiveRatio = reduceMotion ? widget.ratio : _animation.value;
+            final effectiveRatio = reduceMotion
+                ? widget.ratio
+                : _animation.value;
             return CustomPaint(
               painter: _RingPainter(
                 ratio: effectiveRatio,
@@ -299,8 +302,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     _totalsSub = txRepo
         .watchMonthCategoryTotals(_year, _month, period: _currentPeriod)
         .listen((totals) {
-      _handleDataUpdate(totals: totals);
-    });
+          _handleDataUpdate(totals: totals);
+        });
   }
 
   void _initSubscriptions() {
@@ -316,17 +319,18 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
         .watch(SettingsKeys.periodMonthStart)
         .map(MonthStartMode.parse)
         .listen((mode) {
-      if (mounted && mode != _monthStartMode) {
-        setState(() {
-          _monthStartMode = mode;
+          if (mounted && mode != _monthStartMode) {
+            setState(() {
+              _monthStartMode = mode;
+            });
+            _initMonthDataSubscriptions();
+          }
         });
-        _initMonthDataSubscriptions();
-      }
-    });
 
     _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
       if (mounted) {
-        final schedChanged = _schedule?.id != sched?.id ||
+        final schedChanged =
+            _schedule?.id != sched?.id ||
             _schedule?.payDays != sched?.payDays ||
             _schedule?.payDayRules != sched?.payDayRules;
         setState(() {
@@ -352,7 +356,9 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     if (budgets != null) _budgets = budgets;
     if (totals != null) _categoryTotals = totals;
 
-    final spentMap = {for (final ct in _categoryTotals) ct.category.id: ct.total};
+    final spentMap = {
+      for (final ct in _categoryTotals) ct.category.id: ct.total,
+    };
 
     if (!_hasInitialData) {
       for (final bv in _budgets) {
@@ -370,7 +376,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
         if (prev != null) {
           if (prev != BudgetLevel.over && status.level == BudgetLevel.over) {
             Haptics.danger();
-          } else if (prev == BudgetLevel.ok && status.level == BudgetLevel.warning) {
+          } else if (prev == BudgetLevel.ok &&
+              status.level == BudgetLevel.warning) {
             Haptics.warning();
           }
         }
@@ -420,7 +427,9 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
-    final spentMap = {for (final ct in _categoryTotals) ct.category.id: ct.total};
+    final spentMap = {
+      for (final ct in _categoryTotals) ct.category.id: ct.total,
+    };
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -495,6 +504,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           ),
         ),
         Pressable(
+          semanticLabel: 'Agregar presupuesto',
           onTap: () => _showAddBudgetDialog(context),
           child: Container(
             width: 42,
@@ -505,11 +515,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
               border: Border.all(color: colors.glassBorder, width: 1),
             ),
             child: Center(
-              child: Icon(
-                uiIcon('plus'),
-                size: 20,
-                color: colors.textPrimary,
-              ),
+              child: Icon(uiIcon('plus'), size: 20, color: colors.textPrimary),
             ),
           ),
         ),
@@ -567,9 +573,12 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
             Pressable(
               onTap: () => _showAddBudgetDialog(context),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
                   gradient: LinearGradient(
                     colors: [colors.brandStart, colors.brandEnd],
                   ),
@@ -617,11 +626,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(16),
       child: Pressable(
-        onTap: () => _showDetailSheet(
-          context,
-          budgetView: budgetView,
-          spent: spent,
-        ),
+        onTap: () =>
+            _showDetailSheet(context, budgetView: budgetView, spent: spent),
         child: Row(
           children: [
             BudgetRing(
@@ -654,12 +660,19 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: effectiveColor.withValues(alpha: isDark ? 0.20 : 0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          color: effectiveColor.withValues(
+                            alpha: isDark ? 0.20 : 0.12,
+                          ),
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
                           border: Border.all(
-                            color: effectiveColor.withValues(alpha: isDark ? 0.40 : 0.25),
+                            color: effectiveColor.withValues(
+                              alpha: isDark ? 0.40 : 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -714,8 +727,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                       color: status.level == BudgetLevel.over
                           ? colors.danger
                           : (status.level == BudgetLevel.warning
-                              ? colors.warning
-                              : colors.textSecondary),
+                                ? colors.warning
+                                : colors.textSecondary),
                     ),
                   ),
                 ],
@@ -774,7 +787,10 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final status = budgetStatus(widget.spent, widget.budgetView.budget.monthlyLimit);
+    final status = budgetStatus(
+      widget.spent,
+      widget.budgetView.budget.monthlyLimit,
+    );
     final effectiveColor = _getEffectiveColor(
       status,
       widget.budgetView.category,
@@ -805,12 +821,11 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
               ),
               decoration: BoxDecoration(
                 color: colors.sheetSurface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(
-                  top: BorderSide(
-                    color: colors.glassBorder,
-                    width: 1,
-                  ),
+                  top: BorderSide(color: colors.glassBorder, width: 1),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -884,6 +899,7 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                             ),
                           ),
                           Pressable(
+                            semanticLabel: 'Cerrar',
                             onTap: () => Navigator.of(context).pop(),
                             child: Padding(
                               padding: const EdgeInsets.all(6),
@@ -969,8 +985,8 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                                       color: status.level == BudgetLevel.over
                                           ? colors.danger
                                           : (status.level == BudgetLevel.warning
-                                              ? colors.warning
-                                              : colors.positive),
+                                                ? colors.warning
+                                                : colors.positive),
                                       fontFeatures: const [
                                         FontFeature.tabularFigures(),
                                       ],
@@ -994,7 +1010,9 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: colors.glassFill,
-                                  borderRadius: BorderRadius.circular(22),
+                                  borderRadius: BorderRadius.circular(
+                                    PocktRadii.xl,
+                                  ),
                                   border: Border.all(
                                     color: colors.glassBorder,
                                     width: 1,
@@ -1028,12 +1046,16 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                             onTap: _onRemoveLimit,
                             child: Container(
                               height: 44,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               decoration: BoxDecoration(
                                 color: colors.danger.withValues(
                                   alpha: isDark ? 0.18 : 0.10,
                                 ),
-                                borderRadius: BorderRadius.circular(22),
+                                borderRadius: BorderRadius.circular(
+                                  PocktRadii.xl,
+                                ),
                                 border: Border.all(
                                   color: colors.danger.withValues(
                                     alpha: isDark ? 0.35 : 0.25,
@@ -1106,7 +1128,8 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                             return ListView.separated(
                               physics: const BouncingScrollPhysics(),
                               itemCount: txs.length,
-                              separatorBuilder: (_, _) => const SizedBox(height: 6),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 6),
                               itemBuilder: (context, index) {
                                 return SwipeableTxRow(
                                   view: txs[index],
@@ -1208,12 +1231,11 @@ class _BudgetLimitKeypadSheetState
             child: Container(
               decoration: BoxDecoration(
                 color: colors.sheetSurface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(
-                  top: BorderSide(
-                    color: colors.glassBorder,
-                    width: 1,
-                  ),
+                  top: BorderSide(color: colors.glassBorder, width: 1),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -1251,7 +1273,7 @@ class _BudgetLimitKeypadSheetState
                           color: categoryColor.withValues(
                             alpha: isDark ? 0.22 : 0.12,
                           ),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(PocktRadii.xl),
                           border: Border.all(
                             color: categoryColor.withValues(
                               alpha: isDark ? 0.45 : 0.30,
@@ -1322,7 +1344,9 @@ class _BudgetLimitKeypadSheetState
                             height: 52,
                             decoration: BoxDecoration(
                               color: categoryColor,
-                              borderRadius: BorderRadius.circular(26),
+                              borderRadius: BorderRadius.circular(
+                                PocktRadii.xl,
+                              ),
                             ),
                             child: Center(
                               child: Text(
@@ -1413,7 +1437,7 @@ class _KeypadBtn extends StatelessWidget {
         height: 50,
         decoration: BoxDecoration(
           color: colors.glassFill,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           border: Border.all(color: colors.glassBorder, width: 1),
         ),
         child: Center(
@@ -1436,9 +1460,7 @@ class _KeypadBtn extends StatelessWidget {
 class _AddBudgetCategoryPickerSheet extends ConsumerWidget {
   final Set<String> existingCategoryIds;
 
-  const _AddBudgetCategoryPickerSheet({
-    required this.existingCategoryIds,
-  });
+  const _AddBudgetCategoryPickerSheet({required this.existingCategoryIds});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1463,12 +1485,11 @@ class _AddBudgetCategoryPickerSheet extends ConsumerWidget {
               ),
               decoration: BoxDecoration(
                 color: colors.sheetSurface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 border: Border(
-                  top: BorderSide(
-                    color: colors.glassBorder,
-                    width: 1,
-                  ),
+                  top: BorderSide(color: colors.glassBorder, width: 1),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -1526,6 +1547,7 @@ class _AddBudgetCategoryPickerSheet extends ConsumerWidget {
                             ],
                           ),
                           Pressable(
+                            semanticLabel: 'Cerrar',
                             onTap: () => Navigator.of(context).pop(),
                             child: Padding(
                               padding: const EdgeInsets.all(6),
@@ -1548,13 +1570,17 @@ class _AddBudgetCategoryPickerSheet extends ConsumerWidget {
                           builder: (context, snapshot) {
                             final allCategories = snapshot.data ?? const [];
                             final available = allCategories
-                                .where((c) => !existingCategoryIds.contains(c.id))
+                                .where(
+                                  (c) => !existingCategoryIds.contains(c.id),
+                                )
                                 .toList();
 
                             if (available.isEmpty) {
                               return Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
                                   child: Text(
                                     'Todas las categorías de gasto ya tienen un presupuesto asignado.',
                                     textAlign: TextAlign.center,
@@ -1571,7 +1597,8 @@ class _AddBudgetCategoryPickerSheet extends ConsumerWidget {
                             return ListView.separated(
                               physics: const BouncingScrollPhysics(),
                               itemCount: available.length,
-                              separatorBuilder: (_, _) => const SizedBox(height: 6),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 6),
                               itemBuilder: (context, index) {
                                 final cat = available[index];
                                 final catColor = _getCategoryColor(cat, isDark);
@@ -1671,10 +1698,7 @@ Future<bool?> showBudgetDetailSheet(
             begin: const Offset(0, 0.08),
             end: Offset.zero,
           ).animate(curved),
-          child: FadeTransition(
-            opacity: curved,
-            child: child,
-          ),
+          child: FadeTransition(opacity: curved, child: child),
         );
       },
     ),
@@ -1709,10 +1733,7 @@ Future<bool?> showBudgetLimitKeypad(
             begin: const Offset(0, 0.08),
             end: Offset.zero,
           ).animate(curved),
-          child: FadeTransition(
-            opacity: curved,
-            child: child,
-          ),
+          child: FadeTransition(opacity: curved, child: child),
         );
       },
     ),
@@ -1745,10 +1766,7 @@ Future<Category?> showAddBudgetCategoryPicker(
             begin: const Offset(0, 0.08),
             end: Offset.zero,
           ).animate(curved),
-          child: FadeTransition(
-            opacity: curved,
-            child: child,
-          ),
+          child: FadeTransition(opacity: curved, child: child),
         );
       },
     ),
