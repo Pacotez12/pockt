@@ -193,6 +193,7 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'timer': PhosphorIconsRegular.timer,
   'file-csv': PhosphorIconsRegular.fileCsv,
   'info': PhosphorIconsRegular.info,
+  'hand-coins': PhosphorIconsRegular.handCoins,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -254,6 +255,7 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'timer': PhosphorIconsFill.timer,
   'file-csv': PhosphorIconsFill.fileCsv,
   'info': PhosphorIconsFill.info,
+  'hand-coins': PhosphorIconsFill.handCoins,
 };
 
 /// Devuelve el [IconData] de Phosphor en estilo Regular o Fill según [filled].

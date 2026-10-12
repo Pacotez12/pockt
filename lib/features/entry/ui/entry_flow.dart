@@ -14,6 +14,7 @@ import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:pockt/features/entry/ui/amount_keypad.dart';
+import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
 Widget entrySpringTransitionsBuilder(
@@ -50,6 +51,7 @@ Future<bool?> showAmountKeypad(
   int? initialAmount,
   DateTime? initialDate,
   String? initialMerchant,
+  String? initialLoanId,
   Future<void> Function({
     required int amount,
     required Category category,
@@ -69,6 +71,7 @@ Future<bool?> showAmountKeypad(
         initialAmount: initialAmount,
         initialDate: initialDate,
         initialMerchant: initialMerchant,
+        initialLoanId: initialLoanId,
         onSaveOverride: onSaveOverride,
       ),
       transitionsBuilder: entrySpringTransitionsBuilder,
@@ -105,6 +108,22 @@ Future<void> showEntryFlow(
           ..where((c) => c.id.equals(initialCategoryId)))
         .getSingleOrNull();
     if (category != null && context.mounted) {
+      String? loanId;
+      int? prefilledAmount;
+      if (category.name == 'Préstamos') {
+        final activeLoans = await container.read(loansRepositoryProvider).getActive(
+              direction: initialType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+            );
+        if (activeLoans.isNotEmpty && context.mounted) {
+          final choice = await showLoanPickerSheet(context, loans: activeLoans);
+          if (choice.type == LoanPickerChoiceType.cancel) return;
+          if (choice.type == LoanPickerChoiceType.loan) {
+            loanId = choice.loan!.id;
+            prefilledAmount = choice.loan!.installmentAmount;
+          }
+        }
+      }
+      if (!context.mounted) return;
       await Navigator.of(context).push<bool>(
         PageRouteBuilder<bool>(
           transitionDuration: const Duration(milliseconds: 350),
@@ -112,6 +131,8 @@ Future<void> showEntryFlow(
           pageBuilder: (context, _, _) => AmountKeypadScreen(
             category: category,
             type: initialType,
+            initialLoanId: loanId,
+            initialAmount: prefilledAmount,
           ),
           transitionsBuilder: entrySpringTransitionsBuilder,
         ),
@@ -131,6 +152,187 @@ Future<void> showEntryFlow(
       transitionsBuilder: entrySpringTransitionsBuilder,
     ),
   );
+}
+
+enum LoanPickerChoiceType {
+  loan,
+  general,
+  cancel,
+}
+
+class LoanPickerChoice {
+  final LoanPickerChoiceType type;
+  final Loan? loan;
+
+  const LoanPickerChoice._(this.type, this.loan);
+  factory LoanPickerChoice.loan(Loan loan) => LoanPickerChoice._(LoanPickerChoiceType.loan, loan);
+  factory LoanPickerChoice.general() => const LoanPickerChoice._(LoanPickerChoiceType.general, null);
+  factory LoanPickerChoice.cancel() => const LoanPickerChoice._(LoanPickerChoiceType.cancel, null);
+}
+
+Future<LoanPickerChoice> showLoanPickerSheet(
+  BuildContext context, {
+  required List<Loan> loans,
+}) async {
+  final result = await showModalBottomSheet<LoanPickerChoice>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final colors = sheetContext.pockt;
+      final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+
+      return Container(
+        decoration: BoxDecoration(
+          color: colors.sheetSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.textTertiary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '¿A qué préstamo corresponde?',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Vinculá este movimiento a una deuda o cuota activa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(sheetContext).size.height * 0.45,
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: loans.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final loan = loans[index];
+                    final subtitle = loan.installmentAmount != null
+                        ? 'Cuota: ${formatGs(loan.installmentAmount!)}'
+                        : 'Total: ${formatGs(loan.totalAmount)}';
+
+                    return Pressable(
+                      onTap: () {
+                        Haptics.tick();
+                        Navigator.of(sheetContext).pop(LoanPickerChoice.loan(loan));
+                      },
+                      child: GlassCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: colors.brandAt(0).withValues(alpha: isDark ? 0.2 : 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  uiIcon('hand-coins'),
+                                  size: 18,
+                                  color: colors.brandAt(0),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    loan.name,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              uiIcon('caret-right'),
+                              size: 14,
+                              color: colors.textTertiary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Pressable(
+                onTap: () {
+                  Haptics.tick();
+                  Navigator.of(sheetContext).pop(LoanPickerChoice.general());
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: colors.glassBorder),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Ninguno / Gasto general',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  return result ?? LoanPickerChoice.cancel();
 }
 
 Future<Category?> showCategoryPickerSheet(
@@ -272,6 +474,22 @@ class _EntryCategoryPickerScreenState
     Category category,
   ) async {
     Haptics.tick();
+    String? loanId;
+    int? amount = proposal.amount > 0 ? proposal.amount : null;
+    if (category.name == 'Préstamos') {
+      final activeLoans = await ref.read(loansRepositoryProvider).getActive(
+            direction: _currentType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+          );
+      if (activeLoans.isNotEmpty && mounted) {
+        final choice = await showLoanPickerSheet(context, loans: activeLoans);
+        if (choice.type == LoanPickerChoiceType.cancel) return;
+        if (choice.type == LoanPickerChoiceType.loan) {
+          loanId = choice.loan!.id;
+          amount ??= choice.loan!.installmentAmount;
+        }
+      }
+    }
+    if (!mounted) return;
     final saved = await Navigator.of(context).push<bool>(
       PageRouteBuilder<bool>(
         transitionDuration: const Duration(milliseconds: 350),
@@ -279,9 +497,61 @@ class _EntryCategoryPickerScreenState
         pageBuilder: (context, _, _) => AmountKeypadScreen(
           category: category,
           type: _currentType,
-          initialAmount: proposal.amount,
+          initialAmount: amount,
           initialDate: combineDayWithNow(proposal.occurredLocalDay, DateTime.now()),
           initialMerchant: proposal.merchant,
+          initialLoanId: loanId,
+        ),
+        transitionsBuilder: (context, animation, _, child) {
+          if (MediaQuery.disableAnimationsOf(context)) {
+            return child;
+          }
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: SpringCurve(spring: PocktSprings.soft),
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: child,
+          );
+        },
+      ),
+    );
+    if (saved == true && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _onCategorySelected(Category category) async {
+    Haptics.tick();
+    String? loanId;
+    int? prefilledAmount;
+    if (category.name == 'Préstamos') {
+      final activeLoans = await ref.read(loansRepositoryProvider).getActive(
+            direction: _currentType == TxType.expense ? LoanDirection.owe : LoanDirection.lent,
+          );
+      if (!mounted) return;
+      if (activeLoans.isNotEmpty) {
+        final choice = await showLoanPickerSheet(context, loans: activeLoans);
+        if (!mounted) return;
+        if (choice.type == LoanPickerChoiceType.cancel) return;
+        if (choice.type == LoanPickerChoiceType.loan) {
+          loanId = choice.loan!.id;
+          prefilledAmount = choice.loan!.installmentAmount;
+        }
+      }
+    }
+    if (!mounted) return;
+    final saved = await Navigator.of(context).push<bool>(
+      PageRouteBuilder<bool>(
+        transitionDuration: const Duration(milliseconds: 350),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (context, _, _) => AmountKeypadScreen(
+          category: category,
+          type: _currentType,
+          initialLoanId: loanId,
+          initialAmount: prefilledAmount,
         ),
         transitionsBuilder: (context, animation, _, child) {
           if (MediaQuery.disableAnimationsOf(context)) {
@@ -556,38 +826,7 @@ class _EntryCategoryPickerScreenState
                 Expanded(
                   child: CategoryGrid(
                     currentType: _currentType,
-                    onCategorySelected: (category) async {
-                      Haptics.tick();
-                      final saved = await Navigator.of(context).push<bool>(
-                        PageRouteBuilder<bool>(
-                          transitionDuration:
-                              const Duration(milliseconds: 350),
-                          reverseTransitionDuration:
-                              const Duration(milliseconds: 300),
-                          pageBuilder: (context, _, _) => AmountKeypadScreen(
-                            category: category,
-                            type: _currentType,
-                          ),
-                          transitionsBuilder: (context, animation, _, child) {
-                            if (MediaQuery.disableAnimationsOf(context)) {
-                              return child;
-                            }
-                            final curved = CurvedAnimation(
-                              parent: animation,
-                              curve: SpringCurve(spring: PocktSprings.soft),
-                              reverseCurve: Curves.easeInCubic,
-                            );
-                            return FadeTransition(
-                              opacity: curved,
-                              child: child,
-                            );
-                          },
-                        ),
-                      );
-                      if (saved == true && context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
+                    onCategorySelected: _onCategorySelected,
                   ),
                 ),
               ],

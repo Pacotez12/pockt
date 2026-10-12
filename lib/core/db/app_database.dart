@@ -20,13 +20,14 @@ part 'app_database.g.dart';
   CategoryKeywords,
   MerchantMemory,
   SalaryDeductions,
+  Loans,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -192,6 +193,27 @@ class AppDatabase extends _$AppDatabase {
             );
           }
         }
+        if (from < 8) {
+          await m.createTable(loans);
+          await m.addColumn(transactions, transactions.loanId);
+          final existing = await customSelect(
+            'SELECT id FROM categories WHERE name = ? LIMIT 1;',
+            variables: [Variable.withString('Préstamos')],
+          ).get();
+          if (existing.isEmpty) {
+            await into(categories).insert(
+              const CategoriesCompanion(
+                id: Value('018f0000-0000-7000-8000-000000000014'),
+                name: Value('Préstamos'),
+                icon: Value('coins'),
+                colorDark: Value(0xFF8BA4B5),
+                colorLight: Value(0xFF3D6176),
+                kind: Value(CategoryKind.expense),
+                sortOrder: Value(10),
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -273,6 +295,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> wipeAllData() async {
     await transaction(() async {
       await delete(transactions).go();
+      await delete(loans).go();
       await delete(suggestedTransactions).go();
       await delete(merchantMemory).go();
       await delete(budgets).go();
@@ -381,6 +404,15 @@ class AppDatabase extends _$AppDatabase {
         colorLight: Value(0xFF606A74),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(9),
+      ),
+      const CategoriesCompanion(
+        id: Value('018f0000-0000-7000-8000-000000000014'),
+        name: Value('Préstamos'),
+        icon: Value('coins'),
+        colorDark: Value(0xFF8BA4B5),
+        colorLight: Value(0xFF3D6176),
+        kind: Value(CategoryKind.expense),
+        sortOrder: Value(10),
       ),
 
       // 3 categorías de ingreso

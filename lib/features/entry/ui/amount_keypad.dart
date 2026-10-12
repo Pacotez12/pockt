@@ -20,6 +20,7 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
   final int? initialAmount;
   final DateTime? initialDate;
   final String? initialMerchant;
+  final String? initialLoanId;
   final Future<void> Function({
     required int amount,
     required Category category,
@@ -36,6 +37,7 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
     this.initialAmount,
     this.initialDate,
     this.initialMerchant,
+    this.initialLoanId,
     this.onSaveOverride,
   });
 
@@ -49,6 +51,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   late DateTime _occurredAt;
   String? _merchant;
   String? _note;
+  String? _loanId;
   bool _isSaving = false;
   bool _notePrompted = false;
 
@@ -56,6 +59,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   void initState() {
     super.initState();
     _category = widget.category;
+    _loanId = widget.initialLoanId ?? widget.editing?.tx.loanId;
     if (widget.editing != null) {
       _digits = widget.editing!.tx.amount.toString();
       _occurredAt = toLocal(widget.editing!.tx.occurredAt);
@@ -139,6 +143,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
             occurredAt: _occurredAt.toUtc(),
             merchant: _merchant,
             note: _note,
+            loanId: _loanId,
           );
         } else {
           await txRepo.add(
@@ -148,6 +153,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
             occurredAt: _occurredAt.toUtc(),
             merchant: _merchant,
             note: _note,
+            loanId: _loanId,
           );
         }
       }
@@ -443,6 +449,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                     vertical: 8,
                   ),
                   child: FilledButton(
+                    key: const ValueKey('keypad-btn-action'),
                     onPressed: canSave ? _onSave : null,
                     style: FilledButton.styleFrom(
                       backgroundColor: categoryColor,

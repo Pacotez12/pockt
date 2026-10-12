@@ -23,6 +23,7 @@ class FailingTransactionsRepo extends TransactionsRepository {
     required DateTime occurredAt,
     String? merchant,
     String? note,
+    String? loanId,
   }) async {
     throw Exception('Error simulado al guardar');
   }
@@ -35,6 +36,8 @@ class FailingTransactionsRepo extends TransactionsRepository {
     DateTime? occurredAt,
     String? merchant,
     String? note,
+    String? loanId,
+    bool clearLoanId = false,
   }) async {
     throw Exception('Error simulado al actualizar');
   }

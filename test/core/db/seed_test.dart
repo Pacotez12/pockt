@@ -19,10 +19,10 @@ void main() {
     await db.close();
   });
 
-  test('seed: 10 categorías de gasto y 3 de ingreso', () async {
+  test('seed: 11 categorías de gasto y 3 de ingreso', () async {
     final expenses = await repo.watchActive(CategoryKind.expense).first;
     final incomes = await repo.watchActive(CategoryKind.income).first;
-    expect(expenses, hasLength(10));
+    expect(expenses, hasLength(11));
     expect(incomes, hasLength(3));
   });
 

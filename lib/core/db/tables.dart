@@ -7,6 +7,30 @@ enum CategoryKind { expense, income }
 
 enum TxSource { manual, recurring, incomeSchedule, capture }
 
+enum LoanDirection { owe, lent }
+
+enum LoanKind { loan, installments }
+
+class Loans extends Table {
+  TextColumn get id => text()();
+  TextColumn get direction => textEnum<LoanDirection>()();
+  TextColumn get kind => textEnum<LoanKind>()();
+  TextColumn get name => text()();
+  TextColumn get counterparty => text().nullable()();
+  IntColumn get totalAmount => integer()();
+  IntColumn get installmentAmount => integer().nullable()();
+  IntColumn get installmentsTotal => integer().nullable()();
+  IntColumn get dueDay => integer().nullable()();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get closedAt => dateTime().nullable()();
+  IntColumn get reminderDays => integer().withDefault(const Constant(2))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Categories extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -35,6 +59,7 @@ class Transactions extends Table {
   TextColumn get source => textEnum<TxSource>()();
   TextColumn get recurringRuleId => text().nullable()();
   TextColumn get suggestionId => text().nullable()();
+  TextColumn get loanId => text().nullable().references(Loans, #id)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override

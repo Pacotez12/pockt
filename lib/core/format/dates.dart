@@ -83,3 +83,10 @@ String formatDayHeader(DateTime localDay, DateTime nowLocal) {
   final long = formatLongDay(localDay);
   return localDay.year == nowLocal.year ? long : '$long de ${localDay.year}';
 }
+
+/// "oct 2026" o "nov 2026"
+String formatMonthYear(DateTime date) {
+  final month = _kMonthsShort[date.month - 1];
+  return '$month ${date.year}';
+}
+

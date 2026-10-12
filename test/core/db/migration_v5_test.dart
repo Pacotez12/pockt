@@ -163,7 +163,7 @@ void main() {
     );
 
     // 1. Schema version actualizado a 7
-    expect(db.schemaVersion, equals(7));
+    expect(db.schemaVersion, equals(8));
 
     // 2. Datos existentes intactos
     final txs = await db.select(db.transactions).get();
@@ -206,7 +206,7 @@ void main() {
     // 4. Verificar a nivel de SQLite raw que expected_amount ya no existe y existen monthly_amount y pay_split_percents
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(7));
+    expect(userVersionResult.first['user_version'], equals(8));
 
     final tableInfo = rawDb.select('PRAGMA table_info(income_schedules);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();

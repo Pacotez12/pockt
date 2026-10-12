@@ -197,10 +197,10 @@ void main() {
 
   test('base nueva se crea con la paleta nueva de §6.2b', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
-    expect(db.schemaVersion, equals(7));
+    expect(db.schemaVersion, equals(8));
 
     final cats = await db.select(db.categories).get();
-    expect(cats.length, equals(13));
+    expect(cats.length, equals(14));
 
     final expectedColors = <String, ({int dark, int light})>{
       'Comida': (dark: 0xFFE4A067, light: 0xFF9A5505),
@@ -213,6 +213,7 @@ void main() {
       'Regalos': (dark: 0xFFDD96CD, light: 0xFF924B84),
       'Ropa': (dark: 0xFFC1B35B, light: 0xFF796900),
       'Otros': (dark: 0xFF9BA6B1, light: 0xFF606A74),
+      'Préstamos': (dark: 0xFF8BA4B5, light: 0xFF3D6176),
       'Sueldo': (dark: 0xFF74C692, light: 0xFF187C49),
       'Extra': (dark: 0xFF47C5D2, light: 0xFF007B89),
       'Otros ingresos': (dark: 0xFF9BA6B1, light: 0xFF606A74),
@@ -243,8 +244,8 @@ void main() {
       NativeDatabase(dbFile),
     );
 
-    // 1. Schema version actualizado a 7
-    expect(db.schemaVersion, equals(7));
+    // 1. Schema version actualizado a 8
+    expect(db.schemaVersion, equals(8));
 
     final cats = await db.select(db.categories).get();
     final catsById = {for (final c in cats) c.id: c};
@@ -318,7 +319,7 @@ void main() {
     // 6. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(7));
+    expect(userVersionResult.first['user_version'], equals(8));
     rawDb.close();
   });
 }

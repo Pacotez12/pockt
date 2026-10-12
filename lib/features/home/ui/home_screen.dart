@@ -24,6 +24,8 @@ import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
+import 'package:pockt/features/loans/data/loans_repository.dart';
+import 'package:pockt/features/loans/ui/loans_screen.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
@@ -488,6 +490,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.only(top: 10),
           child: _buildPeriodLine(context, pLine),
         );
+      case 'loans':
+        return _buildLoansCard(context);
       case 'suggestions':
         if (_pendingSuggestions.isEmpty) return null;
         return Padding(
@@ -519,6 +523,232 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       default:
         return null;
     }
+  }
+
+  Widget? _buildLoansCard(BuildContext context) {
+    final colors = context.pockt;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final obscure = ref.watch(shouldObscureAmountsProvider);
+    final loansAsync = ref.watch(activeLoansWithProgressProvider);
+
+    return loansAsync.maybeWhen(
+      data: (loansWithProgress) {
+        if (loansWithProgress.isEmpty) return null;
+
+        int totalOwe = 0;
+        int totalLent = 0;
+        for (final item in loansWithProgress) {
+          if (item.loan.direction == LoanDirection.owe) {
+            totalOwe += item.progress.balance;
+          } else {
+            totalLent += item.progress.balance;
+          }
+        }
+
+        final dues = loansWithProgress
+            .where((item) => item.loan.dueDay != null)
+            .toList()
+          ..sort((a, b) => (a.progress.daysUntilNextDue ?? 99999)
+              .compareTo(b.progress.daysUntilNextDue ?? 99999));
+        final topDues = dues.take(3).toList();
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Pressable(
+            key: const ValueKey('home-loans-card'),
+            onTap: () {
+              Haptics.tick();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LoansScreen()),
+              );
+            },
+            child: GlassCard(
+              borderRadius: BorderRadius.circular(24),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: colors.brandAt(0).withValues(alpha: isDark ? 0.2 : 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            uiIcon('hand-coins'),
+                            size: 15,
+                            color: colors.brandAt(0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Préstamos y cuotas',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        uiIcon('caret-right'),
+                        size: 14,
+                        color: colors.textSecondary.withValues(alpha: 0.6),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      if (totalOwe > 0 || totalLent == 0)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Debés',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                obscure ? '••••' : formatGs(totalOwe),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.4,
+                                  color: colors.danger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (totalLent > 0)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Te deben',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                obscure ? '••••' : formatGs(totalLent),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.4,
+                                  color: colors.positive,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (topDues.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: colors.glassBorder),
+                    const SizedBox(height: 10),
+                    ...topDues.map((item) {
+                      final dueDays = item.progress.daysUntilNextDue;
+                      String dueBadge;
+                      Color badgeColor = colors.textSecondary;
+                      if (dueDays != null) {
+                        if (dueDays < 0) {
+                          dueBadge = 'Vencido';
+                          badgeColor = colors.danger;
+                        } else if (dueDays == 0) {
+                          dueBadge = 'Vence hoy';
+                          badgeColor = colors.warning;
+                        } else if (dueDays == 1) {
+                          dueBadge = 'Vence mañana';
+                          badgeColor = colors.warning;
+                        } else if (dueDays <= 5) {
+                          dueBadge = 'Vence en $dueDays días';
+                          badgeColor = colors.warning;
+                        } else {
+                          dueBadge = 'Día ${item.loan.dueDay}';
+                        }
+                      } else {
+                        dueBadge = 'Día ${item.loan.dueDay}';
+                      }
+
+                      final installment = item.loan.installmentAmount ?? item.progress.balance;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.loan.name,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: colors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                dueBadge,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: badgeColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              obscure ? '••••' : formatGs(installment),
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      orElse: () => null,
+    );
   }
 
   Widget _buildTopBar(BuildContext context) {

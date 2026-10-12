@@ -6,6 +6,7 @@ import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/backup/data/drive_backup_store.dart';
 import 'package:pockt/features/backup/data/key_storage.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
+import 'package:pockt/features/loans/domain/loan_reminders.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
@@ -49,6 +50,12 @@ void callbackDispatcher() {
 
       // 2. Reprogramar recordatorios según el estado actual
       await scheduler.reschedule(nowLocal: now);
+      await rescheduleLoanReminders(
+        db: db,
+        notifier: notifier,
+        settingsRepo: settingsRepo,
+        nowLocal: now,
+      );
 
       // 3. Actualizar widget de pantalla de inicio
       await HomeWidgetBridge.update(db: db, nowLocal: now);

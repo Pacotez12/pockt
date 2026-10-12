@@ -202,6 +202,14 @@ const Map<String, List<String>> kSeedCategoryKeywords = {
     'devolución',
     'devolucion',
   ],
+  'Préstamos': [
+    'préstamo',
+    'prestamo',
+    'cuota',
+    'deuda',
+    'interés',
+    'interes',
+  ],
 };
 
 /// Construye un mapa keyword -> categoryId a partir de las categorías dadas.

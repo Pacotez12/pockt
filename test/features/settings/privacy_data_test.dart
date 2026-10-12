@@ -104,7 +104,7 @@ void main() {
 
       expect(await db.select(db.transactions).get(), isNotEmpty);
       final categoriesBefore = await db.select(db.categories).get();
-      expect(categoriesBefore.length, 14); // 13 de fábrica + 1 personalizada
+      expect(categoriesBefore.length, 15); // 14 de fábrica + 1 personalizada
 
       // 2. Ejecutamos el borrado
       await db.wipeAllData();
@@ -113,9 +113,9 @@ void main() {
       final txsAfter = await db.select(db.transactions).get();
       expect(txsAfter, isEmpty);
 
-      // 4. Verificamos que solo quedaron las 13 categorías de fábrica
+      // 4. Verificamos que solo quedaron las 14 categorías de fábrica
       final categoriesAfter = await db.select(db.categories).get();
-      expect(categoriesAfter.length, 13);
+      expect(categoriesAfter.length, 14);
       expect(categoriesAfter.any((c) => c.id == customCatId), isFalse);
       expect(categoriesAfter.any((c) => c.name == 'Comida'), isTrue);
     });

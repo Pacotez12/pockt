@@ -5,6 +5,7 @@ import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/budgets/domain/budget_status.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
+import 'package:pockt/features/loans/domain/loan_progress.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:uuid/uuid.dart';
 
@@ -76,6 +77,7 @@ class TransactionsRepository {
     required DateTime occurredAt,
     String? merchant,
     String? note,
+    String? loanId,
   }) async {
     if (amount <= 0) {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
@@ -97,11 +99,30 @@ class TransactionsRepository {
               source: TxSource.manual,
               merchant: Value(merchant),
               note: Value(note),
+              loanId: Value(loanId),
             ),
           );
 
       if (merchant != null && merchant.trim().isNotEmpty) {
         await _upsertMerchantMemory(merchant, categoryId, occurredAt.toUtc());
+      }
+
+      if (loanId != null) {
+        final loan = await (db.select(db.loans)..where((l) => l.id.equals(loanId))).getSingleOrNull();
+        if (loan != null && loan.closedAt == null) {
+          final allPayments = await (db.select(db.transactions)
+                ..where((t) => t.loanId.equals(loanId) & t.deletedAt.isNull()))
+              .get();
+          final progress = calculateLoanProgress(loan: loan, payments: allPayments, now: occurredAt);
+          if (progress.balance <= 0) {
+            await (db.update(db.loans)..where((l) => l.id.equals(loanId))).write(
+              LoansCompanion(
+                closedAt: Value(occurredAt),
+                updatedAt: Value(now),
+              ),
+            );
+          }
+        }
       }
 
       return id;
@@ -147,6 +168,8 @@ class TransactionsRepository {
     DateTime? occurredAt,
     String? merchant,
     String? note,
+    String? loanId,
+    bool clearLoanId = false,
   }) async {
     if (amount != null && amount <= 0) {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
@@ -159,6 +182,7 @@ class TransactionsRepository {
         occurredAt: occurredAt != null ? Value(occurredAt.toUtc()) : const Value.absent(),
         merchant: merchant != null ? Value(merchant) : const Value.absent(),
         note: note != null ? Value(note) : const Value.absent(),
+        loanId: clearLoanId ? const Value(null) : (loanId != null ? Value(loanId) : const Value.absent()),
         updatedAt: Value(_now()),
       );
 

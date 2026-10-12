@@ -13,6 +13,7 @@ import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/backup/ui/backup_screen.dart';
 import 'package:pockt/features/home/ui/home_cards_screen.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
+import 'package:pockt/features/loans/ui/loans_screen.dart';
 import 'package:pockt/features/recurring/ui/recurring_screen.dart';
 import 'package:pockt/features/reminders/ui/reminders_screen.dart';
 import 'package:pockt/features/security/app_lock.dart';
@@ -173,6 +174,22 @@ class SettingsScreen extends ConsumerWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const RecurringScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    key: const ValueKey('settings-loans-tile'),
+                    icon: 'hand-coins',
+                    title: 'Préstamos y cuotas',
+                    subtitle: 'Deudas, cuotas y préstamos otorgados',
+                    iconColor: colors.brandAt(0),
+                    onTap: () {
+                      Haptics.tick();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LoansScreen(),
                         ),
                       );
                     },

@@ -38,6 +38,8 @@ class HomeCardItem {
     switch (id) {
       case 'period':
         return 'Quincena y cobros';
+      case 'loans':
+        return 'Préstamos y cuotas';
       case 'suggestions':
         return 'Sugerencias';
       case 'calendar':
@@ -51,6 +53,7 @@ class HomeCardItem {
 
   static List<HomeCardItem> defaultCards() => const [
         HomeCardItem(id: 'period', label: 'Quincena y cobros', visible: true),
+        HomeCardItem(id: 'loans', label: 'Préstamos y cuotas', visible: true),
         HomeCardItem(id: 'suggestions', label: 'Sugerencias', visible: true),
         HomeCardItem(id: 'calendar', label: 'Calendario de calor', visible: true),
         HomeCardItem(id: 'recent', label: 'Últimos movimientos', visible: true),
