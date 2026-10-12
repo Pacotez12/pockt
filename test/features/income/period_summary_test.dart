@@ -331,6 +331,27 @@ void main() {
       expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 16)), 2100000);
     });
 
+    test('descuentos mayores que el cobro de fin de mes no rompen el Inicio (usa el bruto)', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[95, 5]',
+        monthlyAmount: 4000000,
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+      const deductions = [
+        SalaryDeductionItem(name: 'Préstamo', kind: 'fixed', value: 400000),
+      ];
+      // 5 % de 4.000.000 = 200.000 < 400.000 de descuentos.
+      expect(
+        expectedAmountForPeriod(schedule, DateTime(2026, 10, 9), deductions: deductions),
+        200000,
+      );
+    });
+
     test('quedan estimado usa el neto con descuentos', () {
       final schedule = IncomeSchedule(
         id: 'sched-1',

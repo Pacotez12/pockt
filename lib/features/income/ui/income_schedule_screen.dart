@@ -179,6 +179,19 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
         ? [_splitPercent1, 100 - _splitPercent1]
         : const [100];
 
+    if (_monthlyAmount != null) {
+      try {
+        netPayAmounts(_monthlyAmount!, splits, _deductions);
+      } on ArgumentError {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Los descuentos superan el cobro de fin de mes. Ajustá el sueldo, el reparto o los descuentos.'),
+          ),
+        );
+        return;
+      }
+    }
+
     await repo.setSchedule(
       mode: _mode,
       payDays: _payDays,

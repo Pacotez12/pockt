@@ -75,7 +75,7 @@ int? expectedAmountForPeriod(
     schedule.paySplitPercents,
     count: payDays.length,
   );
-  final splitList = netPayAmounts(schedule.monthlyAmount!, splits, deductions);
+  final splitList = safeNetPayAmounts(schedule.monthlyAmount!, splits, deductions);
   final prevWindow = previousPayWindow(todayLocal, payDays, rules);
   if (prevWindow == null) return null;
 

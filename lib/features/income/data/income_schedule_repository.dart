@@ -165,7 +165,7 @@ class IncomeScheduleRepository {
 
           final int amount;
           if (actualMonthlyAmount != null && matchIndex != null) {
-            final netList = netPayAmounts(
+            final netList = safeNetPayAmounts(
               actualMonthlyAmount,
               splits,
               deductions ?? const [],
