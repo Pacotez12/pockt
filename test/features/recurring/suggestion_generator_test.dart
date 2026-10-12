@@ -257,5 +257,49 @@ void main() {
     final sugs = await db.select(db.suggestedTransactions).get();
     expect(sugs.first.amount, 0);
   });
-}
 
+  test('el cobro de fin de mes sugerido descuenta los descuentos del sueldo', () async {
+    await db.into(db.incomeSchedules).insert(
+          IncomeSchedulesCompanion.insert(
+            id: 'sched-neto',
+            mode: 'biweekly',
+            payDays: jsonEncode([15, -1]),
+            payDayRules: jsonEncode(['previous', 'previous']),
+            monthlyAmount: const Value(4000000),
+            paySplitPercents: jsonEncode([30, 70]),
+            categoryId: sueldoId,
+            effectiveFrom: DateTime(2026, 10, 1),
+          ),
+        );
+    await db.into(db.salaryDeductions).insert(
+          SalaryDeductionsCompanion.insert(
+            id: 'ded-ips',
+            scheduleId: 'sched-neto',
+            name: 'IPS',
+            kind: 'percent',
+            value: 900,
+          ),
+        );
+    await db.into(db.salaryDeductions).insert(
+          SalaryDeductionsCompanion.insert(
+            id: 'ded-seguro',
+            scheduleId: 'sched-neto',
+            name: 'Seguro',
+            kind: 'fixed',
+            value: 40000,
+          ),
+        );
+
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 31),
+    );
+    await generator.run();
+
+    final sugs = await (db.select(db.suggestedTransactions)
+          ..orderBy([(t) => OrderingTerm.asc(t.occurredAt)]))
+        .get();
+    expect(sugs.map((s) => s.amount).toList(), [1200000, 2400000]);
+  });
+}

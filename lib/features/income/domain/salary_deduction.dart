@@ -114,3 +114,18 @@ List<int> netPayAmounts(
     lastNet,
   ];
 }
+
+/// Como [netPayAmounts], pero si los descuentos dejan el último cobro en
+/// negativo devuelve el reparto bruto en vez de lanzar (para pantallas y
+/// tareas que no pueden fallar).
+List<int> safeNetPayAmounts(
+  int gross,
+  List<int> splitPercents,
+  Iterable<SalaryDeductionLike> deductions,
+) {
+  try {
+    return netPayAmounts(gross, splitPercents, deductions);
+  } on ArgumentError {
+    return splitAmounts(gross, splitPercents.isEmpty ? const [100] : splitPercents);
+  }
+}

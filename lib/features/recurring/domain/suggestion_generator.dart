@@ -7,6 +7,7 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/income/domain/pay_split.dart';
+import 'package:pockt/features/income/domain/salary_deduction.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/domain/recurrence.dart';
 
@@ -136,9 +137,15 @@ class SuggestionGenerator {
           currentSchedule.paySplitPercents,
           count: payDaysList.length,
         );
-        final splitAmountsList = currentSchedule.monthlyAmount != null
-            ? splitAmounts(currentSchedule.monthlyAmount!, splits)
-            : List.filled(payDaysList.length, 0);
+        final deductions = await (_db.select(_db.salaryDeductions)
+              ..where((d) => d.scheduleId.equals(currentSchedule.id)))
+            .get();
+        final monthly = currentSchedule.monthlyAmount;
+        // Neto: los descuentos se restan del cobro de fin de mes (spec §7b);
+        // si los descuentos superan ese cobro se sugiere el bruto.
+        final splitAmountsList = monthly == null
+            ? List.filled(payDaysList.length, 0)
+            : safeNetPayAmounts(monthly, splits, deductions);
 
         final payDaysToCreate = <({DateTime date, int amount})>[];
         var curYear = startDate.year;
