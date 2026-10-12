@@ -237,6 +237,9 @@ Reglas complementarias: en gráficos de Evolución los gastos van en marca y los
 
 ## 7. Backup, restauración y seguridad
 
+> **Decisión 2026-10-11 (autor): eliminar la integración con Google Drive.** No se configura Google Cloud ni se usa `google_sign_in`/`googleapis`. Pendiente de diseñar el reemplazo (por ejemplo backup `.pockt` cifrado guardado o compartido como archivo local y restauración desde archivo); hasta entonces el código de Drive queda sin conectar y se elimina en un plan propio.
+
+
 ### 7.1 Backup
 - Login con Google (`google_sign_in`) con el scope mínimo `drive.file`. Proyecto de Google Cloud en modo "en pruebas" con el autor como único usuario de prueba.
 - La app crea la carpeta visible **"Pockt · Backups"** en el primer backup. Si se borra a mano, la recrea en el siguiente.
