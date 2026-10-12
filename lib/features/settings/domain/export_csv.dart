@@ -39,20 +39,20 @@ String generateTransactionsCsv(List<TxView> items) {
 Future<void> exportAndShareCsv(
   List<TxView> items, {
   Future<ShareResult> Function(List<XFile> files)? shareFn,
+  Future<Directory> Function() tempDirectory = getTemporaryDirectory,
 }) async {
   final csvContent = generateTransactionsCsv(items);
-  final tempDir = await getTemporaryDirectory();
+  final tempDir = await tempDirectory();
   final filePath = '${tempDir.path}/pockt_movimientos.csv';
   final file = File(filePath);
   await file.writeAsString(csvContent, encoding: utf8);
 
   final xFile = XFile(filePath, mimeType: 'text/csv', name: 'pockt_movimientos.csv');
   if (shareFn != null) {
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [xFile],
-        text: 'Movimientos de Pockt',
-      ),
-    );
+    await shareFn([xFile]);
+    return;
   }
+  await SharePlus.instance.share(
+    ShareParams(files: [xFile], text: 'Movimientos de Pockt'),
+  );
 }
