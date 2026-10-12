@@ -12,6 +12,7 @@ import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
 /// Punto de entrada top-level ejecutado en segundo plano por Workmanager.
@@ -19,6 +20,8 @@ import 'package:workmanager/workmanager.dart';
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
+      // El isolate de fondo no comparte la base de zonas cargada en main().
+      tz.initializeTimeZones();
       await initLocalZone();
       final db = AppDatabase();
       final settingsRepo = SettingsRepository(db);
