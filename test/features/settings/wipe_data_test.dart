@@ -129,6 +129,13 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
+    await tester.tap(find.text('Privacidad y datos'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.scrollUntilVisible(
+      find.text('Borrar todos los datos'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('Borrar todos los datos'));
     await tester.pump(const Duration(milliseconds: 300));
 

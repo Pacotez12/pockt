@@ -146,6 +146,9 @@ void main() {
     testWidgets('muestra acceso Préstamos y cuotas bajo Tu dinero y navega', (tester) async {
       await tester.pumpWidget(createTestWidget(const SettingsScreen()));
       await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Tu dinero'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
       expect(find.byKey(const ValueKey('settings-loans-tile')), findsOneWidget);
       expect(find.text('Préstamos y cuotas'), findsOneWidget);

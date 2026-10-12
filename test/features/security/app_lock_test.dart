@@ -238,6 +238,8 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Privacidad y datos'));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.scrollUntilVisible(
         find.text('Bloqueo con huella'),
         200,

@@ -70,93 +70,85 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('SettingsScreen lista las cinco secciones y todas las filas principales', (tester) async {
+  Future<void> openSection(WidgetTester tester, String title) async {
+    await tester.tap(find.text(title));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> goBack(WidgetTester tester) async {
+    await tester.tap(find.bySemanticsLabel('Volver').last);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('la portada de Ajustes muestra solo las cinco secciones', (tester) async {
     await pumpSettingsScreen(tester);
 
     expect(find.text('Ajustes'), findsOneWidget);
+    for (final t in ['Tu dinero', 'Carga', 'Inicio y apariencia', 'Avisos', 'Privacidad y datos']) {
+      expect(find.text(t), findsOneWidget);
+    }
+    // Las opciones viven dentro de cada sección, no en la portada.
+    expect(find.text('Tecla rápida'), findsNothing);
+    expect(find.text('Borrar todos los datos'), findsNothing);
+  });
 
-    // Secciones
-    expect(find.text('Tu dinero'), findsOneWidget);
-    expect(find.text('Carga'), findsOneWidget);
-    expect(find.text('Inicio y apariencia'), findsOneWidget);
-    expect(find.text('Avisos'), findsOneWidget);
-    expect(find.text('Privacidad y datos'), findsOneWidget);
-
-    // Filas
-    expect(find.text('Esquema de cobro'), findsOneWidget);
-    expect(find.text('Inicio del mes'), findsOneWidget);
-    expect(find.text('Categorías'), findsOneWidget);
-    expect(find.text('Recurrentes'), findsOneWidget);
-
-    expect(find.text('Orden de categorías'), findsOneWidget);
-    expect(find.text('Tecla rápida'), findsOneWidget);
-    expect(find.text('Pedir nota al guardar'), findsOneWidget);
-    expect(find.text('Vibración'), findsOneWidget);
-
-    expect(find.text('Apariencia'), findsOneWidget);
-    expect(find.text('Tarjetas del Inicio'), findsOneWidget);
-    expect(find.text('Movimientos recientes'), findsOneWidget);
-    expect(find.text('Resplandor aurora'), findsOneWidget);
-    expect(find.text('Aurora reacciona al presupuesto'), findsOneWidget);
-    expect(find.text('La semana empieza'), findsOneWidget);
-    expect(find.text('Reducir animaciones'), findsOneWidget);
-
-    expect(find.text('Recordatorios'), findsOneWidget);
-    expect(find.text('Alertas de presupuesto'), findsOneWidget);
-    expect(find.text('Umbral de advertencia'), findsOneWidget);
-    expect(find.text('Umbral de límite'), findsOneWidget);
-
-    expect(find.text('Bloqueo con huella'), findsOneWidget);
-    expect(find.text('Tiempo hasta bloquear'), findsOneWidget);
-    expect(find.text('Ocultar montos'), findsOneWidget);
-    expect(find.text('Copia de seguridad'), findsOneWidget);
-    expect(find.text('Exportar a CSV'), findsOneWidget);
-    expect(find.text('Borrar todos los datos'), findsOneWidget);
-    expect(find.text('Acerca de Pockt'), findsOneWidget);
+  testWidgets('cada sección abre su pantalla con todas sus filas', (tester) async {
+    await pumpSettingsScreen(tester);
+    const sections = {
+      'Tu dinero': ['Esquema de cobro', 'Inicio del mes', 'Categorías', 'Recurrentes', 'Préstamos y cuotas'],
+      'Carga': ['Orden de categorías', 'Tecla rápida', 'Pedir nota al guardar', 'Vibración'],
+      'Inicio y apariencia': ['Apariencia', 'Tarjetas del Inicio', 'Movimientos recientes', 'Resplandor aurora',
+          'Aurora reacciona al presupuesto', 'La semana empieza', 'Reducir animaciones'],
+      'Avisos': ['Recordatorios', 'Alertas de presupuesto', 'Umbral de advertencia', 'Umbral de límite'],
+      'Privacidad y datos': ['Bloqueo con huella', 'Tiempo hasta bloquear', 'Ocultar montos', 'Copia de seguridad',
+          'Exportar a CSV', 'Borrar todos los datos', 'Acerca de Pockt'],
+    };
+    for (final entry in sections.entries) {
+      await openSection(tester, entry.key);
+      for (final row in entry.value) {
+        expect(find.text(row), findsOneWidget, reason: '${entry.key} → $row');
+      }
+      await goBack(tester);
+    }
   });
 
   testWidgets('tocar Categorías navega a CategoryKeywordsScreen', (tester) async {
     await pumpSettingsScreen(tester);
-
+    await openSection(tester, 'Tu dinero');
     await tester.tap(find.text('Categorías'));
     await tester.pumpAndSettle();
-
     expect(find.byType(CategoryKeywordsScreen), findsOneWidget);
   });
 
   testWidgets('tocar Esquema de cobro navega a IncomeScheduleScreen', (tester) async {
     await pumpSettingsScreen(tester);
-
+    await openSection(tester, 'Tu dinero');
     await tester.tap(find.text('Esquema de cobro'));
     await tester.pumpAndSettle();
-
     expect(find.byType(IncomeScheduleScreen), findsOneWidget);
   });
 
   testWidgets('tocar Recurrentes navega a RecurringScreen', (tester) async {
     await pumpSettingsScreen(tester);
-
+    await openSection(tester, 'Tu dinero');
     await tester.tap(find.text('Recurrentes'));
     await tester.pumpAndSettle();
-
     expect(find.byType(RecurringScreen), findsOneWidget);
   });
 
   testWidgets('tocar Apariencia navega a AppearanceScreen', (tester) async {
     await pumpSettingsScreen(tester);
-
+    await openSection(tester, 'Inicio y apariencia');
     await tester.tap(find.text('Apariencia'));
     await tester.pumpAndSettle();
-
     expect(find.byType(AppearanceScreen), findsOneWidget);
   });
 
   testWidgets('tocar Tarjetas del Inicio navega a HomeCardsScreen', (tester) async {
     await pumpSettingsScreen(tester);
-
+    await openSection(tester, 'Inicio y apariencia');
     await tester.tap(find.text('Tarjetas del Inicio'));
     await tester.pumpAndSettle();
-
     expect(find.byType(HomeCardsScreen), findsOneWidget);
   });
 
@@ -179,62 +171,41 @@ void main() {
     }
   });
 
-  testWidgets('SettingsScreen organiza las secciones con brandAt en encabezados e íconos', (tester) async {
+  testWidgets('SettingsScreen organiza las secciones con brandAt en íconos', (tester) async {
     await pumpSettingsScreen(tester);
+    final c = PocktColors.dark;
 
-    final darkColors = PocktColors.dark;
+    Color iconColorOf(String key) {
+      final tile = find.byKey(ValueKey(key));
+      return tester.widget<Icon>(find.descendant(of: tile, matching: find.byType(Icon)).first).color!;
+    }
 
-    // Encabezados de sección con brandAt
-    final tuDineroText = tester.widget<Text>(find.text('Tu dinero'));
-    expect(tuDineroText.style?.color, equals(darkColors.brandAt(0)));
+    expect(iconColorOf('settings-section-money'), c.brandAt(0));
+    expect(iconColorOf('settings-section-entry'), c.brandAt(1));
+    expect(iconColorOf('settings-section-home'), c.brandAt(2));
+    expect(iconColorOf('settings-section-alerts'), c.brandAt(3));
+    expect(iconColorOf('settings-section-privacy'), c.brandAt(3));
 
-    final cargaText = tester.widget<Text>(find.text('Carga'));
-    expect(cargaText.style?.color, equals(darkColors.brandAt(1)));
+    await openSection(tester, 'Tu dinero');
+    expect(iconColorOf('settings-categories-tile'), c.brandAt(0));
+    expect(iconColorOf('settings-income-schedule-tile'), c.brandAt(0));
+    expect(iconColorOf('settings-recurring-tile'), c.brandAt(0));
+    await goBack(tester);
 
-    final inicioAparienciaText = tester.widget<Text>(find.text('Inicio y apariencia'));
-    expect(inicioAparienciaText.style?.color, equals(darkColors.brandAt(2)));
+    await openSection(tester, 'Carga');
+    expect(iconColorOf('settings-quick-key'), c.brandAt(1));
+    await goBack(tester);
 
-    final avisosText = tester.widget<Text>(find.text('Avisos'));
-    expect(avisosText.style?.color, equals(darkColors.brandAt(3)));
+    await openSection(tester, 'Inicio y apariencia');
+    expect(iconColorOf('settings-appearance-tile'), c.brandAt(2));
+    await goBack(tester);
 
-    final privacidadText = tester.widget<Text>(find.text('Privacidad y datos'));
-    expect(privacidadText.style?.color, equals(darkColors.brandAt(3)));
+    await openSection(tester, 'Avisos');
+    expect(iconColorOf('settings-reminders-tile'), c.brandAt(3));
+    await goBack(tester);
 
-    // Íconos por sección
-    // Categorías: brandAt(0)
-    final catTile = find.byKey(const ValueKey('settings-categories-tile'));
-    final catIcon = tester.widget<Icon>(find.descendant(of: catTile, matching: find.byType(Icon)).first);
-    expect(catIcon.color, equals(darkColors.brandAt(0)));
-
-    // Esquema de cobro: brandAt(0)
-    final incomeTile = find.byKey(const ValueKey('settings-income-schedule-tile'));
-    final incomeIcon = tester.widget<Icon>(find.descendant(of: incomeTile, matching: find.byType(Icon)).first);
-    expect(incomeIcon.color, equals(darkColors.brandAt(0)));
-
-    // Recurrentes: brandAt(0)
-    final recTile = find.byKey(const ValueKey('settings-recurring-tile'));
-    final recIcon = tester.widget<Icon>(find.descendant(of: recTile, matching: find.byType(Icon)).first);
-    expect(recIcon.color, equals(darkColors.brandAt(0)));
-
-    // Carga: brandAt(1)
-    final quickKeyTile = find.byKey(const ValueKey('settings-quick-key'));
-    final quickKeyIcon = tester.widget<Icon>(find.descendant(of: quickKeyTile, matching: find.byType(Icon)).first);
-    expect(quickKeyIcon.color, equals(darkColors.brandAt(1)));
-
-    // Apariencia: brandAt(2)
-    final appTile = find.byKey(const ValueKey('settings-appearance-tile'));
-    final appIcon = tester.widget<Icon>(find.descendant(of: appTile, matching: find.byType(Icon)).first);
-    expect(appIcon.color, equals(darkColors.brandAt(2)));
-
-    // Recordatorios: brandAt(3)
-    final remTile = find.byKey(const ValueKey('settings-reminders-tile'));
-    final remIcon = tester.widget<Icon>(find.descendant(of: remTile, matching: find.byType(Icon)).first);
-    expect(remIcon.color, equals(darkColors.brandAt(3)));
-
-    // Copia de seguridad: brandAt(3) cuando no está atrasada
-    final backupTile = find.byKey(const ValueKey('settings-backup-tile'));
-    final backupIcon = tester.widget<Icon>(find.descendant(of: backupTile, matching: find.byType(Icon)).first);
-    expect(backupIcon.color, equals(darkColors.brandAt(3)));
+    await openSection(tester, 'Privacidad y datos');
+    expect(iconColorOf('settings-backup-tile'), c.brandAt(3));
   });
 
   testWidgets('Copia de seguridad muestra color warning cuando el backup está atrasado', (tester) async {
@@ -244,6 +215,7 @@ void main() {
     await settingsRepo.set(SettingsKeys.backupLastSuccessAt, tenDaysAgo);
 
     await pumpSettingsScreen(tester);
+    await openSection(tester, 'Privacidad y datos');
 
     final backupTile = find.byKey(const ValueKey('settings-backup-tile'));
     final backupIcon = tester.widget<Icon>(find.descendant(of: backupTile, matching: find.byType(Icon)).first);
@@ -255,41 +227,56 @@ void main() {
     await pumpSettingsScreen(tester);
 
     // 1. Tecla rápida a '00'
+    await openSection(tester, 'Carga');
     await tester.tap(find.text('00'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.entryQuickKey), equals('00'));
 
     // 2. Movimientos recientes a '10'
+    await goBack(tester);
+    await openSection(tester, 'Inicio y apariencia');
     await tester.tap(find.text('10'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.homeRecentCount), equals('10'));
 
     // 3. Inicio del mes a 'Desde el cobro'
+    await goBack(tester);
+    await openSection(tester, 'Tu dinero');
     await tester.tap(find.text('Desde el cobro'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.periodMonthStart), equals('payday'));
 
     // 4. La semana empieza a 'Domingo'
+    await goBack(tester);
+    await openSection(tester, 'Inicio y apariencia');
     await tester.tap(find.text('Domingo'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.calendarWeekStart), equals('sunday'));
 
     // 5. Umbral de advertencia a '90 %'
+    await goBack(tester);
+    await openSection(tester, 'Avisos');
     await tester.tap(find.text('90 %'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.budgetAlertLow), equals('90'));
 
     // 6. Tiempo hasta bloquear a '5 min'
+    await goBack(tester);
+    await openSection(tester, 'Privacidad y datos');
     await tester.tap(find.text('5 min'));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.securityLockAfter), equals('5'));
 
     // 7. Switch de pedir nota
+    await goBack(tester);
+    await openSection(tester, 'Carga');
     await tester.tap(find.byKey(const ValueKey('settings-ask-note-switch')));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.entryAskNote), equals('true'));
 
     // 8. Switch de ocultar montos
+    await goBack(tester);
+    await openSection(tester, 'Privacidad y datos');
     await tester.tap(find.byKey(const ValueKey('settings-hide-amounts-switch')));
     await tester.pumpAndSettle();
     expect(await settingsRepo.get(SettingsKeys.privacyHideAmounts), equals('true'));
