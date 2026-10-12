@@ -39,32 +39,40 @@ void main() {
 
     expect(PocktColors.dark.heat, [
       const Color(0x0DFFFFFF),
-      const Color(0x38FF8A3D),
-      const Color(0x73FF7053),
-      const Color(0xB8FF5769),
+      const Color(0xFF55263A),
+      const Color(0xFF94344D),
+      const Color(0xFFDA534F),
       const Color(0xFFFF3D7F),
     ]);
 
     expect(PocktColors.light.heat, [
       const Color(0x0D000000),
-      const Color(0x38FF8A3D),
-      const Color(0x73FF7053),
-      const Color(0xB8FF5769),
+      const Color(0xFFFFE0DA),
+      const Color(0xFFFFBDB7),
+      const Color(0xFFF98E8F),
       const Color(0xFFFF3D7F),
     ]);
   });
 
-  test('la escala heat de cada tema sale de la marca (mismo matiz que brandAt)', () {
-    for (var i = 1; i <= 4; i++) {
-      final darkHeatHue = HSVColor.fromColor(PocktColors.dark.heat[i]).hue;
-      final darkBrandHue = HSVColor.fromColor(PocktColors.dark.brandAt(i - 1)).hue;
-      expect((darkHeatHue - darkBrandHue).abs(), lessThan(0.1),
-          reason: 'heat[$i] oscuro (${PocktColors.dark.heat[i]}) no tiene el mismo matiz que brandAt(${i - 1})');
-
-      final lightHeatHue = HSVColor.fromColor(PocktColors.light.heat[i]).hue;
-      final lightBrandHue = HSVColor.fromColor(PocktColors.light.brandAt(i - 1)).hue;
-      expect((lightHeatHue - lightBrandHue).abs(), lessThan(0.1),
-          reason: 'heat[$i] claro (${PocktColors.light.heat[i]}) no tiene el mismo matiz que brandAt(${i - 1})');
+  test('la escala heat es opaca, de la familia de la marca y sube de luminosidad', () {
+    for (final (name, colors, rising) in [
+      ('oscuro', PocktColors.dark, true),
+      ('claro', PocktColors.light, false),
+    ]) {
+      double? prev;
+      for (var i = 1; i <= 4; i++) {
+        final c = colors.heat[i];
+        expect(c.a, 1.0, reason: '$name heat[$i] debe ser opaco (no marrón sobre el fondo)');
+        final hue = HSVColor.fromColor(c).hue;
+        expect(hue >= 330 || hue <= 30, isTrue,
+            reason: '$name heat[$i] ($c) fuera de la familia rosa-coral de la marca');
+        final l = c.computeLuminance();
+        if (prev != null) {
+          expect(rising ? l > prev : l < prev, isTrue,
+              reason: '$name heat[$i] debe ${rising ? 'aclarar' : 'oscurecer'} respecto del anterior');
+        }
+        prev = l;
+      }
     }
   });
 

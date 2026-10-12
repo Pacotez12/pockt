@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/motion.dart';
@@ -236,10 +237,12 @@ class HeatCalendarDayCell extends StatelessWidget {
     final Color textColor;
     if (isFuture) {
       textColor = colors.textTertiary.withValues(alpha: 0.35);
-    } else if (level == 4) {
-      textColor = Colors.black;
-    } else if (isDark && level == 3) {
-      textColor = Colors.white;
+    } else if (level >= 1) {
+      // Número en blanco o negro según cuál contraste más con el fondo de la celda.
+      final bg = level == 4 ? colors.brandStart : colors.heat[level];
+      textColor = _contrast(Colors.white, bg) >= _contrast(Colors.black, bg)
+          ? Colors.white
+          : Colors.black;
     } else {
       textColor = isDark
           ? colors.textPrimary.withValues(alpha: 0.85)
@@ -356,4 +359,9 @@ class _DashedBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
       color != oldDelegate.color;
+}
+
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance(), lb = b.computeLuminance();
+  return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);
 }

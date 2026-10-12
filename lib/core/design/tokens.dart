@@ -60,11 +60,14 @@ class PocktColors extends ThemeExtension<PocktColors> {
     warning: const Color(0xFFF7B83D),
     danger: const Color(0xFFF4514F),
     sheetSurface: const Color(0xFF18181B),
+    // Escala del calendario (OKLCH): la luminosidad sube nivel a nivel y el
+    // matiz va de rosa oscuro a coral; opacos para no volverse marrón sobre
+    // el negro. El nivel 4 se pinta con el degradé de marca.
     heat: const [
       Color(0x0DFFFFFF),
-      Color(0x38FF8A3D),
-      Color(0x73FF7053),
-      Color(0xB8FF5769),
+      Color(0xFF55263A),
+      Color(0xFF94344D),
+      Color(0xFFDA534F),
       Color(0xFFFF3D7F),
     ],
     brandRamp: defaultBrandRamp,
@@ -86,9 +89,9 @@ class PocktColors extends ThemeExtension<PocktColors> {
     sheetSurface: const Color(0xFFFFFFFF),
     heat: const [
       Color(0x0D000000),
-      Color(0x38FF8A3D),
-      Color(0x73FF7053),
-      Color(0xB8FF5769),
+      Color(0xFFFFE0DA),
+      Color(0xFFFFBDB7),
+      Color(0xFFF98E8F),
       Color(0xFFFF3D7F),
     ],
     brandRamp: defaultBrandRamp,
