@@ -60,6 +60,9 @@ class Transactions extends Table {
   TextColumn get recurringRuleId => text().nullable()();
   TextColumn get suggestionId => text().nullable()();
   TextColumn get loanId => text().nullable().references(Loans, #id)();
+
+  /// Pago extra / adelanto de un préstamo (no cuenta como cuota regular).
+  BoolColumn get isExtra => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override
@@ -77,7 +80,8 @@ class SuggestedTransactions extends Table {
   TextColumn get source => textEnum<TxSource>()();
   TextColumn get sourceRef => text().nullable()();
   TextColumn get status => text()();
-  TextColumn get transactionId => text().nullable().references(Transactions, #id)();
+  TextColumn get transactionId =>
+      text().nullable().references(Transactions, #id)();
   TextColumn get rawText => text().nullable()();
   TextColumn get fingerprint => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -87,8 +91,8 @@ class SuggestedTransactions extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {source, sourceRef, occurredAt},
-      ];
+    {source, sourceRef, occurredAt},
+  ];
 }
 
 class RecurringRules extends Table {
@@ -174,8 +178,8 @@ class CategoryKeywords extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {categoryId, keyword},
-      ];
+    {categoryId, keyword},
+  ];
 }
 
 class MerchantMemory extends Table {

@@ -78,6 +78,8 @@ void main() {
         source: TxSource.manual,
         currency: 'PYG',
         loanId: 'loan-1',
+        isExtra: false,
+        note: 'incluye extra por mora',
       );
 
       final reminder = planLoanReminder(
@@ -121,6 +123,7 @@ void main() {
         currency: 'PYG',
         loanId: 'loan-1',
         note: 'Pago extra adelanto',
+        isExtra: true,
       );
 
       final reminder = planLoanReminder(

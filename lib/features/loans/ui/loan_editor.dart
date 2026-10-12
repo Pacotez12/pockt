@@ -46,7 +46,9 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
   }
 
   Future<void> _loadExistingLoan() async {
-    final loan = await ref.read(loansRepositoryProvider).getLoan(widget.loanId!);
+    final loan = await ref
+        .read(loansRepositoryProvider)
+        .getLoan(widget.loanId!);
     if (loan == null || !mounted) return;
 
     setState(() {
@@ -82,7 +84,9 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
 
   void _recalculateTotalIfNeeded() {
     if (!_calculateFromInstallments) return;
-    final instAmount = int.tryParse(_installmentAmountController.text.replaceAll('.', '').trim());
+    final instAmount = int.tryParse(
+      _installmentAmountController.text.replaceAll('.', '').trim(),
+    );
     final count = int.tryParse(_installmentsTotalController.text.trim());
     if (instAmount != null && count != null && count > 0) {
       final total = instAmount * count;
@@ -93,21 +97,24 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresá un nombre')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Ingresá un nombre')));
       return;
     }
 
-    final totalAmount = int.tryParse(_totalAmountController.text.replaceAll('.', '').trim());
+    final totalAmount = int.tryParse(
+      _totalAmountController.text.replaceAll('.', '').trim(),
+    );
     if (totalAmount == null || totalAmount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresá un monto válido')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ingresá un monto válido')));
       return;
     }
 
-    final instAmount = int.tryParse(_installmentAmountController.text.replaceAll('.', '').trim());
+    final instAmount = int.tryParse(
+      _installmentAmountController.text.replaceAll('.', '').trim(),
+    );
     final instTotal = int.tryParse(_installmentsTotalController.text.trim());
     final dueDay = int.tryParse(_dueDayController.text.trim());
 
@@ -151,9 +158,8 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -219,7 +225,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
               // Nombre y contraparte
               GlassCard(
                 padding: const EdgeInsets.all(16),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(PocktRadii.xl),
                 child: Column(
                   children: [
                     TextField(
@@ -228,7 +234,9 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                       decoration: InputDecoration(
                         labelText: 'Nombre o concepto',
                         labelStyle: TextStyle(color: colors.textSecondary),
-                        hintText: _kind == LoanKind.installments ? 'Ej: Heladera, Celular' : 'Ej: Préstamo personal',
+                        hintText: _kind == LoanKind.installments
+                            ? 'Ej: Heladera, Celular'
+                            : 'Ej: Préstamo personal',
                         hintStyle: TextStyle(color: colors.textTertiary),
                         border: InputBorder.none,
                       ),
@@ -238,9 +246,13 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                       controller: _counterpartyController,
                       style: TextStyle(color: colors.textPrimary, fontSize: 16),
                       decoration: InputDecoration(
-                        labelText: _direction == LoanDirection.owe ? 'Acreedor / Comercio (opcional)' : 'Prestatario (opcional)',
+                        labelText: _direction == LoanDirection.owe
+                            ? 'Acreedor / Comercio (opcional)'
+                            : 'Prestatario (opcional)',
                         labelStyle: TextStyle(color: colors.textSecondary),
-                        hintText: _direction == LoanDirection.owe ? 'Ej: Bristol, Banco' : 'Ej: Juan, Mamá',
+                        hintText: _direction == LoanDirection.owe
+                            ? 'Ej: Bristol, Banco'
+                            : 'Ej: Juan, Mamá',
                         hintStyle: TextStyle(color: colors.textTertiary),
                         border: InputBorder.none,
                       ),
@@ -253,7 +265,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
               // Montos y cuotas
               GlassCard(
                 padding: const EdgeInsets.all(16),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(PocktRadii.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -289,13 +301,24 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                             child: TextField(
                               controller: _installmentAmountController,
                               keyboardType: TextInputType.number,
-                              style: TextStyle(color: colors.textPrimary, fontSize: 16),
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Monto de cuota',
-                                labelStyle: TextStyle(color: colors.textSecondary),
+                                labelStyle: TextStyle(
+                                  color: colors.textSecondary,
+                                ),
                                 prefixText: '₲ ',
-                                prefixStyle: TextStyle(color: colors.textPrimary),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixStyle: TextStyle(
+                                  color: colors.textPrimary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    PocktRadii.m,
+                                  ),
+                                ),
                               ),
                               onChanged: (_) => _recalculateTotalIfNeeded(),
                             ),
@@ -305,11 +328,20 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                             child: TextField(
                               controller: _installmentsTotalController,
                               keyboardType: TextInputType.number,
-                              style: TextStyle(color: colors.textPrimary, fontSize: 16),
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Cant. cuotas',
-                                labelStyle: TextStyle(color: colors.textSecondary),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                labelStyle: TextStyle(
+                                  color: colors.textSecondary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    PocktRadii.m,
+                                  ),
+                                ),
                               ),
                               onChanged: (_) => _recalculateTotalIfNeeded(),
                             ),
@@ -328,11 +360,17 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                       decoration: InputDecoration(
-                        labelText: 'Monto total a ${_direction == LoanDirection.owe ? 'pagar' : 'cobrar'}',
+                        labelText:
+                            'Monto total a ${_direction == LoanDirection.owe ? 'pagar' : 'cobrar'}',
                         labelStyle: TextStyle(color: colors.textSecondary),
                         prefixText: '₲ ',
-                        prefixStyle: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w700),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixStyle: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(PocktRadii.m),
+                        ),
                       ),
                     ),
                   ],
@@ -343,7 +381,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
               // Vencimiento y fechas
               GlassCard(
                 padding: const EdgeInsets.all(16),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(PocktRadii.xl),
                 child: Column(
                   children: [
                     TextField(
@@ -403,10 +441,11 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
               const SizedBox(height: 16),
 
               // Si es Presté y es alta nueva: opción de desembolso inicial
-              if (widget.loanId == null && _direction == LoanDirection.lent) ...[
+              if (widget.loanId == null &&
+                  _direction == LoanDirection.lent) ...[
                 GlassCard(
                   padding: const EdgeInsets.all(16),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
                   child: Row(
                     children: [
                       Expanded(
@@ -458,7 +497,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
     return Container(
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         border: Border.all(color: colors.glassBorder),
       ),
       padding: const EdgeInsets.all(4),
@@ -493,7 +532,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
     return Container(
       decoration: BoxDecoration(
         color: colors.glassFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         border: Border.all(color: colors.glassBorder),
       ),
       padding: const EdgeInsets.all(4),
@@ -548,11 +587,15 @@ class _SegmentTab extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(PocktRadii.m),
           color: selected
-              ? (isDark ? colors.brandStart.withValues(alpha: 0.20) : colors.brandStart.withValues(alpha: 0.14))
+              ? (isDark
+                    ? colors.brandStart.withValues(alpha: 0.20)
+                    : colors.brandStart.withValues(alpha: 0.14))
               : Colors.transparent,
-          border: selected ? Border.all(color: colors.brandStart.withValues(alpha: 0.35)) : null,
+          border: selected
+              ? Border.all(color: colors.brandStart.withValues(alpha: 0.35))
+              : null,
         ),
         child: Center(
           child: Text(

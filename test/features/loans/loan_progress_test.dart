@@ -26,6 +26,7 @@ void main() {
       required int amount,
       required DateTime date,
       String? note,
+      bool isExtra = false,
       TxType type = TxType.expense,
     }) {
       return Transaction(
@@ -40,14 +41,43 @@ void main() {
         updatedAt: date,
         source: TxSource.manual,
         note: note,
+        isExtra: isExtra,
       );
     }
+
+    test('una cuota normal con "extra" en la nota sigue contando como cuota', () {
+      final payments = [
+        makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
+        makePayment(
+          id: 'p2',
+          amount: 110000,
+          date: DateTime(2026, 2, 15),
+          note: 'incluye extra por mora',
+        ),
+      ];
+
+      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+
+      expect(progress.installmentsPaid, equals(2));
+    });
+
+    test('un pago marcado isExtra no cuenta como cuota aunque la nota no lo diga', () {
+      final payments = [
+        makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
+        makePayment(id: 'p2', amount: 200000, date: DateTime(2026, 2, 20), isExtra: true),
+      ];
+
+      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+
+      expect(progress.installmentsPaid, equals(1));
+      expect(progress.paid, equals(300000));
+    });
 
     test('pagado, saldo y cuotas con pagos regulares y un extra', () {
       final payments = [
         makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
         makePayment(id: 'p2', amount: 100000, date: DateTime(2026, 2, 15)),
-        makePayment(id: 'p3', amount: 200000, date: DateTime(2026, 2, 20), note: 'Pago extra adelanto'),
+        makePayment(id: 'p3', amount: 200000, date: DateTime(2026, 2, 20), note: 'Pago extra adelanto', isExtra: true),
       ];
 
       final progress = calculateLoanProgress(loan: baseLoan, payments: payments);

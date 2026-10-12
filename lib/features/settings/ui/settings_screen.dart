@@ -8,6 +8,7 @@ import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/notifications/notifier.dart' show notifierProvider;
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/backup/ui/backup_screen.dart';
@@ -18,6 +19,8 @@ import 'package:pockt/features/recurring/ui/recurring_screen.dart';
 import 'package:pockt/features/reminders/ui/reminders_screen.dart';
 import 'package:pockt/features/security/app_lock.dart';
 import 'package:pockt/features/settings/domain/export_csv.dart';
+import 'package:pockt/features/settings/domain/wipe_data.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 
@@ -35,7 +38,9 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.pockt;
     final repo = ref.watch(settingsRepositoryProvider);
-    final scheduleAsync = ref.watch(incomeScheduleRepositoryProvider).watchCurrent();
+    final scheduleAsync = ref
+        .watch(incomeScheduleRepositoryProvider)
+        .watchCurrent();
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -48,6 +53,7 @@ class SettingsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -103,16 +109,15 @@ class SettingsScreen extends ConsumerWidget {
                   // ==========================================
                   // 1. TU DINERO
                   // ==========================================
-                  _SectionHeader(
-                    title: 'Tu dinero',
-                    color: colors.brandAt(0),
-                  ),
+                  _SectionHeader(title: 'Tu dinero', color: colors.brandAt(0)),
                   StreamBuilder(
                     stream: scheduleAsync,
                     builder: (context, snapshot) {
                       final schedule = snapshot.data;
                       final subtitle = schedule != null
-                          ? (schedule.mode == 'biweekly' ? 'Quincenal' : 'Mensual')
+                          ? (schedule.mode == 'biweekly'
+                                ? 'Quincenal'
+                                : 'Mensual')
                           : 'Configurar cuándo cobrás';
 
                       return _SettingsTile(
@@ -139,12 +144,15 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Inicio del mes',
                     subtitle: 'Período para cálculos y presupuestos',
                     iconColor: colors.brandAt(0),
-                    selectedValue: ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar,
+                    selectedValue:
+                        ref.watch(monthStartModeProvider).value ??
+                        MonthStartMode.calendar,
                     options: const [
                       (value: MonthStartMode.calendar, label: 'Calendario'),
                       (value: MonthStartMode.payday, label: 'Desde el cobro'),
                     ],
-                    onSelected: (mode) => repo.set(SettingsKeys.periodMonthStart, mode.name),
+                    onSelected: (mode) =>
+                        repo.set(SettingsKeys.periodMonthStart, mode.name),
                   ),
                   const SizedBox(height: 8),
                   _SettingsTile(
@@ -188,9 +196,7 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () {
                       Haptics.tick();
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const LoansScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const LoansScreen()),
                       );
                     },
                   ),
@@ -200,22 +206,22 @@ class SettingsScreen extends ConsumerWidget {
                   // ==========================================
                   // 2. CARGA
                   // ==========================================
-                  _SectionHeader(
-                    title: 'Carga',
-                    color: colors.brandAt(1),
-                  ),
+                  _SectionHeader(title: 'Carga', color: colors.brandAt(1)),
                   _SettingsSegmentTile<CategoryOrder>(
                     key: const ValueKey('settings-category-order'),
                     icon: 'sort-ascending',
                     title: 'Orden de categorías',
                     subtitle: 'Disposición de la grilla de carga',
                     iconColor: colors.brandAt(1),
-                    selectedValue: ref.watch(categoryOrderProvider).value ?? CategoryOrder.mostUsed,
+                    selectedValue:
+                        ref.watch(categoryOrderProvider).value ??
+                        CategoryOrder.mostUsed,
                     options: const [
                       (value: CategoryOrder.mostUsed, label: 'Más usadas'),
                       (value: CategoryOrder.manual, label: 'Manual'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.entryCategoryOrder, val.name),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.entryCategoryOrder, val.name),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSegmentTile<String>(
@@ -229,7 +235,8 @@ class SettingsScreen extends ConsumerWidget {
                       (value: '000', label: '000'),
                       (value: '00', label: '00'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.entryQuickKey, val),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.entryQuickKey, val),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSwitchTile(
@@ -239,7 +246,8 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Muestra campo de nota antes de guardar',
                     iconColor: colors.brandAt(1),
                     value: ref.watch(askNoteProvider).value ?? false,
-                    onChanged: (val) => repo.set(SettingsKeys.entryAskNote, val.toString()),
+                    onChanged: (val) =>
+                        repo.set(SettingsKeys.entryAskNote, val.toString()),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSwitchTile(
@@ -249,7 +257,8 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Respuesta táctil al presionar botones',
                     iconColor: colors.brandAt(1),
                     value: ref.watch(hapticsEnabledProvider).value ?? true,
-                    onChanged: (val) => repo.set(SettingsKeys.feedbackHaptics, val.toString()),
+                    onChanged: (val) =>
+                        repo.set(SettingsKeys.feedbackHaptics, val.toString()),
                   ),
 
                   const SizedBox(height: 20),
@@ -317,7 +326,8 @@ class SettingsScreen extends ConsumerWidget {
                       (value: 10, label: '10'),
                       (value: 20, label: '20'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.homeRecentCount, val.toString()),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.homeRecentCount, val.toString()),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSegmentTile<GlowMode>(
@@ -326,13 +336,15 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Resplandor aurora',
                     subtitle: 'Intensidad del resplandor de fondo',
                     iconColor: colors.brandAt(2),
-                    selectedValue: ref.watch(glowModeProvider).value ?? GlowMode.subtle,
+                    selectedValue:
+                        ref.watch(glowModeProvider).value ?? GlowMode.subtle,
                     options: const [
                       (value: GlowMode.off, label: 'Apagada'),
                       (value: GlowMode.subtle, label: 'Sutil'),
                       (value: GlowMode.full, label: 'Plena'),
                     ],
-                    onSelected: (mode) => repo.set(SettingsKeys.glowMode, mode.name),
+                    onSelected: (mode) =>
+                        repo.set(SettingsKeys.glowMode, mode.name),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSwitchTile(
@@ -342,7 +354,10 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Vira a ámbar o rojo según el gasto',
                     iconColor: colors.brandAt(2),
                     value: ref.watch(glowReactsToBudgetProvider).value ?? true,
-                    onChanged: (val) => repo.set(SettingsKeys.glowReactsToBudget, val.toString()),
+                    onChanged: (val) => repo.set(
+                      SettingsKeys.glowReactsToBudget,
+                      val.toString(),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSegmentTile<WeekStart>(
@@ -351,12 +366,14 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'La semana empieza',
                     subtitle: 'Primer día en los calendarios',
                     iconColor: colors.brandAt(2),
-                    selectedValue: ref.watch(weekStartProvider).value ?? WeekStart.monday,
+                    selectedValue:
+                        ref.watch(weekStartProvider).value ?? WeekStart.monday,
                     options: const [
                       (value: WeekStart.monday, label: 'Lunes'),
                       (value: WeekStart.sunday, label: 'Domingo'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.calendarWeekStart, val.name),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.calendarWeekStart, val.name),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSwitchTile(
@@ -366,7 +383,8 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Desactiva efectos de movimiento en Pockt',
                     iconColor: colors.brandAt(2),
                     value: ref.watch(motionReduceProvider).value ?? false,
-                    onChanged: (val) => repo.set(SettingsKeys.motionReduce, val.toString()),
+                    onChanged: (val) =>
+                        repo.set(SettingsKeys.motionReduce, val.toString()),
                   ),
 
                   const SizedBox(height: 20),
@@ -374,10 +392,7 @@ class SettingsScreen extends ConsumerWidget {
                   // ==========================================
                   // 4. AVISOS
                   // ==========================================
-                  _SectionHeader(
-                    title: 'Avisos',
-                    color: colors.brandAt(3),
-                  ),
+                  _SectionHeader(title: 'Avisos', color: colors.brandAt(3)),
                   StreamBuilder<String?>(
                     stream: repo.watch(SettingsKeys.remindersIntensity),
                     builder: (context, snapshot) {
@@ -414,7 +429,10 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Avisar al acercarse al límite mensual',
                     iconColor: colors.brandAt(3),
                     value: ref.watch(budgetAlertsEnabledProvider).value ?? true,
-                    onChanged: (val) => repo.set(SettingsKeys.budgetAlertsEnabled, val.toString()),
+                    onChanged: (val) => repo.set(
+                      SettingsKeys.budgetAlertsEnabled,
+                      val.toString(),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSegmentTile<int>(
@@ -423,13 +441,15 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Umbral de advertencia',
                     subtitle: 'Porcentaje para el primer aviso',
                     iconColor: colors.brandAt(3),
-                    selectedValue: ref.watch(budgetAlertLowProvider).value ?? 80,
+                    selectedValue:
+                        ref.watch(budgetAlertLowProvider).value ?? 80,
                     options: const [
                       (value: 70, label: '70 %'),
                       (value: 80, label: '80 %'),
                       (value: 90, label: '90 %'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.budgetAlertLow, val.toString()),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.budgetAlertLow, val.toString()),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSegmentTile<int>(
@@ -438,12 +458,14 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Umbral de límite',
                     subtitle: 'Porcentaje para el aviso de exceso',
                     iconColor: colors.brandAt(3),
-                    selectedValue: ref.watch(budgetAlertHighProvider).value ?? 100,
+                    selectedValue:
+                        ref.watch(budgetAlertHighProvider).value ?? 100,
                     options: const [
                       (value: 100, label: '100 %'),
                       (value: 110, label: '110 %'),
                     ],
-                    onSelected: (val) => repo.set(SettingsKeys.budgetAlertHigh, val.toString()),
+                    onSelected: (val) =>
+                        repo.set(SettingsKeys.budgetAlertHigh, val.toString()),
                   ),
 
                   const SizedBox(height: 20),
@@ -463,14 +485,16 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Tiempo hasta bloquear',
                     subtitle: 'Espera en segundo plano antes de pedir huella',
                     iconColor: colors.brandAt(3),
-                    selectedValue: ref.watch(securityLockAfterProvider).value ?? 1,
+                    selectedValue:
+                        ref.watch(securityLockAfterProvider).value ?? 1,
                     options: const [
                       (value: 0, label: 'Al instante'),
                       (value: 1, label: '1 min'),
                       (value: 5, label: '5 min'),
                       (value: 15, label: '15 min'),
                     ],
-                    onSelected: (val) => ref.read(appLockControllerProvider).setLockAfter(val),
+                    onSelected: (val) =>
+                        ref.read(appLockControllerProvider).setLockAfter(val),
                   ),
                   const SizedBox(height: 8),
                   _SettingsSwitchTile(
@@ -480,7 +504,10 @@ class SettingsScreen extends ConsumerWidget {
                     subtitle: 'Muestra •••• hasta tocar el total',
                     iconColor: colors.brandAt(3),
                     value: ref.watch(privacyHideAmountsProvider).value ?? false,
-                    onChanged: (val) => repo.set(SettingsKeys.privacyHideAmounts, val.toString()),
+                    onChanged: (val) => repo.set(
+                      SettingsKeys.privacyHideAmounts,
+                      val.toString(),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   StreamBuilder<BackupStatus>(
@@ -497,7 +524,9 @@ class SettingsScreen extends ConsumerWidget {
                         icon: 'cloud-arrow-up',
                         title: 'Copia de seguridad',
                         subtitle: subtitle,
-                        iconColor: isOverdue ? colors.warning : colors.brandAt(3),
+                        iconColor: isOverdue
+                            ? colors.warning
+                            : colors.brandAt(3),
                         onTap: () {
                           Haptics.tick();
                           Navigator.of(context).push(
@@ -578,7 +607,9 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.sheetSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
+        ),
         title: Row(
           children: [
             Icon(uiIcon('info'), color: colors.brandAt(3), size: 22),
@@ -636,7 +667,10 @@ class SettingsScreen extends ConsumerWidget {
                 applicationVersion: version,
               );
             },
-            child: Text('Licencias', style: TextStyle(color: colors.brandAt(3))),
+            child: Text(
+              'Licencias',
+              style: TextStyle(color: colors.brandAt(3)),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -652,10 +686,7 @@ class _SectionHeader extends StatelessWidget {
   final String title;
   final Color color;
 
-  const _SectionHeader({
-    required this.title,
-    required this.color,
-  });
+  const _SectionHeader({required this.title, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -699,7 +730,7 @@ class _SettingsTile extends StatelessWidget {
       onTap: onTap,
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
         child: Row(
           children: [
             Container(
@@ -710,11 +741,7 @@ class _SettingsTile extends StatelessWidget {
                 color: iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
               ),
               child: Center(
-                child: Icon(
-                  uiIcon(icon),
-                  size: 18,
-                  color: iconColor,
-                ),
+                child: Icon(uiIcon(icon), size: 18, color: iconColor),
               ),
             ),
             const SizedBox(width: 14),
@@ -743,11 +770,7 @@ class _SettingsTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              uiIcon('caret-right'),
-              size: 16,
-              color: colors.textTertiary,
-            ),
+            Icon(uiIcon('caret-right'), size: 16, color: colors.textTertiary),
           ],
         ),
       ),
@@ -785,62 +808,58 @@ class _SettingsSwitchTile extends StatelessWidget {
       },
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        borderRadius: BorderRadius.circular(20),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
-            ),
-            child: Center(
-              child: Icon(
-                uiIcon(icon),
-                size: 18,
-                color: iconColor,
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
+              ),
+              child: Center(
+                child: Icon(uiIcon(icon), size: 18, color: iconColor),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: colors.textTertiary,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: colors.textTertiary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Switch(
-            value: value,
-            activeThumbColor: iconColor,
-            onChanged: (val) {
-              Haptics.tick();
-              onChanged(val);
-            },
-          ),
-        ],
+            Switch(
+              value: value,
+              activeThumbColor: iconColor,
+              onChanged: (val) {
+                Haptics.tick();
+                onChanged(val);
+              },
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -871,7 +890,7 @@ class _SettingsSegmentTile<T> extends StatelessWidget {
 
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -885,11 +904,7 @@ class _SettingsSegmentTile<T> extends StatelessWidget {
                   color: iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
                 ),
                 child: Center(
-                  child: Icon(
-                    uiIcon(icon),
-                    size: 18,
-                    color: iconColor,
-                  ),
+                  child: Icon(uiIcon(icon), size: 18, color: iconColor),
                 ),
               ),
               const SizedBox(width: 14),
@@ -925,7 +940,7 @@ class _SettingsSegmentTile<T> extends StatelessWidget {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: colors.glassFill,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(PocktRadii.m),
               border: Border.all(color: colors.glassBorder),
             ),
             child: Row(
@@ -944,7 +959,9 @@ class _SettingsSegmentTile<T> extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(9),
                           color: opt.value == selectedValue
-                              ? iconColor.withValues(alpha: isDark ? 0.28 : 0.18)
+                              ? iconColor.withValues(
+                                  alpha: isDark ? 0.28 : 0.18,
+                                )
                               : Colors.transparent,
                         ),
                         child: Center(
@@ -1015,7 +1032,8 @@ class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
     if (_availability == null) {
       subtitle = 'Comprobando seguridad...';
     } else if (isNoDeviceLock) {
-      subtitle = 'El dispositivo no tiene bloqueo configurado (PIN, patrón o huella)';
+      subtitle =
+          'El dispositivo no tiene bloqueo configurado (PIN, patrón o huella)';
     } else if (isUnsupported) {
       subtitle = 'No soportado en este dispositivo';
     } else if (isEnabled) {
@@ -1026,7 +1044,7 @@ class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
 
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Row(
         children: [
           Container(
@@ -1034,7 +1052,7 @@ class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
             height: 38,
             decoration: BoxDecoration(
               color: colors.brandAt(3).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(PocktRadii.m),
             ),
             child: Center(
               child: Icon(
@@ -1064,7 +1082,9 @@ class _LockSettingsTileState extends ConsumerState<_LockSettingsTile> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
-                    color: isNoDeviceLock ? colors.warning : colors.textTertiary,
+                    color: isNoDeviceLock
+                        ? colors.warning
+                        : colors.textTertiary,
                   ),
                 ),
               ],
@@ -1110,7 +1130,9 @@ class _WipeDataDialogState extends State<_WipeDataDialog> {
 
     return AlertDialog(
       backgroundColor: colors.sheetSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
+      ),
       title: Row(
         children: [
           Icon(uiIcon('warning'), color: colors.danger, size: 22),
@@ -1160,7 +1182,7 @@ class _WipeDataDialogState extends State<_WipeDataDialog> {
               filled: true,
               fillColor: colors.glassFill,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
                 borderSide: BorderSide(color: colors.glassBorder),
               ),
             ),
@@ -1175,7 +1197,10 @@ class _WipeDataDialogState extends State<_WipeDataDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancelar', style: TextStyle(color: colors.textSecondary)),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(color: colors.textSecondary),
+          ),
         ),
         FilledButton(
           key: const ValueKey('wipe-confirm-button'),
@@ -1183,12 +1208,17 @@ class _WipeDataDialogState extends State<_WipeDataDialog> {
           onPressed: _canDelete
               ? () async {
                   Haptics.danger();
-                  final db = widget.ref.read(databaseProvider);
-                  await db.wipeAllData();
+                  await wipeAllUserData(
+                    db: widget.ref.read(databaseProvider),
+                    notifier: widget.ref.read(notifierProvider),
+                    homeWidget: widget.ref.read(homeWidgetPlatformProvider),
+                  );
                   if (context.mounted) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Datos borrados exitosamente')),
+                      const SnackBar(
+                        content: Text('Datos borrados exitosamente'),
+                      ),
                     );
                   }
                 }

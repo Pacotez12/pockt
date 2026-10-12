@@ -21,6 +21,7 @@ TxView _makeTxView({String id = 'tx-1', String merchant = 'Superseis'}) {
       createdAt: DateTime(2026, 10, 10, 12, 0),
       updatedAt: DateTime(2026, 10, 10, 12, 0),
       source: TxSource.manual,
+      isExtra: false,
       deletedAt: null,
     ),
     category: const Category(

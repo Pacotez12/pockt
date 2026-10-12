@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
@@ -79,7 +80,9 @@ PlannedReminder? planLoanReminder({
   final currentMonthDue = DateTime(today.year, today.month, effectiveDueDay);
 
   // Determinar si ya se pagó la cuota de este mes
-  final validPayments = payments.where((p) => p.deletedAt == null && !isLoanExtraPayment(p));
+  final validPayments = payments.where(
+    (p) => p.deletedAt == null && !isLoanExtraPayment(p),
+  );
   final paymentsThisMonth = validPayments.where((p) {
     final isCorrectType = loan.direction == LoanDirection.owe
         ? p.type == TxType.expense
@@ -95,7 +98,9 @@ PlannedReminder? planLoanReminder({
   }
 
   // La fecha de aviso es N días antes del vencimiento
-  final reminderDate = currentMonthDue.subtract(Duration(days: loan.reminderDays));
+  final reminderDate = currentMonthDue.subtract(
+    Duration(days: loan.reminderDays),
+  );
 
   // Hora por defecto: 09:00
   var targetH = 9;
@@ -117,7 +122,8 @@ PlannedReminder? planLoanReminder({
   final amountFormatted = formatGs(installment);
 
   final title = 'Vence cuota: ${loan.name}';
-  final body = '${loan.name}: cuota de $amountFormatted vence en ${loan.reminderDays} días (día ${loan.dueDay}).';
+  final body =
+      '${loan.name}: cuota de $amountFormatted vence en ${loan.reminderDays} días (día ${loan.dueDay}).';
 
   return PlannedReminder(
     atLocal: scheduledAt,
@@ -134,10 +140,14 @@ Future<void> rescheduleLoanReminders({
   SettingsRepository? settingsRepo,
   required DateTime nowLocal,
 }) async {
-  final activeLoans = await (db.select(db.loans)..where((l) => l.closedAt.isNull())).get();
+  final activeLoans = await (db.select(
+    db.loans,
+  )..where((l) => l.closedAt.isNull())).get();
 
-  final quietStartStr = await settingsRepo?.get(SettingsKeys.remindersQuietStart) ?? '23:00';
-  final quietEndStr = await settingsRepo?.get(SettingsKeys.remindersQuietEnd) ?? '09:00';
+  final quietStartStr =
+      await settingsRepo?.get(SettingsKeys.remindersQuietStart) ?? '23:00';
+  final quietEndStr =
+      await settingsRepo?.get(SettingsKeys.remindersQuietEnd) ?? '09:00';
   final quietStart = _parseTime(quietStartStr, fallbackH: 23, fallbackM: 0);
   final quietEnd = _parseTime(quietEndStr, fallbackH: 9, fallbackM: 0);
 
@@ -145,9 +155,9 @@ Future<void> rescheduleLoanReminders({
     final notifId = loanNotificationId(loan.id);
     await notifier.cancel(notifId);
 
-    final payments = await (db.select(db.transactions)
-          ..where((t) => t.loanId.equals(loan.id) & t.deletedAt.isNull()))
-        .get();
+    final payments = await (db.select(
+      db.transactions,
+    )..where((t) => t.loanId.equals(loan.id) & t.deletedAt.isNull())).get();
 
     final reminder = planLoanReminder(
       loan: loan,

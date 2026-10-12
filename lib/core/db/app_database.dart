@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:pockt/core/db/tables.dart';
@@ -8,26 +9,28 @@ import 'package:uuid/uuid.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [
-  Categories,
-  Transactions,
-  SuggestedTransactions,
-  RecurringRules,
-  IncomeSchedules,
-  Budgets,
-  DayMarks,
-  Settings,
-  CategoryKeywords,
-  MerchantMemory,
-  SalaryDeductions,
-  Loans,
-])
+@DriftDatabase(
+  tables: [
+    Categories,
+    Transactions,
+    SuggestedTransactions,
+    RecurringRules,
+    IncomeSchedules,
+    Budgets,
+    DayMarks,
+    Settings,
+    CategoryKeywords,
+    MerchantMemory,
+    SalaryDeductions,
+    Loans,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -104,7 +107,9 @@ class AppDatabase extends _$AppDatabase {
           }
 
           await customStatement('DROP TABLE income_schedules;');
-          await customStatement('ALTER TABLE income_schedules_new RENAME TO income_schedules;');
+          await customStatement(
+            'ALTER TABLE income_schedules_new RENAME TO income_schedules;',
+          );
         }
         if (from < 5) {
           await customStatement('''
@@ -173,7 +178,9 @@ class AppDatabase extends _$AppDatabase {
           }
 
           await customStatement('DROP TABLE income_schedules;');
-          await customStatement('ALTER TABLE income_schedules_new RENAME TO income_schedules;');
+          await customStatement(
+            'ALTER TABLE income_schedules_new RENAME TO income_schedules;',
+          );
         }
         if (from < 6) {
           await m.createTable(salaryDeductions);
@@ -214,6 +221,28 @@ class AppDatabase extends _$AppDatabase {
             );
           }
         }
+        if (from < 9) {
+          await m.addColumn(transactions, transactions.isExtra);
+          // Pagos extra viejos: los marcaba la nota. Solo los ligados a un préstamo.
+          await customStatement(
+            'UPDATE transactions SET is_extra = 1 '
+            'WHERE loan_id IS NOT NULL '
+            "AND (LOWER(note) LIKE '%extra%' OR LOWER(note) LIKE '%adelanto%');",
+          );
+          // Préstamos tenía un color casi igual a Otros: tono propio, solo si
+          // conserva el color de fábrica (no pisa uno elegido por el usuario).
+          await customStatement(
+            'UPDATE categories SET color_dark = ?, color_light = ? '
+            'WHERE id = ? AND color_dark = ? AND color_light = ?;',
+            [
+              _kPrestamosDark,
+              _kPrestamosLight,
+              _kPrestamosId,
+              _kPrestamosOldDark,
+              _kPrestamosOldLight,
+            ],
+          );
+        }
       },
     );
   }
@@ -251,25 +280,38 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _preloadMerchantMemory() async {
-    final txs = await (select(transactions)
-          ..where((t) => t.merchant.isNotNull() & t.deletedAt.isNull()))
-        .get();
+    // Solo las columnas que existen desde la v1: esta migración corre antes de
+    // que se agreguen las columnas nuevas (loan_id, is_extra, ...).
+    final rows =
+        await (selectOnly(transactions)
+              ..addColumns([
+                transactions.merchant,
+                transactions.categoryId,
+                transactions.occurredAt,
+              ])
+              ..where(
+                transactions.merchant.isNotNull() &
+                    transactions.deletedAt.isNull(),
+              ))
+            .get();
 
     final counts = <(String, String), ({int uses, DateTime lastUsedAt})>{};
 
-    for (final tx in txs) {
-      final m = tx.merchant?.trim();
+    for (final row in rows) {
+      final m = row.read(transactions.merchant)?.trim();
       if (m == null || m.isEmpty) continue;
       final norm = normalizeKeyword(m);
       if (norm.isEmpty) continue;
 
-      final pair = (norm, tx.categoryId);
+      final categoryId = row.read(transactions.categoryId)!;
+      final occurredAt = row.read(transactions.occurredAt)!;
+      final pair = (norm, categoryId);
       final current = counts[pair];
       if (current == null) {
-        counts[pair] = (uses: 1, lastUsedAt: tx.occurredAt);
+        counts[pair] = (uses: 1, lastUsedAt: occurredAt);
       } else {
-        final newest = tx.occurredAt.isAfter(current.lastUsedAt)
-            ? tx.occurredAt
+        final newest = occurredAt.isAfter(current.lastUsedAt)
+            ? occurredAt
             : current.lastUsedAt;
         counts[pair] = (uses: current.uses + 1, lastUsedAt: newest);
       }
@@ -409,8 +451,8 @@ class AppDatabase extends _$AppDatabase {
         id: Value('018f0000-0000-7000-8000-000000000014'),
         name: Value('Préstamos'),
         icon: Value('coins'),
-        colorDark: Value(0xFF8BA4B5),
-        colorLight: Value(0xFF3D6176),
+        colorDark: Value(_kPrestamosDark),
+        colorLight: Value(_kPrestamosLight),
         kind: Value(CategoryKind.expense),
         sortOrder: Value(10),
       ),
@@ -454,6 +496,14 @@ class AppDatabase extends _$AppDatabase {
     return driftDatabase(name: 'pockt');
   }
 }
+
+const _kPrestamosId = '018f0000-0000-7000-8000-000000000014';
+// Paleta OKLCH §6.2b, matiz ~170 (verde azulado): L 0,76 C 0,11 oscuro / L 0,52 C 0,12 claro.
+const _kPrestamosDark = 0xFF5FC8A6;
+const _kPrestamosLight = 0xFF007E5E;
+// Color de fábrica de la v8 (casi igual a "Otros").
+const _kPrestamosOldDark = 0xFF8BA4B5;
+const _kPrestamosOldLight = 0xFF3D6176;
 
 const _kFactoryCategoryColorUpdates = [
   (

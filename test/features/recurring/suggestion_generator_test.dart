@@ -104,6 +104,47 @@ void main() {
     expect(totalSugs, hasLength(1));
   });
 
+  test('dos run() simultáneos comparten la ejecución y producen una sola notificación', () async {
+    await db.into(db.recurringRules).insert(
+          RecurringRulesCompanion.insert(
+            id: 'rule-gym',
+            name: 'Gimnasio',
+            type: TxType.expense,
+            amount: 120000,
+            categoryId: comidaId,
+            frequency: 'monthly',
+            dayOfMonth: const Value(10),
+            nextDueDate: DateTime(2026, 9, 10),
+            active: const Value(true),
+          ),
+        );
+
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 10, 14, 0),
+    );
+
+    // Como al volver a la app varias veces seguidas: la segunda llamada llega
+    // mientras la primera sigue en curso.
+    final first = generator.run();
+    final second = generator.run();
+
+    expect(identical(first, second), isTrue);
+
+    final counts = await Future.wait([first, second]);
+    expect(counts, [2, 2]);
+    expect(notifier.shown, hasLength(1));
+    expect(notifier.shown.first.body, 'Tenés 2 movimientos por confirmar');
+    expect(await db.select(db.suggestedTransactions).get(), hasLength(2));
+
+    // Terminada la ejecución, la siguiente llamada corre de nuevo (no queda trabada).
+    final third = generator.run();
+    expect(identical(third, first), isFalse);
+    expect(await third, 0);
+    expect(notifier.shown, hasLength(1));
+  });
+
   test('cobro quincenal desde 1/10 con hoy 16/10 genera una sugerencia el 15/10', () async {
     await db.into(db.incomeSchedules).insert(
           IncomeSchedulesCompanion.insert(

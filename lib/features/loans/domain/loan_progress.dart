@@ -1,13 +1,11 @@
 import 'dart:math';
+
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 
-/// Helper para detectar si un movimiento ligado a un préstamo es un pago extra / adelanto.
-bool isLoanExtraPayment(Transaction tx) {
-  final note = tx.note?.toLowerCase();
-  if (note == null) return false;
-  return note.contains('extra') || note.contains('adelanto');
-}
+/// Indica si un movimiento ligado a un préstamo es un pago extra / adelanto.
+/// Se decide por la columna `isExtra`, no por el texto de la nota.
+bool isLoanExtraPayment(Transaction tx) => tx.isExtra;
 
 /// Estado y avance calculado de un préstamo (spec §7c).
 class LoanProgress {
@@ -59,7 +57,9 @@ LoanProgress calculateLoanProgress({
   final isClosed = balance <= 0 || loan.closedAt != null;
 
   // Cuotas pagadas: solo pagos regulares (los extra no suman cuota, pero sí bajan el saldo)
-  final regularPaymentsCount = relevantPayments.where((p) => !isLoanExtraPayment(p)).length;
+  final regularPaymentsCount = relevantPayments
+      .where((p) => !isLoanExtraPayment(p))
+      .length;
   final installmentsPaid = loan.installmentsTotal != null
       ? min(loan.installmentsTotal!, regularPaymentsCount)
       : regularPaymentsCount;
@@ -91,10 +91,12 @@ LoanProgress calculateLoanProgress({
 
     final currentMonthDue = makeDate(today.year, today.month, dueDay);
     // Misma regla que el aviso: una cuota regular pagada este mes la cubre.
-    final paidThisMonth = relevantPayments.any((p) =>
-        !isLoanExtraPayment(p) &&
-        p.occurredAt.year == today.year &&
-        p.occurredAt.month == today.month);
+    final paidThisMonth = relevantPayments.any(
+      (p) =>
+          !isLoanExtraPayment(p) &&
+          p.occurredAt.year == today.year &&
+          p.occurredAt.month == today.month,
+    );
     if (!currentMonthDue.isBefore(today) && !paidThisMonth) {
       nextDueDate = currentMonthDue;
     } else {

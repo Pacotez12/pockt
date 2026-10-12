@@ -163,7 +163,7 @@ void main() {
       DatabaseConnection(NativeDatabase(dbFile), closeStreamsSynchronously: true),
     );
 
-    expect(db.schemaVersion, equals(8));
+    expect(db.schemaVersion, equals(9));
 
     // Verify existing transaction and category are preserved
     final txs = await db.select(db.transactions).get();

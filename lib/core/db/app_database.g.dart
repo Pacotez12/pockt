@@ -1508,6 +1508,21 @@ class $TransactionsTable extends Transactions
       'REFERENCES loans (id)',
     ),
   );
+  static const VerificationMeta _isExtraMeta = const VerificationMeta(
+    'isExtra',
+  );
+  @override
+  late final GeneratedColumn<bool> isExtra = GeneratedColumn<bool>(
+    'is_extra',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_extra" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _deletedAtMeta = const VerificationMeta(
     'deletedAt',
   );
@@ -1535,6 +1550,7 @@ class $TransactionsTable extends Transactions
     recurringRuleId,
     suggestionId,
     loanId,
+    isExtra,
     deletedAt,
   ];
   @override
@@ -1636,6 +1652,12 @@ class $TransactionsTable extends Transactions
         loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta),
       );
     }
+    if (data.containsKey('is_extra')) {
+      context.handle(
+        _isExtraMeta,
+        isExtra.isAcceptableOrUnknown(data['is_extra']!, _isExtraMeta),
+      );
+    }
     if (data.containsKey('deleted_at')) {
       context.handle(
         _deletedAtMeta,
@@ -1711,6 +1733,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}loan_id'],
       ),
+      isExtra: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_extra'],
+      )!,
       deletedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}deleted_at'],
@@ -1744,6 +1770,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? recurringRuleId;
   final String? suggestionId;
   final String? loanId;
+
+  /// Pago extra / adelanto de un préstamo (no cuenta como cuota regular).
+  final bool isExtra;
   final DateTime? deletedAt;
   const Transaction({
     required this.id,
@@ -1760,6 +1789,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.recurringRuleId,
     this.suggestionId,
     this.loanId,
+    required this.isExtra,
     this.deletedAt,
   });
   @override
@@ -1797,6 +1827,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || loanId != null) {
       map['loan_id'] = Variable<String>(loanId);
     }
+    map['is_extra'] = Variable<bool>(isExtra);
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
@@ -1827,6 +1858,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       loanId: loanId == null && nullToAbsent
           ? const Value.absent()
           : Value(loanId),
+      isExtra: Value(isExtra),
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
@@ -1857,6 +1889,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       recurringRuleId: serializer.fromJson<String?>(json['recurringRuleId']),
       suggestionId: serializer.fromJson<String?>(json['suggestionId']),
       loanId: serializer.fromJson<String?>(json['loanId']),
+      isExtra: serializer.fromJson<bool>(json['isExtra']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
@@ -1882,6 +1915,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'recurringRuleId': serializer.toJson<String?>(recurringRuleId),
       'suggestionId': serializer.toJson<String?>(suggestionId),
       'loanId': serializer.toJson<String?>(loanId),
+      'isExtra': serializer.toJson<bool>(isExtra),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
@@ -1901,6 +1935,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> recurringRuleId = const Value.absent(),
     Value<String?> suggestionId = const Value.absent(),
     Value<String?> loanId = const Value.absent(),
+    bool? isExtra,
     Value<DateTime?> deletedAt = const Value.absent(),
   }) => Transaction(
     id: id ?? this.id,
@@ -1919,6 +1954,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         : this.recurringRuleId,
     suggestionId: suggestionId.present ? suggestionId.value : this.suggestionId,
     loanId: loanId.present ? loanId.value : this.loanId,
+    isExtra: isExtra ?? this.isExtra,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
@@ -1945,6 +1981,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? data.suggestionId.value
           : this.suggestionId,
       loanId: data.loanId.present ? data.loanId.value : this.loanId,
+      isExtra: data.isExtra.present ? data.isExtra.value : this.isExtra,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
@@ -1966,6 +2003,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('recurringRuleId: $recurringRuleId, ')
           ..write('suggestionId: $suggestionId, ')
           ..write('loanId: $loanId, ')
+          ..write('isExtra: $isExtra, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
@@ -1987,6 +2025,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     recurringRuleId,
     suggestionId,
     loanId,
+    isExtra,
     deletedAt,
   );
   @override
@@ -2007,6 +2046,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.recurringRuleId == this.recurringRuleId &&
           other.suggestionId == this.suggestionId &&
           other.loanId == this.loanId &&
+          other.isExtra == this.isExtra &&
           other.deletedAt == this.deletedAt);
 }
 
@@ -2025,6 +2065,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> recurringRuleId;
   final Value<String?> suggestionId;
   final Value<String?> loanId;
+  final Value<bool> isExtra;
   final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const TransactionsCompanion({
@@ -2042,6 +2083,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.recurringRuleId = const Value.absent(),
     this.suggestionId = const Value.absent(),
     this.loanId = const Value.absent(),
+    this.isExtra = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2060,6 +2102,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.recurringRuleId = const Value.absent(),
     this.suggestionId = const Value.absent(),
     this.loanId = const Value.absent(),
+    this.isExtra = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2085,6 +2128,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? recurringRuleId,
     Expression<String>? suggestionId,
     Expression<String>? loanId,
+    Expression<bool>? isExtra,
     Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
@@ -2103,6 +2147,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (recurringRuleId != null) 'recurring_rule_id': recurringRuleId,
       if (suggestionId != null) 'suggestion_id': suggestionId,
       if (loanId != null) 'loan_id': loanId,
+      if (isExtra != null) 'is_extra': isExtra,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2123,6 +2168,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? recurringRuleId,
     Value<String?>? suggestionId,
     Value<String?>? loanId,
+    Value<bool>? isExtra,
     Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
@@ -2141,6 +2187,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       recurringRuleId: recurringRuleId ?? this.recurringRuleId,
       suggestionId: suggestionId ?? this.suggestionId,
       loanId: loanId ?? this.loanId,
+      isExtra: isExtra ?? this.isExtra,
       deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2195,6 +2242,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (loanId.present) {
       map['loan_id'] = Variable<String>(loanId.value);
     }
+    if (isExtra.present) {
+      map['is_extra'] = Variable<bool>(isExtra.value);
+    }
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
@@ -2221,6 +2271,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('recurringRuleId: $recurringRuleId, ')
           ..write('suggestionId: $suggestionId, ')
           ..write('loanId: $loanId, ')
+          ..write('isExtra: $isExtra, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7583,6 +7634,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> recurringRuleId,
       Value<String?> suggestionId,
       Value<String?> loanId,
+      Value<bool> isExtra,
       Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
@@ -7602,6 +7654,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> recurringRuleId,
       Value<String?> suggestionId,
       Value<String?> loanId,
+      Value<bool> isExtra,
       Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
@@ -7738,6 +7791,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get suggestionId => $composableBuilder(
     column: $table.suggestionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isExtra => $composableBuilder(
+    column: $table.isExtra,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7888,6 +7946,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isExtra => $composableBuilder(
+    column: $table.isExtra,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
     column: $table.deletedAt,
     builder: (column) => ColumnOrderings(column),
@@ -7990,6 +8053,9 @@ class $$TransactionsTableAnnotationComposer
     column: $table.suggestionId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isExtra =>
+      $composableBuilder(column: $table.isExtra, builder: (column) => column);
 
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
@@ -8113,6 +8179,7 @@ class $$TransactionsTableTableManager
                 Value<String?> recurringRuleId = const Value.absent(),
                 Value<String?> suggestionId = const Value.absent(),
                 Value<String?> loanId = const Value.absent(),
+                Value<bool> isExtra = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
@@ -8130,6 +8197,7 @@ class $$TransactionsTableTableManager
                 recurringRuleId: recurringRuleId,
                 suggestionId: suggestionId,
                 loanId: loanId,
+                isExtra: isExtra,
                 deletedAt: deletedAt,
                 rowid: rowid,
               ),
@@ -8149,6 +8217,7 @@ class $$TransactionsTableTableManager
                 Value<String?> recurringRuleId = const Value.absent(),
                 Value<String?> suggestionId = const Value.absent(),
                 Value<String?> loanId = const Value.absent(),
+                Value<bool> isExtra = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
@@ -8166,6 +8235,7 @@ class $$TransactionsTableTableManager
                 recurringRuleId: recurringRuleId,
                 suggestionId: suggestionId,
                 loanId: loanId,
+                isExtra: isExtra,
                 deletedAt: deletedAt,
                 rowid: rowid,
               ),

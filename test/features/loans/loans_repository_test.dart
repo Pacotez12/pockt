@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
+import 'package:pockt/features/loans/domain/loan_progress.dart';
 
 void main() {
   late AppDatabase db;
@@ -68,6 +69,35 @@ void main() {
     final payments = await repo.watchPayments(loanId).first;
     expect(payments.length, equals(2));
     expect(payments.any((p) => p.note == 'Pago extra'), isTrue);
+    // El pago extra queda marcado en la columna, no solo en la nota.
+    expect(payments.where((p) => p.isExtra).length, equals(1));
+    expect(payments.where((p) => p.isExtra).first.note, equals('Pago extra'));
+  });
+
+  test('una cuota normal con "extra" en la nota no se guarda como pago extra', () async {
+    final loanId = await repo.createLoan(
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Auto',
+      totalAmount: 1000000,
+      installmentAmount: 100000,
+      dueDay: 10,
+      startDate: DateTime(2026, 1, 1),
+    );
+
+    await repo.recordPayment(
+      loanId: loanId,
+      amount: 110000,
+      date: DateTime(2026, 2, 10),
+      note: 'incluye extra por mora',
+    );
+
+    final payments = await repo.watchPayments(loanId).first;
+    expect(payments.single.isExtra, isFalse);
+    expect(payments.single.note, equals('incluye extra por mora'));
+    final loan = await repo.getLoan(loanId);
+    final progress = calculateLoanProgress(loan: loan!, payments: payments);
+    expect(progress.installmentsPaid, equals(1));
   });
 
   test('crear préstamo lent con desembolso inicial genera gasto, y pagos son ingresos', () async {

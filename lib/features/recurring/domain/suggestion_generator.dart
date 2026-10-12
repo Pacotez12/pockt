@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'package:pockt/core/db/app_database.dart';
@@ -22,21 +23,34 @@ class SuggestionGenerator {
     this._notifier, {
     DateTime Function()? clock,
     SuggestionsRepository? suggestionsRepository,
-  })  : _clock = clock ?? DateTime.now,
-        _suggestionsRepo = suggestionsRepository ??
-            SuggestionsRepository(_db, clock: clock);
+  }) : _clock = clock ?? DateTime.now,
+       _suggestionsRepo =
+           suggestionsRepository ?? SuggestionsRepository(_db, clock: clock);
+
+  Future<int>? _inFlight;
 
   /// Genera sugerencias pendientes para recurrentes activas y el esquema de cobro vigente.
   /// Devuelve la cantidad de sugerencias nuevas creadas.
-  Future<int> run() async {
+  ///
+  /// Si ya hay una ejecución en curso devuelve esa misma [Future]: así varias
+  /// vueltas seguidas a la app no repiten el trabajo ni la notificación.
+  Future<int> run() {
+    final current = _inFlight;
+    if (current != null) return current;
+    final future = _runOnce().whenComplete(() => _inFlight = null);
+    _inFlight = future;
+    return future;
+  }
+
+  Future<int> _runOnce() async {
     final now = _clock();
     final today = DateTime(now.year, now.month, now.day);
     var createdCount = 0;
 
     // 1. Recurrentes activas
-    final activeRules = await (_db.select(_db.recurringRules)
-          ..where((r) => r.active.equals(true)))
-        .get();
+    final activeRules = await (_db.select(
+      _db.recurringRules,
+    )..where((r) => r.active.equals(true))).get();
 
     for (final rule in activeRules) {
       final RecurrenceFrequency freq;
@@ -86,34 +100,36 @@ class SuggestionGenerator {
           dayOfWeek: rule.dayOfWeek,
           monthOfYear: rule.monthOfYear,
         );
-        await (_db.update(_db.recurringRules)..where((r) => r.id.equals(rule.id))).write(
-          RecurringRulesCompanion(
-            nextDueDate: Value(nextDue),
-          ),
-        );
+        await (_db.update(_db.recurringRules)
+              ..where((r) => r.id.equals(rule.id)))
+            .write(RecurringRulesCompanion(nextDueDate: Value(nextDue)));
       }
     }
 
     // 2. Esquema de cobro vigente
     final todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
-    final currentSchedule = await (_db.select(_db.incomeSchedules)
-          ..where((s) => s.effectiveFrom.isSmallerOrEqualValue(todayEnd))
-          ..orderBy([(s) => OrderingTerm.desc(s.effectiveFrom)])
-          ..limit(1))
-        .getSingleOrNull();
+    final currentSchedule =
+        await (_db.select(_db.incomeSchedules)
+              ..where((s) => s.effectiveFrom.isSmallerOrEqualValue(todayEnd))
+              ..orderBy([(s) => OrderingTerm.desc(s.effectiveFrom)])
+              ..limit(1))
+            .getSingleOrNull();
 
     if (currentSchedule != null) {
       final payDaysList = (jsonDecode(currentSchedule.payDays) as List)
           .map((e) => (e as num).toInt())
           .toList();
 
-      final lastSuggested = await (_db.select(_db.suggestedTransactions)
-            ..where((t) =>
-                t.source.equalsValue(TxSource.incomeSchedule) &
-                t.sourceRef.equals(currentSchedule.id))
-            ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])
-            ..limit(1))
-          .getSingleOrNull();
+      final lastSuggested =
+          await (_db.select(_db.suggestedTransactions)
+                ..where(
+                  (t) =>
+                      t.source.equalsValue(TxSource.incomeSchedule) &
+                      t.sourceRef.equals(currentSchedule.id),
+                )
+                ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])
+                ..limit(1))
+              .getSingleOrNull();
 
       final DateTime startDate;
       if (lastSuggested != null) {
@@ -132,14 +148,17 @@ class SuggestionGenerator {
       }
 
       if (!startDate.isAfter(today)) {
-        final rules = parsePayDayRules(currentSchedule.payDayRules, payDaysList);
+        final rules = parsePayDayRules(
+          currentSchedule.payDayRules,
+          payDaysList,
+        );
         final splits = parsePaySplitPercents(
           currentSchedule.paySplitPercents,
           count: payDaysList.length,
         );
-        final deductions = await (_db.select(_db.salaryDeductions)
-              ..where((d) => d.scheduleId.equals(currentSchedule.id)))
-            .get();
+        final deductions = await (_db.select(
+          _db.salaryDeductions,
+        )..where((d) => d.scheduleId.equals(currentSchedule.id))).get();
         final monthly = currentSchedule.monthlyAmount;
         // Neto: los descuentos se restan del cobro de fin de mes (spec §7b);
         // si los descuentos superan ese cobro se sugiere el bruto.
@@ -153,7 +172,8 @@ class SuggestionGenerator {
         final endYear = today.year;
         final endMonth = today.month;
 
-        while (curYear < endYear || (curYear == endYear && curMonth <= endMonth)) {
+        while (curYear < endYear ||
+            (curYear == endYear && curMonth <= endMonth)) {
           final daysInMonth = DateTime(curYear, curMonth + 1, 0).day;
           for (var i = 0; i < payDaysList.length; i++) {
             final rawDay = payDaysList[i];
@@ -178,8 +198,9 @@ class SuggestionGenerator {
               window.earliest.day,
             );
             if (!dayDate.isBefore(startDate) && !dayDate.isAfter(today)) {
-              final amount =
-                  i < splitAmountsList.length ? splitAmountsList[i] : 0;
+              final amount = i < splitAmountsList.length
+                  ? splitAmountsList[i]
+                  : 0;
               payDaysToCreate.add((date: dayDate, amount: amount));
             }
           }

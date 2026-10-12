@@ -42,6 +42,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
               child: Row(
                 children: [
                   Pressable(
+                    semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 36,
@@ -86,6 +87,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                     ),
                   ),
                   Pressable(
+                    semanticLabel: 'Agregar préstamo',
                     onTap: () {
                       Haptics.tick();
                       Navigator.of(context).push(
@@ -121,7 +123,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.glassFill,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
                   border: Border.all(color: colors.glassBorder),
                 ),
                 padding: const EdgeInsets.all(4),
@@ -164,16 +166,18 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
             const SizedBox(height: 12),
 
             // Lista según la pestaña activa
-            Expanded(
-              child: _buildTabList(context, repo, colors),
-            ),
+            Expanded(child: _buildTabList(context, repo, colors)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTabList(BuildContext context, LoansRepository repo, PocktColors colors) {
+  Widget _buildTabList(
+    BuildContext context,
+    LoansRepository repo,
+    PocktColors colors,
+  ) {
     final AsyncValue<List<Loan>> loansAsync = switch (_currentTab) {
       LoansTab.owe => ref.watch(activeLoansProvider(LoanDirection.owe)),
       LoansTab.lent => ref.watch(activeLoansProvider(LoanDirection.lent)),
@@ -247,11 +251,15 @@ class _TabButton extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(PocktRadii.m),
           color: selected
-              ? (isDark ? colors.brandStart.withValues(alpha: 0.20) : colors.brandStart.withValues(alpha: 0.14))
+              ? (isDark
+                    ? colors.brandStart.withValues(alpha: 0.20)
+                    : colors.brandStart.withValues(alpha: 0.14))
               : Colors.transparent,
-          border: selected ? Border.all(color: colors.brandStart.withValues(alpha: 0.35)) : null,
+          border: selected
+              ? Border.all(color: colors.brandStart.withValues(alpha: 0.35))
+              : null,
         ),
         child: Center(
           child: Text(
@@ -285,163 +293,166 @@ class _LoanCard extends ConsumerWidget {
     final payments = ref.watch(loanPaymentsProvider(loan.id)).value ?? [];
     final progress = calculateLoanProgress(loan: loan, payments: payments);
 
-        // Vencimiento etiqueta (solo si está activo y faltan <= 5 días)
-        Widget? dueBadge;
-        if (!progress.isClosed && progress.daysUntilNextDue != null && progress.daysUntilNextDue! <= 5) {
-          final days = progress.daysUntilNextDue!;
-          final isDanger = days <= 0;
-          final label = days <= 0
-              ? (days == 0 ? 'Vence hoy' : 'Vencido')
-              : 'Vence en $days día${days == 1 ? '' : 's'}';
-          final badgeColor = isDanger ? colors.danger : colors.warning;
+    // Vencimiento etiqueta (solo si está activo y faltan <= 5 días)
+    Widget? dueBadge;
+    if (!progress.isClosed &&
+        progress.daysUntilNextDue != null &&
+        progress.daysUntilNextDue! <= 5) {
+      final days = progress.daysUntilNextDue!;
+      final isDanger = days <= 0;
+      final label = days <= 0
+          ? (days == 0 ? 'Vence hoy' : 'Vencido')
+          : 'Vence en $days día${days == 1 ? '' : 's'}';
+      final badgeColor = isDanger ? colors.danger : colors.warning;
 
-          dueBadge = Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+      dueBadge = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: badgeColor.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(PocktRadii.s),
+          border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(uiIcon('warning'), size: 12, color: badgeColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: badgeColor,
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(uiIcon('warning'), size: 12, color: badgeColor),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
-                  ),
-                ),
-              ],
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Pressable(
+        onTap: () {
+          Haptics.tick();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LoanDetailScreen(loanId: loan.id),
             ),
           );
-        }
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Pressable(
-            onTap: () {
-              Haptics.tick();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => LoanDetailScreen(loanId: loan.id),
-                ),
-              );
-            },
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              borderRadius: BorderRadius.circular(20),
-              child: Column(
+        },
+        child: GlassCard(
+          padding: const EdgeInsets.all(16),
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fila superior: Título, contraparte y badge de vencimiento
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Fila superior: Título, contraparte y badge de vencimiento
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              loan.name,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            if (loan.counterparty != null && loan.counterparty!.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                loan.counterparty!,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  color: colors.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      ?dueBadge,
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Saldo pendiente
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Saldo pendiente',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        _formatGs(progress.balance),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Barra de progreso
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress.percent,
-                      minHeight: 6,
-                      backgroundColor: colors.glassBorder,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        progress.isClosed ? colors.positive : colors.brandStart,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Pie de la tarjeta: N de M cuotas · Fin estimado
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        loan.installmentsTotal != null
-                            ? '${progress.installmentsPaid} de ${loan.installmentsTotal} cuotas'
-                            : '${progress.installmentsPaid} cuota${progress.installmentsPaid == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                      if (progress.estimatedEndDate != null)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Fin est. ${formatMonthYear(progress.estimatedEndDate!)}',
+                          loan.name,
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: colors.textTertiary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
                           ),
                         ),
-                    ],
+                        if (loan.counterparty != null &&
+                            loan.counterparty!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            loan.counterparty!,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: colors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  ?dueBadge,
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Saldo pendiente
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Saldo pendiente',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    _formatGs(progress.balance),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+
+              // Barra de progreso
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress.percent,
+                  minHeight: 6,
+                  backgroundColor: colors.glassBorder,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    progress.isClosed ? colors.positive : colors.brandStart,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Pie de la tarjeta: N de M cuotas · Fin estimado
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    loan.installmentsTotal != null
+                        ? '${progress.installmentsPaid} de ${loan.installmentsTotal} cuotas'
+                        : '${progress.installmentsPaid} cuota${progress.installmentsPaid == 1 ? '' : 's'}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: colors.textTertiary,
+                    ),
+                  ),
+                  if (progress.estimatedEndDate != null)
+                    Text(
+                      'Fin est. ${formatMonthYear(progress.estimatedEndDate!)}',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
   }
 }

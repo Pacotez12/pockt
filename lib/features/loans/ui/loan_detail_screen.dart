@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -58,184 +59,189 @@ class LoanDetailScreen extends ConsumerWidget {
     final progress = calculateLoanProgress(loan: loan, payments: payments);
 
     return Scaffold(
-                  backgroundColor: colors.background,
-                  appBar: AppBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    title: Text(
-                      loan.name,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    leading: IconButton(
-                      icon: Icon(uiIcon('arrow-left'), color: colors.textPrimary),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    actions: [
-                      IconButton(
-                        icon: Icon(uiIcon('pencil-simple'), color: colors.textSecondary),
-                        onPressed: () {
-                          Haptics.tick();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => LoanEditorScreen(loanId: loanId),
-                            ),
-                          );
-                        },
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(uiIcon('gear'), color: colors.textSecondary),
-                        color: colors.sheetSurface,
-                        onSelected: (val) async {
-                          if (val == 'toggle_close') {
-                            Haptics.save();
-                            if (loan.closedAt == null) {
-                              await repo.closeLoan(loanId);
-                            } else {
-                              await repo.reopenLoan(loanId);
-                            }
-                          } else if (val == 'delete') {
-                            Haptics.danger();
-                            final confirm = await _confirmDelete(context);
-                            if (confirm == true) {
-                              await repo.deleteLoan(loanId);
-                              if (context.mounted) Navigator.of(context).pop();
-                            }
-                          }
-                        },
-                        itemBuilder: (ctx) => [
-                          PopupMenuItem(
-                            value: 'toggle_close',
-                            child: Text(
-                              loan.closedAt == null ? 'Marcar como terminado' : 'Reabrir préstamo',
-                              style: TextStyle(color: colors.textPrimary),
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Eliminar préstamo',
-                              style: TextStyle(color: colors.danger),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          loan.name,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: colors.textPrimary,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(uiIcon('arrow-left'), color: colors.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(uiIcon('pencil-simple'), color: colors.textSecondary),
+            onPressed: () {
+              Haptics.tick();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LoanEditorScreen(loanId: loanId),
+                ),
+              );
+            },
+          ),
+          PopupMenuButton<String>(
+            icon: Icon(uiIcon('gear'), color: colors.textSecondary),
+            color: colors.sheetSurface,
+            onSelected: (val) async {
+              if (val == 'toggle_close') {
+                Haptics.save();
+                if (loan.closedAt == null) {
+                  await repo.closeLoan(loanId);
+                } else {
+                  await repo.reopenLoan(loanId);
+                }
+              } else if (val == 'delete') {
+                Haptics.danger();
+                final confirm = await _confirmDelete(context);
+                if (confirm == true) {
+                  await repo.deleteLoan(loanId);
+                  if (context.mounted) Navigator.of(context).pop();
+                }
+              }
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'toggle_close',
+                child: Text(
+                  loan.closedAt == null
+                      ? 'Marcar como terminado'
+                      : 'Reabrir préstamo',
+                  style: TextStyle(color: colors.textPrimary),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text(
+                  'Eliminar préstamo',
+                  style: TextStyle(color: colors.danger),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          children: [
+            // Contraparte si existe
+            if (loan.counterparty != null && loan.counterparty!.isNotEmpty) ...[
+              Center(
+                child: Text(
+                  loan.direction == LoanDirection.owe
+                      ? 'Acreedor: ${loan.counterparty}'
+                      : 'Prestatario: ${loan.counterparty}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: colors.textSecondary,
                   ),
-                  body: SafeArea(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      children: [
-                        // Contraparte si existe
-                        if (loan.counterparty != null && loan.counterparty!.isNotEmpty) ...[
-                          Center(
-                            child: Text(
-                              loan.direction == LoanDirection.owe
-                                  ? 'Acreedor: ${loan.counterparty}'
-                                  : 'Prestatario: ${loan.counterparty}',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
-                        // Tarjeta principal con anillo y saldo
-                        _buildHeroCard(context, colors, loan, progress),
-                        const SizedBox(height: 16),
+            // Tarjeta principal con anillo y saldo
+            _buildHeroCard(context, colors, loan, progress),
+            const SizedBox(height: 16),
 
-                        // Botones de acción
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _PrimaryActionButton(
-                                label: 'Registrar pago',
-                                icon: 'plus',
-                                color: colors.brandStart,
-                                onTap: () => _showPaymentSheet(
-                                  context: context,
-                                  ref: ref,
-                                  loan: loan,
-                                  progress: progress,
-                                  isExtra: false,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              flex: 3,
-                              child: _SecondaryActionButton(
-                                label: 'Pago extra / adelanto',
-                                icon: 'sparkle',
-                                onTap: () => _showPaymentSheet(
-                                  context: context,
-                                  ref: ref,
-                                  loan: loan,
-                                  progress: progress,
-                                  isExtra: true,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Historial de pagos
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'HISTORIAL DE PAGOS',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                                color: colors.textTertiary,
-                              ),
-                            ),
-                            Text(
-                              '${payments.length} movimiento${payments.length == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12,
-                                color: colors.textTertiary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        if (payments.isEmpty)
-                          GlassCard(
-                            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Center(
-                              child: Text(
-                                'Aún no registraste pagos para este préstamo.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          ...payments.map((p) => _buildPaymentRow(colors, p)),
-                        const SizedBox(height: 32),
-                      ],
+            // Botones de acción
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _PrimaryActionButton(
+                    label: 'Registrar pago',
+                    icon: 'plus',
+                    color: colors.brandStart,
+                    onTap: () => _showPaymentSheet(
+                      context: context,
+                      ref: ref,
+                      loan: loan,
+                      progress: progress,
+                      isExtra: false,
                     ),
                   ),
-                );
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 3,
+                  child: _SecondaryActionButton(
+                    label: 'Pago extra / adelanto',
+                    icon: 'sparkle',
+                    onTap: () => _showPaymentSheet(
+                      context: context,
+                      ref: ref,
+                      loan: loan,
+                      progress: progress,
+                      isExtra: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Historial de pagos
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'HISTORIAL DE PAGOS',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: colors.textTertiary,
+                  ),
+                ),
+                Text(
+                  '${payments.length} movimiento${payments.length == 1 ? '' : 's'}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (payments.isEmpty)
+              GlassCard(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 36,
+                  horizontal: 20,
+                ),
+                borderRadius: BorderRadius.circular(PocktRadii.l),
+                child: Center(
+                  child: Text(
+                    'Aún no registraste pagos para este préstamo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...payments.map((p) => _buildPaymentRow(colors, p)),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildHeroCard(
@@ -246,7 +252,7 @@ class LoanDetailScreen extends ConsumerWidget {
   ) {
     return GlassCard(
       padding: const EdgeInsets.all(20),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
       child: Column(
         children: [
           // Anillo con porcentaje en el centro
@@ -284,7 +290,7 @@ class LoanDetailScreen extends ConsumerWidget {
                       progress.isClosed ? 'Completado' : 'Pagado',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11,
+                        fontSize: 12,
                         color: colors.textTertiary,
                       ),
                     ),
@@ -321,7 +327,7 @@ class LoanDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
               color: colors.glassFill,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(PocktRadii.l),
               border: Border.all(color: colors.glassBorder),
             ),
             child: Row(
@@ -371,10 +377,14 @@ class LoanDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-                if (progress.nextDueDate != null && progress.estimatedEndDate != null)
+                if (progress.nextDueDate != null &&
+                    progress.estimatedEndDate != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('·', style: TextStyle(color: colors.textTertiary)),
+                    child: Text(
+                      '·',
+                      style: TextStyle(color: colors.textTertiary),
+                    ),
                   ),
                 if (progress.estimatedEndDate != null)
                   Text(
@@ -399,7 +409,7 @@ class LoanDetailScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
         child: Row(
           children: [
             Container(
@@ -438,16 +448,19 @@ class LoanDetailScreen extends ConsumerWidget {
                       if (isExtra) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: colors.warning.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(PocktRadii.s),
                           ),
                           child: Text(
                             'Extra',
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: colors.warning,
                             ),
@@ -497,11 +510,8 @@ class LoanDetailScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _PaymentModalSheet(
-        loan: loan,
-        progress: progress,
-        isExtra: isExtra,
-      ),
+      builder: (ctx) =>
+          _PaymentModalSheet(loan: loan, progress: progress, isExtra: isExtra),
     );
   }
 
@@ -511,7 +521,10 @@ class LoanDetailScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.sheetSurface,
-        title: Text('¿Eliminar préstamo?', style: TextStyle(color: colors.textPrimary)),
+        title: Text(
+          '¿Eliminar préstamo?',
+          style: TextStyle(color: colors.textPrimary),
+        ),
         content: Text(
           'El préstamo se eliminará. Los pagos ya registrados se conservarán como movimientos generales.',
           style: TextStyle(color: colors.textSecondary),
@@ -519,11 +532,20 @@ class LoanDetailScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancelar', style: TextStyle(color: colors.textSecondary)),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: colors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Eliminar', style: TextStyle(color: colors.danger, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Eliminar',
+              style: TextStyle(
+                color: colors.danger,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -546,7 +568,7 @@ class _MetricItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
+            fontSize: 12,
             color: colors.textTertiary,
           ),
         ),
@@ -588,7 +610,7 @@ class _PrimaryActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           color: color,
         ),
         child: Row(
@@ -631,7 +653,7 @@ class _SecondaryActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(PocktRadii.l),
           color: colors.glassFill,
           border: Border.all(color: colors.glassBorder),
         ),
@@ -681,11 +703,18 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
   void initState() {
     super.initState();
     final defaultAmount = widget.loan.installmentAmount != null
-        ? min(widget.loan.installmentAmount!, max(1, widget.progress.balance)).toString()
-        : (widget.progress.balance > 0 ? widget.progress.balance.toString() : '');
+        ? min(
+            widget.loan.installmentAmount!,
+            max(1, widget.progress.balance),
+          ).toString()
+        : (widget.progress.balance > 0
+              ? widget.progress.balance.toString()
+              : '');
 
     _amountController = TextEditingController(text: defaultAmount);
-    _noteController = TextEditingController(text: widget.isExtra ? 'Pago extra' : '');
+    _noteController = TextEditingController(
+      text: widget.isExtra ? 'Pago extra' : '',
+    );
   }
 
   @override
@@ -696,11 +725,13 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
   }
 
   Future<void> _submit() async {
-    final amount = int.tryParse(_amountController.text.replaceAll('.', '').trim());
+    final amount = int.tryParse(
+      _amountController.text.replaceAll('.', '').trim(),
+    );
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresá un monto válido')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ingresá un monto válido')));
       return;
     }
 
@@ -714,15 +745,16 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
         amount: amount,
         date: _date,
         isExtra: widget.isExtra,
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
       );
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al registrar: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al registrar: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -759,7 +791,9 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              widget.isExtra ? 'Registrar pago extra / adelanto' : 'Registrar pago de cuota',
+              widget.isExtra
+                  ? 'Registrar pago extra / adelanto'
+                  : 'Registrar pago de cuota',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 18,
@@ -785,7 +819,9 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
                 ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -794,14 +830,19 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
               style: TextStyle(color: colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Nota o referencia (opcional)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
+                ),
               ),
             ),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Fecha del pago:', style: TextStyle(color: colors.textSecondary)),
+                Text(
+                  'Fecha del pago:',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
                 TextButton(
                   onPressed: () async {
                     final picked = await showDatePicker(
@@ -814,7 +855,10 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
                   },
                   child: Text(
                     DateFormat('dd/MM/yyyy').format(_date),
-                    style: TextStyle(color: colors.brandStart, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: colors.brandStart,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -826,7 +870,9 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
                 backgroundColor: colors.brandStart,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
+                ),
               ),
               child: Text(
                 widget.isExtra ? 'Guardar pago extra' : 'Guardar pago',
