@@ -67,6 +67,28 @@ void main() {
     expect(notifier.shown, hasLength(1));
   });
 
+  test('en modo desde el cobro, el mismo período no repite la alerta al cambiar el mes calendario', () async {
+    await budgetsRepo.setLimit(comidaId, 1000000);
+    final period = DatePeriod(start: DateTime(2026, 9, 30), end: DateTime(2026, 10, 29));
+    await db.into(db.transactions).insert(TransactionsCompanion.insert(
+          id: 'tx-1',
+          type: TxType.expense,
+          amount: 850000,
+          categoryId: comidaId,
+          occurredAt: DateTime(2026, 9, 30, 12),
+          createdAt: DateTime(2026, 9, 30, 12),
+          updatedAt: DateTime(2026, 9, 30, 12),
+          source: TxSource.manual,
+        ));
+
+    await evaluateBudgetAlerts(comidaId,
+        nowLocal: DateTime(2026, 9, 30), db: db, notifier: notifier, period: period);
+    await evaluateBudgetAlerts(comidaId,
+        nowLocal: DateTime(2026, 10, 1), db: db, notifier: notifier, period: period);
+
+    expect(notifier.shown, hasLength(1));
+  });
+
   test('mes siguiente vuelve a avisar la alerta de 80 %', () async {
     await budgetsRepo.setLimit(comidaId, 1000000);
 

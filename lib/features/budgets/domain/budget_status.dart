@@ -108,8 +108,11 @@ Future<void> evaluateBudgetAlerts(
     warningRatio: alertLow / 100.0,
     overRatio: alertHigh / 100.0,
   );
+  // Clave del período (no del mes calendario): en modo "desde el cobro" un
+  // período cruza dos meses y no debe repetir ni perder alertas.
+  final ps = effectivePeriod.start;
   final yearMonth =
-      '${nowLocal.year}-${nowLocal.month.toString().padLeft(2, '0')}';
+      '${ps.year}-${ps.month.toString().padLeft(2, '0')}-${ps.day.toString().padLeft(2, '0')}';
 
   if (status.level == BudgetLevel.over) {
     if (budget.alert100SentFor != yearMonth) {
