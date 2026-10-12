@@ -28,6 +28,7 @@ class AppLockController with ChangeNotifier {
   final Future<void> Function(bool enabled)? onSecurityChanged;
 
   bool _locked = false;
+  bool _authenticating = false;
   bool _isLockEnabled = false;
   int _lockAfterMinutes = 1;
   DateTime? _pausedAt;
@@ -56,6 +57,8 @@ class AppLockController with ChangeNotifier {
 
   /// Desbloquea la app mediante biometría o PIN del dispositivo.
   Future<bool> unlock() async {
+    // El diálogo de huella/PIN pausa y reanuda la app: esas vueltas no cuentan.
+    _authenticating = true;
     try {
       final success = await auth.authenticate(
         localizedReason: 'Desbloquear Pockt',
@@ -63,11 +66,15 @@ class AppLockController with ChangeNotifier {
       );
       if (success) {
         _locked = false;
+        _pausedAt = null;
         Haptics.save();
         notifyListeners();
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _authenticating = false;
+    }
 
     _locked = true;
     Haptics.danger();
@@ -77,12 +84,13 @@ class AppLockController with ChangeNotifier {
 
   /// Guarda el timestamp al pasar a segundo plano.
   void onPaused() {
+    if (_authenticating) return;
     _pausedAt = clock();
   }
 
   /// Al volver al primer plano, si pasó el tiempo configurado, bloquea la app.
   void onResumed() {
-    if (!_isLockEnabled) return;
+    if (!_isLockEnabled || _authenticating) return;
     if (_pausedAt != null) {
       final elapsed = clock().difference(_pausedAt!);
       final threshold = Duration(minutes: _lockAfterMinutes);

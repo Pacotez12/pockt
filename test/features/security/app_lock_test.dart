@@ -71,6 +71,30 @@ void main() {
       expect(secureFlagCalls, contains(true));
     });
 
+    test('con bloqueo al instante, desbloquear con PIN (pausa y vuelta) no vuelve a bloquear', () async {
+      final controller = createController(lockActiveInSettings: true);
+      await controller.init();
+      await controller.setLockAfter(0);
+      late AppLockController c;
+      c = controller;
+      // El PIN del sistema abre otra pantalla: la app pasa a segundo plano y vuelve.
+      when(() => mockAuth.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            biometricOnly: any(named: 'biometricOnly'),
+          )).thenAnswer((_) async {
+        c.onPaused();
+        currentTime = currentTime.add(const Duration(seconds: 4));
+        c.onResumed();
+        return true;
+      });
+
+      expect(await controller.unlock(), isTrue);
+      expect(controller.locked, isFalse);
+      // La vuelta posterior al diálogo tampoco bloquea.
+      controller.onResumed();
+      expect(controller.locked, isFalse);
+    });
+
     test('sin bloqueo activo, arrancar no bloquea', () async {
       final controller = createController(lockActiveInSettings: false);
       await controller.init();
