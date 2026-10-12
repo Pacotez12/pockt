@@ -95,7 +95,7 @@ void main() {
   testWidgets('cada sección abre su pantalla con todas sus filas', (tester) async {
     await pumpSettingsScreen(tester);
     const sections = {
-      'Tu dinero': ['Esquema de cobro', 'Inicio del mes', 'Categorías', 'Recurrentes', 'Préstamos y cuotas'],
+      'Tu dinero': ['Sueldo y cobros', 'Inicio del mes', 'Categorías', 'Recurrentes', 'Préstamos y cuotas'],
       'Carga': ['Orden de categorías', 'Tecla rápida', 'Pedir nota al guardar', 'Vibración'],
       'Inicio y apariencia': ['Apariencia', 'Tarjetas del Inicio', 'Movimientos recientes', 'Resplandor aurora',
           'Aurora reacciona al presupuesto', 'La semana empieza', 'Reducir animaciones'],
@@ -123,7 +123,7 @@ void main() {
   testWidgets('tocar Esquema de cobro navega a IncomeScheduleScreen', (tester) async {
     await pumpSettingsScreen(tester);
     await openSection(tester, 'Tu dinero');
-    await tester.tap(find.text('Esquema de cobro'));
+    await tester.tap(find.text('Sueldo y cobros'));
     await tester.pumpAndSettle();
     expect(find.byType(IncomeScheduleScreen), findsOneWidget);
   });

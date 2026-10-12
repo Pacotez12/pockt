@@ -119,6 +119,8 @@ ThemeData buildDarkTheme() {
       surface: colors.background,
       primary: colors.brandStart,
       secondary: colors.brandEnd,
+      error: colors.danger,
+      outline: colors.glassBorder,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: colors.sheetSurface,
@@ -130,6 +132,7 @@ ThemeData buildDarkTheme() {
     ),
     datePickerTheme: _buildDatePickerTheme(colors),
     snackBarTheme: _buildSnackBarTheme(colors),
+    switchTheme: _buildSwitchTheme(colors),
     inputDecorationTheme: _buildInputDecorationTheme(colors),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colors.brandStart,
@@ -155,6 +158,8 @@ ThemeData buildLightTheme() {
       surface: colors.background,
       primary: colors.brandStart,
       secondary: colors.brandEnd,
+      error: colors.danger,
+      outline: colors.glassBorder,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: colors.sheetSurface,
@@ -166,6 +171,7 @@ ThemeData buildLightTheme() {
     ),
     datePickerTheme: _buildDatePickerTheme(colors),
     snackBarTheme: _buildSnackBarTheme(colors),
+    switchTheme: _buildSwitchTheme(colors),
     inputDecorationTheme: _buildInputDecorationTheme(colors),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colors.brandStart,
@@ -201,31 +207,39 @@ SnackBarThemeData _buildSnackBarTheme(PocktColors colors) {
   );
 }
 
-/// Campos de texto como superficie de vidrio con foco en la marca y error en peligro.
+/// Campos de texto con borde redondeado; el color de cada estado sale del
+/// esquema (foco = marca, error = peligro). Solo `border`: los campos que ya
+/// dibujan su propia superficie (`border: InputBorder.none`) no se ven afectados.
 InputDecorationThemeData _buildInputDecorationTheme(PocktColors colors) {
-  OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(PocktRadii.m),
-    borderSide: BorderSide(color: c, width: w),
-  );
   return InputDecorationThemeData(
-    filled: true,
-    fillColor: colors.glassFill,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     hintStyle: TextStyle(fontFamily: 'Inter', color: colors.textTertiary),
     labelStyle: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
-    floatingLabelStyle: TextStyle(
-      fontFamily: 'Inter',
-      color: colors.brandStart,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(PocktRadii.m),
     ),
-    border: border(colors.glassBorder),
-    enabledBorder: border(colors.glassBorder),
-    focusedBorder: border(colors.brandStart, 1.5),
-    errorBorder: border(colors.danger),
-    focusedErrorBorder: border(colors.danger, 1.5),
-    errorStyle: TextStyle(
-      fontFamily: 'Inter',
-      fontSize: 12,
-      color: colors.danger,
+    errorStyle: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.danger),
+  );
+}
+
+/// Interruptor sin el contorno blanco de Material: pista de vidrio apagado y
+/// marca encendido.
+SwitchThemeData _buildSwitchTheme(PocktColors colors) {
+  return SwitchThemeData(
+    thumbColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.selected)
+          ? Colors.white
+          : colors.textSecondary,
+    ),
+    trackColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.selected)
+          ? colors.brandStart
+          : colors.glassFill,
+    ),
+    trackOutlineColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.selected)
+          ? Colors.transparent
+          : colors.glassBorder,
     ),
   );
 }

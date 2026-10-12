@@ -176,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
           return _SettingsTile(
             key: const ValueKey('settings-income-schedule-tile'),
             icon: 'calendar',
-            title: 'Esquema de cobro',
+            title: 'Sueldo y cobros',
             subtitle: subtitle,
             iconColor: colors.brandAt(0),
             onTap: () {

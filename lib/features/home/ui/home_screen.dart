@@ -1146,7 +1146,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
-            child: Text.rich(
+            // Con letra grande, la línea se achica en vez de partir "Gs." del monto.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text.rich(
               TextSpan(
                 text: '${line.label} · quedan ',
                 style: TextStyle(
@@ -1177,6 +1181,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
               key: const ValueKey('period-line-remaining'),
+            ),
             ),
           ),
           const SizedBox(width: 8),
