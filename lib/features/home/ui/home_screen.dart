@@ -1455,39 +1455,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildPeriodLine(BuildContext context, PeriodLine line) {
     final colors = context.pockt;
     final carry = line.carryOver;
+    final obscure = ref.watch(shouldObscureAmountsProvider);
     final previous = _schedule?.mode.toLowerCase() == 'monthly'
         ? 'del mes anterior'
         : 'de la quincena anterior';
-    final carryText = ref.watch(shouldObscureAmountsProvider)
+    final carryText = obscure
         ? 'incluye •••• $previous'
         : 'incluye ${carry > 0 ? '+' : '−'}${formatGs(carry.abs())} $previous';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPeriodRow(context, line),
-          if (carry != 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                carryText,
-                key: const ValueKey('period-line-carry'),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  color: colors.textSecondary.withValues(alpha: 0.55),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPeriodRow(context, line),
+            if (carry != 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  carryText,
+                  key: const ValueKey('period-line-carry'),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: colors.textSecondary.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPeriodRow(BuildContext context, PeriodLine line) {
     final colors = context.pockt;
+    final obscure = ref.watch(shouldObscureAmountsProvider);
 
     return Row(
       key: const ValueKey('period-line'),
@@ -1508,9 +1514,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 children: [
                   TextSpan(
-                    text: line.isEstimate
-                        ? '~${formatGs(line.remaining)} '
-                        : formatGs(line.remaining),
+                    text: obscure
+                        ? '••••'
+                        : (line.isEstimate
+                              ? '~${formatGs(line.remaining)} '
+                              : formatGs(line.remaining)),
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: line.remaining < 0
@@ -1518,7 +1526,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           : colors.textPrimary,
                     ),
                   ),
-                  if (line.isEstimate)
+                  if (line.isEstimate && !obscure)
                     TextSpan(
                       text: '(estimado)',
                       style: TextStyle(

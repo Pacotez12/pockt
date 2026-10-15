@@ -127,4 +127,40 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('la línea del período y arrastre respetan ocultar montos', (
+    tester,
+  ) async {
+    final settingsRepo = SettingsRepository(db);
+    await settingsRepo.set(SettingsKeys.privacyHideAmounts, 'true');
+
+    await txRepo.add(
+      type: TxType.expense,
+      amount: 3500000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 10, 12),
+    );
+    await pumpHome(tester);
+
+    expect(find.text('incluye •••• de la quincena anterior'), findsOneWidget);
+    expect(
+      find.text('incluye −Gs. 300.000 de la quincena anterior'),
+      findsNothing,
+    );
+    expect(find.textContaining('Gs. 2.900.000'), findsNothing);
+    final remainingWidget = tester.widget<Text>(
+      find.byKey(const ValueKey('period-line-remaining')),
+    );
+    expect(remainingWidget.textSpan?.toPlainText(), contains('••••'));
+
+    // Al tocar el monto del período, se revela
+    await tester.tap(find.byKey(const ValueKey('period-line-remaining')));
+    await tester.pump();
+
+    expect(
+      find.text('incluye −Gs. 300.000 de la quincena anterior'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Gs. 2.900.000'), findsWidgets);
+  });
 }
