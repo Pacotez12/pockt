@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/features/backup/data/local_backup_store.dart';
 
 /// Metadatos de una copia de respaldo remota.
 class RemoteBackup {
@@ -91,8 +92,8 @@ class MemoryBackupStore implements BackupStore {
   }
 }
 
-/// Provider para la interfaz de almacenamiento de backups. Por defecto puede
-/// configurarse en DriveBackupStore o sobreescribirse con MemoryBackupStore en tests.
+/// Almacenamiento de backups: Documentos/Pockt del teléfono (en tests se
+/// sobreescribe con [MemoryBackupStore]).
 final backupStoreProvider = Provider<BackupStore>((ref) {
-  return MemoryBackupStore();
+  return LocalBackupStore();
 });

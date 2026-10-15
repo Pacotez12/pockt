@@ -8,7 +8,6 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/data/backup_store.dart';
-import 'package:pockt/features/backup/data/drive_backup_store.dart';
 import 'package:pockt/features/backup/data/key_storage.dart';
 import 'package:pockt/features/backup/domain/backup_format.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
@@ -159,38 +158,47 @@ void main() {
       expect(status.isOverdue, isTrue);
     });
 
-    test('errores tipados se guardan en backup.lastError y retornan el resultado correspondiente', () async {
+    test('una falla al guardar se registra como storage', () async {
       await service.setPassword('pwd-123');
-
-      // 1. Simular falla no interactiva / sesión de Drive
-      final authFailStore = _ErrorBackupStore(const DriveAuthRequiredException());
-      final authFailService = BackupService(
+      final failService = BackupService(
         db: db,
-        store: authFailStore,
+        store: _ErrorBackupStore(const FileSystemException('Sin espacio')),
         keys: keys,
         settings: settings,
         clock: () => currentTime,
       );
 
-      var res = await authFailService.backupNow();
-      expect(res, equals(BackupResult.notSignedIn));
-      var status = await authFailService.watchStatus().first;
-      expect(status.lastError, equals(BackupResult.notSignedIn));
+      expect(await failService.backupNow(), BackupResult.storage);
+      final status = await failService.watchStatus().first;
+      expect(status.lastError, BackupResult.storage);
+    });
 
-      // 2. Simular falla de red
-      final netFailStore = _ErrorBackupStore(const SocketException('Sin conexión'));
-      final netFailService = BackupService(
-        db: db,
-        store: netFailStore,
-        keys: keys,
-        settings: settings,
-        clock: () => currentTime,
-      );
+    test('backupIfDue: nada sin contraseña; corre si nunca hubo o pasaron 48 h', () async {
+      expect(await service.backupIfDue(), isNull);
 
-      res = await netFailService.backupNow();
-      expect(res, equals(BackupResult.network));
-      status = await netFailService.watchStatus().first;
-      expect(status.lastError, equals(BackupResult.network));
+      await service.setPassword('pwd-123');
+      expect(await service.backupIfDue(), BackupResult.success);
+
+      currentTime = currentTime.add(const Duration(hours: 47));
+      expect(await service.backupIfDue(), isNull);
+
+      currentTime = currentTime.add(const Duration(hours: 2));
+      expect(await service.backupIfDue(), BackupResult.success);
+      expect(await store.list(), hasLength(2));
+    });
+
+    test('sin ningún backup el estado figura atrasado', () async {
+      final status = await service.watchStatus().first;
+      expect(status.isOverdue, isTrue);
+    });
+
+    test('buildExport devuelve un .pockt sin guardarlo', () async {
+      expect(await service.buildExport(), isNull);
+      await service.setPassword('pwd-123');
+      final export = await service.buildExport();
+      expect(export!.name, endsWith('.pockt'));
+      expect(export.bytes, isNotEmpty);
+      expect(await store.list(), isEmpty);
     });
   });
 }

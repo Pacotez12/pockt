@@ -78,7 +78,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('Restaurar copia'), findsOneWidget);
-      expect(find.text('No encontramos copias en tu Google Drive.'), findsOneWidget);
+      expect(find.text('No hay copias en Documentos/Pockt.'), findsOneWidget);
     });
 
     testWidgets('lista las copias disponibles y abre diálogo de contraseña al tocar una', (tester) async {

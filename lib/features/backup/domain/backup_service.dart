@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +6,6 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/data/backup_store.dart';
-import 'package:pockt/features/backup/data/drive_backup_store.dart';
 import 'package:pockt/features/backup/data/key_storage.dart';
 import 'package:pockt/features/backup/data/snapshot.dart';
 import 'package:pockt/features/backup/domain/backup_format.dart';
@@ -16,8 +14,7 @@ import 'package:pockt/features/backup/domain/backup_format.dart';
 enum BackupResult {
   success,
   noPassword,
-  notSignedIn,
-  network,
+  storage,
   unknown;
 
   bool get isSuccess => this == BackupResult.success;
@@ -130,54 +127,46 @@ class BackupService {
       );
       await settings.set(SettingsKeys.backupLastError, '');
       return BackupResult.success;
-    } on DriveAuthRequiredException {
+    } on Exception catch (_) {
+      // Escritura en Documentos/Pockt fallida (espacio, permisos, archivo).
       await settings.set(
         SettingsKeys.backupLastError,
-        BackupResult.notSignedIn.name,
+        BackupResult.storage.name,
       );
-      return BackupResult.notSignedIn;
-    } on SocketException {
-      await settings.set(
-        SettingsKeys.backupLastError,
-        BackupResult.network.name,
-      );
-      return BackupResult.network;
-    } on TimeoutException {
-      await settings.set(
-        SettingsKeys.backupLastError,
-        BackupResult.network.name,
-      );
-      return BackupResult.network;
-    } catch (e) {
-      final err = e.toString().toLowerCase();
-      if (err.contains('socket') ||
-          err.contains('network') ||
-          err.contains('clientexception') ||
-          err.contains('failed host lookup') ||
-          err.contains('connection')) {
-        await settings.set(
-          SettingsKeys.backupLastError,
-          BackupResult.network.name,
-        );
-        return BackupResult.network;
-      }
-      if (err.contains('auth') ||
-          err.contains('sign_in') ||
-          err.contains('unauthorized') ||
-          err.contains('401')) {
-        await settings.set(
-          SettingsKeys.backupLastError,
-          BackupResult.notSignedIn.name,
-        );
-        return BackupResult.notSignedIn;
-      }
-
+      return BackupResult.storage;
+    } catch (_) {
       await settings.set(
         SettingsKeys.backupLastError,
         BackupResult.unknown.name,
       );
       return BackupResult.unknown;
     }
+  }
+
+  /// Genera un `.pockt` cifrado con la contraseña actual sin guardarlo, para
+  /// compartirlo. `null` si no hay contraseña configurada.
+  Future<({String name, List<int> bytes})?> buildExport() async {
+    final keyData = await keys.load();
+    if (keyData == null) return null;
+    final bytes = await encodeBackup(
+      await snapshotDatabase(db),
+      SecretKey(keyData.key),
+      keyData.salt,
+    );
+    return (name: _buildFileName(_clock()), bytes: bytes);
+  }
+
+  /// Backup automático: corre si hay contraseña y pasaron 48 h desde el
+  /// último éxito (o nunca hubo). Devuelve `null` si no tocaba.
+  Future<BackupResult?> backupIfDue() async {
+    if (await keys.load() == null) return null;
+    final last = DateTime.tryParse(
+      await settings.get(SettingsKeys.backupLastSuccessAt) ?? '',
+    );
+    if (last != null && _clock().difference(last) < const Duration(hours: 48)) {
+      return null;
+    }
+    return backupNow();
   }
 
   /// Observa el estado reactivo del backup.
@@ -213,7 +202,8 @@ class BackupService {
       }
     }
 
-    final isOverdue = lastSuccess != null &&
+    // Nunca haber hecho un backup también es estar atrasado.
+    final isOverdue = lastSuccess == null ||
         _clock().difference(lastSuccess).inDays >= 5;
 
     return BackupStatus(

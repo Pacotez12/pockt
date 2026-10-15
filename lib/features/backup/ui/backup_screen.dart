@@ -1,3 +1,6 @@
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +22,7 @@ class BackupScreen extends ConsumerStatefulWidget {
 
 class _BackupScreenState extends ConsumerState<BackupScreen> {
   bool _isBackingUp = false;
+  bool _isExporting = false;
 
   Future<void> _handleBackupNow() async {
     if (_isBackingUp) return;
@@ -45,18 +49,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         case BackupResult.noPassword:
           Haptics.warning();
           _showSetPasswordDialog(isInitial: true);
-        case BackupResult.notSignedIn:
+        case BackupResult.storage:
           Haptics.warning();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Se requiere iniciar sesión en Google Drive'),
-            ),
-          );
-        case BackupResult.network:
-          Haptics.warning();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error de red al conectar con Google Drive'),
+              content: Text('No se pudo guardar la copia en Documentos/Pockt'),
             ),
           );
         case BackupResult.unknown:
@@ -109,7 +106,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Esta contraseña cifra tus copias en Google Drive con AES-256-GCM. '
+                    'Esta contraseña cifra tus copias con AES-256-GCM. '
                     'Pockt nunca guarda tu contraseña: sin ella no podrás restaurar tus respaldos.',
                     style: TextStyle(
                       fontFamily: 'Inter',
@@ -236,7 +233,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       const SizedBox(height: 14),
                       _buildActionButtons(context, status),
                       const SizedBox(height: 14),
-                      _buildDriveFolderCard(context),
+                      _buildFolderCard(context),
                       const SizedBox(height: 14),
                       _buildSecurityCard(context),
                       const SizedBox(height: 14),
@@ -494,7 +491,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     );
   }
 
-  Widget _buildDriveFolderCard(BuildContext context) {
+  Widget _buildFolderCard(BuildContext context) {
     final colors = context.pockt;
 
     return GlassCard(
@@ -504,7 +501,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Google Drive',
+            'Dónde se guarda',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
@@ -515,14 +512,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(uiIcon('tag'), size: 18, color: colors.textSecondary),
+              Icon(uiIcon('device-mobile'), size: 18, color: colors.textSecondary),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pockt · Backups',
+                      'Documentos/Pockt',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 15,
@@ -531,7 +528,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       ),
                     ),
                     Text(
-                      'Se conservan las últimas 7 copias en tu cuenta',
+                      'Automático cada 2 días al abrir la app · se conservan las últimas 7',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
@@ -543,9 +540,70 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Text(
+            'Para no perderla si perdés el teléfono, exportá una copia a Drive, '
+            'WhatsApp o tu correo de vez en cuando.',
+            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.textTertiary),
+          ),
+          const SizedBox(height: 12),
+          Pressable(
+            key: const ValueKey('backup-export-button'),
+            onTap: _isExporting ? null : _handleExport,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: colors.glassFill,
+                borderRadius: BorderRadius.circular(PocktRadii.m),
+                border: Border.all(color: colors.glassBorder),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(uiIcon('arrows-left-right'), size: 18, color: colors.brandStart),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isExporting ? 'Preparando…' : 'Exportar copia',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleExport() async {
+    setState(() => _isExporting = true);
+    try {
+      final export = await ref.read(backupServiceProvider).buildExport();
+      if (!mounted) return;
+      if (export == null) {
+        _showSetPasswordDialog(isInitial: true);
+        return;
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${export.name}');
+      await file.writeAsBytes(export.bytes);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'Copia cifrada de Pockt'),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo exportar la copia')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   Widget _buildSecurityCard(BuildContext context) {
@@ -643,7 +701,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ),
                   ),
                   Text(
-                    'Recuperar datos desde Google Drive',
+                    'Desde Documentos/Pockt o desde un archivo',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
@@ -664,10 +722,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     switch (error) {
       case BackupResult.noPassword:
         return 'No se configuró una contraseña de respaldo.';
-      case BackupResult.notSignedIn:
-        return 'Se requiere iniciar sesión en Google Drive.';
-      case BackupResult.network:
-        return 'No se pudo conectar a Google Drive. Comprobá tu conexión.';
+      case BackupResult.storage:
+        return 'No se pudo guardar la copia en Documentos/Pockt.';
       case BackupResult.unknown:
         return 'Ocurrió un error inesperado al realizar la copia.';
       case BackupResult.success:

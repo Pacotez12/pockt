@@ -49,8 +49,20 @@ class RestoreService {
       (b) => b.id == backupId,
       orElse: () => throw Exception('Copia de seguridad no encontrada'),
     );
+    return previewBytes(
+      await store.download(backupId),
+      password,
+      createdAt: remote.createdAt,
+    );
+  }
 
-    final backupBytes = await store.download(backupId);
+  /// Vista previa de un `.pockt` ya en memoria (por ejemplo elegido con el
+  /// selector de archivos).
+  Future<RestorePreview> previewBytes(
+    List<int> backupBytes,
+    String password, {
+    required DateTime createdAt,
+  }) async {
     final sqliteBytes = await decodeBackup(
       backupBytes,
       keyFor: (salt) => deriveKey(
@@ -74,7 +86,7 @@ class RestoreService {
         final txCount = txCountResult.first.values.first as int;
 
         return RestorePreview(
-          createdAt: remote.createdAt,
+          createdAt: createdAt,
           transactionCount: txCount,
           schemaVersion: schemaVersion,
         );
@@ -96,8 +108,12 @@ class RestoreService {
   /// 5. Abre y valida la base restaurada (ejecutando migraciones si el schemaVersion es anterior).
   /// 6. Si cualquier paso falla, revierte inmediatamente a la copia previa y relanza la excepción.
   Future<void> restore(String backupId, String password) async {
-    // 1. Descargar y descifrar primero.
-    final backupBytes = await store.download(backupId);
+    await restoreBytes(await store.download(backupId), password);
+  }
+
+  /// Restaura desde un `.pockt` ya en memoria, con la misma vuelta atrás.
+  Future<void> restoreBytes(List<int> backupBytes, String password) async {
+    // 1. Descifrar primero: con contraseña incorrecta no se toca ningún archivo.
     final sqliteBytes = await decodeBackup(
       backupBytes,
       keyFor: (salt) => deriveKey(

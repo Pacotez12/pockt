@@ -69,7 +69,7 @@ void main() {
 
       expect(find.text('Copia de seguridad'), findsOneWidget);
       expect(find.text('Respaldar ahora'), findsOneWidget);
-      expect(find.text('Pockt · Backups'), findsOneWidget);
+      expect(find.text('Documentos/Pockt'), findsOneWidget);
     });
 
     testWidgets('muestra fecha formateada del último backup exitoso', (tester) async {

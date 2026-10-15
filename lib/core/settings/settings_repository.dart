@@ -17,7 +17,6 @@ abstract class SettingsKeys {
   static const backupLastSuccessAt = 'backup.lastSuccessAt';
   static const backupLastError = 'backup.lastError';
   static const backupFolderName = 'backup.folderName';
-  static const backupGoogleAccount = 'backup.googleAccount';
   static const securityLock = 'security.lock';
   static const periodMonthStart = 'period.monthStart';
 

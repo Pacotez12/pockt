@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
+import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/security/app_lock.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
@@ -25,6 +26,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runSuggestionGenerator();
+      _runBackupIfDue();
     });
   }
 
@@ -42,7 +44,15 @@ class _PocktAppState extends ConsumerState<PocktApp>
       ref.read(appLockControllerProvider).onResumed();
       ref.read(amountsRevealedProvider.notifier).reset();
       _runSuggestionGenerator();
+      _runBackupIfDue();
     }
+  }
+
+  /// Backup automático en primer plano (spec §7): cada 48 h al abrir/volver.
+  void _runBackupIfDue() {
+    unawaited(
+      ref.read(backupServiceProvider).backupIfDue().catchError((_) => null),
+    );
   }
 
   void _runSuggestionGenerator() {

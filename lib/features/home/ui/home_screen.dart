@@ -468,7 +468,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       if (snapshot.data?.isOverdue == true) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 14),
-                          child: _buildOverdueBackupBanner(context),
+                          child: _buildOverdueBackupBanner(
+                            context,
+                            never: snapshot.data!.lastSuccessAt == null,
+                          ),
                         );
                       }
                       return const SizedBox.shrink();
@@ -1086,7 +1089,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildOverdueBackupBanner(BuildContext context) {
+  Widget _buildOverdueBackupBanner(BuildContext context, {bool never = false}) {
     final colors = context.pockt;
 
     return Pressable(
@@ -1119,7 +1122,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Copia de seguridad pendiente (hace más de 5 días)',
+                never
+                    ? 'Activá la copia de seguridad'
+                    : 'Copia de seguridad pendiente (hace más de 5 días)',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13,

@@ -1,5 +1,6 @@
 package io.github.pacotez12.pockt
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
@@ -9,6 +10,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
+    private lateinit var backupFiles: BackupFiles
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestHighestRefreshRate()
@@ -16,6 +19,9 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        backupFiles = BackupFiles(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "pockt/backup_files")
+            .setMethodCallHandler(backupFiles)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "pockt/secure").setMethodCallHandler { call, result ->
             when (call.method) {
                 "setSecure" -> {
@@ -30,6 +36,13 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    @Deprecated("Selector de archivos de restauración")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (::backupFiles.isInitialized && backupFiles.onActivityResult(requestCode, resultCode, data)) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     // Flutter no pide una tasa de refresco alta por su cuenta: en pantallas

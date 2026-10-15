@@ -204,6 +204,9 @@ void main() {
     expect(iconColorOf('settings-reminders-tile'), c.brandAt(3));
     await goBack(tester);
 
+    // Sin ningún backup la fila va en aviso; con uno reciente, en su paso de marca.
+    await SettingsRepository(testDb)
+        .set(SettingsKeys.backupLastSuccessAt, DateTime.now().toIso8601String());
     await openSection(tester, 'Privacidad y datos');
     expect(iconColorOf('settings-backup-tile'), c.brandAt(3));
   });

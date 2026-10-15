@@ -7,6 +7,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/features/backup/data/backup_store.dart';
+import 'package:pockt/features/backup/data/local_backup_store.dart';
 import 'package:pockt/features/backup/domain/backup_format.dart';
 import 'package:pockt/features/backup/domain/restore_service.dart';
 
@@ -54,6 +55,26 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
 
   void _loadBackups() {
     _backupsFuture = ref.read(backupStoreProvider).list();
+  }
+
+  static const _kPickedId = 'archivo-elegido';
+  List<int>? _pickedBytes;
+
+  /// Restaurar desde un `.pockt` elegido con el selector de Android (tras
+  /// reinstalar o cambiar de teléfono).
+  Future<void> _pickFile() async {
+    Haptics.tick();
+    final store = ref.read(backupStoreProvider);
+    if (store is! LocalBackupStore) return;
+    final picked = await store.pickFile();
+    if (picked == null || !mounted) return;
+    _pickedBytes = picked.bytes;
+    await _showPasswordModal(RemoteBackup(
+      id: _kPickedId,
+      name: picked.name,
+      createdAt: DateTime.now(),
+      sizeBytes: picked.bytes.length,
+    ));
   }
 
   Future<void> _onSelectBackup(RemoteBackup backup) async {
@@ -168,10 +189,16 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             final restoreService = ref.read(
                               restoreServiceProvider,
                             );
-                            final preview = await restoreService.preview(
-                              backup.id,
-                              password,
-                            );
+                            final preview = backup.id == _kPickedId
+                                ? await restoreService.previewBytes(
+                                    _pickedBytes!,
+                                    password,
+                                    createdAt: backup.createdAt,
+                                  )
+                                : await restoreService.preview(
+                                    backup.id,
+                                    password,
+                                  );
 
                             if (!context.mounted) return;
                             Navigator.of(sheetContext).pop();
@@ -384,7 +411,11 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                           });
                           try {
                             final service = ref.read(restoreServiceProvider);
-                            await service.restore(backup.id, password);
+                            if (backup.id == _kPickedId) {
+                              await service.restoreBytes(_pickedBytes!, password);
+                            } else {
+                              await service.restore(backup.id, password);
+                            }
                             Haptics.save();
                             if (!mounted || !sheetContext.mounted) return;
                             Navigator.of(sheetContext).pop();
@@ -568,7 +599,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No encontramos copias en tu Google Drive.',
+                              'No hay copias en Documentos/Pockt.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: 'Inter',
@@ -579,7 +610,7 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Asegurate de haber configurado los respaldos en Ajustes y de tener conexión a Internet.',
+                              'Si tenés un archivo .pockt (por ejemplo exportado a Drive o WhatsApp), elegilo abajo.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: 'Inter',
@@ -674,6 +705,33 @@ class _RestoreFlowScreenState extends ConsumerState<RestoreFlowScreen> {
                     },
                   );
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Pressable(
+                key: const ValueKey('restore-pick-file'),
+                onTap: _pickFile,
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  borderRadius: BorderRadius.circular(PocktRadii.l),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(uiIcon('magnifying-glass'), size: 18, color: colors.brandStart),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Elegir archivo…',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
