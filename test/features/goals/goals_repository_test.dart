@@ -70,6 +70,29 @@ void main() {
     expect(active.length, equals(1));
   });
 
+  test('watchActiveWithProgress se actualiza al aportar', () async {
+    final goalId = await repo.createGoal(
+      name: 'PC Gamer',
+      icon: 'laptop',
+      targetAmount: 15000000,
+    );
+    final emitted = <int>[];
+    final sub = repo.watchActiveWithProgress().listen(
+      (list) => emitted.add(list.single.progress.saved),
+    );
+    await pumpEventQueue();
+
+    await repo.addContribution(
+      goalId: goalId,
+      amount: 2000000,
+      date: DateTime(2026, 10, 15),
+    );
+    await pumpEventQueue();
+    await sub.cancel();
+
+    expect(emitted.last, equals(2000000));
+  });
+
   test('aportar y retirar (= aporte negativo) y vigilar historial', () async {
     final goalId = await repo.createGoal(
       name: 'Nueva notebook',
