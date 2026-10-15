@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
+import 'package:pockt/features/onboarding/domain/onboarding_check.dart';
+import 'package:pockt/features/onboarding/ui/onboarding_flow.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/security/app_lock.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
@@ -56,9 +59,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
   }
 
   void _runSuggestionGenerator() {
-    unawaited(
-      ref.read(suggestionGeneratorProvider).run().catchError((_) => 0),
-    );
+    unawaited(ref.read(suggestionGeneratorProvider).run().catchError((_) => 0));
   }
 
   @override
@@ -86,18 +87,39 @@ class _PocktAppState extends ConsumerState<PocktApp>
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('es', 'PY'),
-        Locale('es'),
-      ],
+      supportedLocales: const [Locale('es', 'PY'), Locale('es')],
       locale: const Locale('es', 'PY'),
       themeAnimationDuration: const Duration(milliseconds: 400),
       themeAnimationCurve: Curves.easeInOut,
       home: const AppLockGate(
-        child: PocktSplash(child: AppShell()),
+        child: PocktSplash(child: OnboardingGate(child: AppShell())),
       ),
     );
   }
 }
 
+class OnboardingGate extends ConsumerWidget {
+  final Widget child;
 
+  const OnboardingGate({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showAsync = ref.watch(shouldShowOnboardingProvider);
+
+    return showAsync.when(
+      data: (show) {
+        if (show) {
+          return OnboardingFlow(
+            onFinish: () {
+              ref.invalidate(shouldShowOnboardingProvider);
+            },
+          );
+        }
+        return child;
+      },
+      loading: () => const ColoredBox(color: Colors.black),
+      error: (e, st) => child,
+    );
+  }
+}

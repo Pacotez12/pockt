@@ -48,6 +48,9 @@ abstract class SettingsKeys {
 
   // Reportes (§7d)
   static const reportsAntThreshold = 'reports.antThreshold';
+
+  // Primer uso (Plan 4 Task 7 / §5.11)
+  static const onboardingDone = 'onboarding.done';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
