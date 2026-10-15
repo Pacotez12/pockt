@@ -45,6 +45,34 @@ class Categories extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class Events extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get icon => text()();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class EntryShortcuts extends Table {
+  TextColumn get id => text()();
+  TextColumn get merchant => text().nullable()();
+  TextColumn get note => text().nullable()();
+  IntColumn get amount => integer()();
+  TextColumn get categoryId => text().references(Categories, #id)();
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDismissed => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Transactions extends Table {
   TextColumn get id => text()();
   TextColumn get type => textEnum<TxType>()();
@@ -63,6 +91,9 @@ class Transactions extends Table {
 
   /// Pago extra / adelanto de un préstamo (no cuenta como cuota regular).
   BoolColumn get isExtra => boolean().withDefault(const Constant(false))();
+
+  /// Evento especial al que se asigna el gasto (Plan 5c / spec §7d).
+  TextColumn get eventId => text().nullable().references(Events, #id)();
   DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override

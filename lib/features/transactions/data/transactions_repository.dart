@@ -34,7 +34,7 @@ class TransactionsRepository {
     DateTime Function()? clock,
     this.notifier,
     this.homeWidget,
-  })  : _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   DateTime _now() => _clock().toUtc();
 
@@ -46,20 +46,30 @@ class TransactionsRepository {
     final key = normalizeKeyword(merchant);
     if (key.isEmpty) return;
 
-    final existing = await (db.select(db.merchantMemory)
-          ..where((m) => m.merchantKey.equals(key) & m.categoryId.equals(categoryId)))
-        .getSingleOrNull();
+    final existing =
+        await (db.select(db.merchantMemory)..where(
+              (m) =>
+                  m.merchantKey.equals(key) & m.categoryId.equals(categoryId),
+            ))
+            .getSingleOrNull();
 
     if (existing != null) {
-      final newest = occurredAt.isAfter(existing.lastUsedAt) ? occurredAt : existing.lastUsedAt;
-      await (db.update(db.merchantMemory)
-            ..where((m) => m.merchantKey.equals(key) & m.categoryId.equals(categoryId)))
-          .write(MerchantMemoryCompanion(
-        uses: Value(existing.uses + 1),
-        lastUsedAt: Value(newest),
-      ));
+      final newest = occurredAt.isAfter(existing.lastUsedAt)
+          ? occurredAt
+          : existing.lastUsedAt;
+      await (db.update(db.merchantMemory)..where(
+            (m) => m.merchantKey.equals(key) & m.categoryId.equals(categoryId),
+          ))
+          .write(
+            MerchantMemoryCompanion(
+              uses: Value(existing.uses + 1),
+              lastUsedAt: Value(newest),
+            ),
+          );
     } else {
-      await db.into(db.merchantMemory).insert(
+      await db
+          .into(db.merchantMemory)
+          .insert(
             MerchantMemoryCompanion.insert(
               merchantKey: key,
               categoryId: categoryId,
@@ -78,6 +88,7 @@ class TransactionsRepository {
     String? merchant,
     String? note,
     String? loanId,
+    String? eventId,
   }) async {
     if (amount <= 0) {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
@@ -86,8 +97,20 @@ class TransactionsRepository {
     final id = const Uuid().v4();
     final now = _now();
 
+    String? effectiveEventId = eventId;
+    if (effectiveEventId == null && type == TxType.expense) {
+      final activeEvent = await (db.select(
+        db.events,
+      )..where((e) => e.isActive.equals(true))).getSingleOrNull();
+      if (activeEvent != null) {
+        effectiveEventId = activeEvent.id;
+      }
+    }
+
     await db.transaction(() async {
-      await db.into(db.transactions).insert(
+      await db
+          .into(db.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: id,
               type: type,
@@ -100,6 +123,7 @@ class TransactionsRepository {
               merchant: Value(merchant),
               note: Value(note),
               loanId: Value(loanId),
+              eventId: Value(effectiveEventId),
             ),
           );
 
@@ -108,14 +132,24 @@ class TransactionsRepository {
       }
 
       if (loanId != null) {
-        final loan = await (db.select(db.loans)..where((l) => l.id.equals(loanId))).getSingleOrNull();
+        final loan = await (db.select(
+          db.loans,
+        )..where((l) => l.id.equals(loanId))).getSingleOrNull();
         if (loan != null && loan.closedAt == null) {
-          final allPayments = await (db.select(db.transactions)
-                ..where((t) => t.loanId.equals(loanId) & t.deletedAt.isNull()))
-              .get();
-          final progress = calculateLoanProgress(loan: loan, payments: allPayments, now: occurredAt);
+          final allPayments =
+              await (db.select(db.transactions)..where(
+                    (t) => t.loanId.equals(loanId) & t.deletedAt.isNull(),
+                  ))
+                  .get();
+          final progress = calculateLoanProgress(
+            loan: loan,
+            payments: allPayments,
+            now: occurredAt,
+          );
           if (progress.balance <= 0) {
-            await (db.update(db.loans)..where((l) => l.id.equals(loanId))).write(
+            await (db.update(
+              db.loans,
+            )..where((l) => l.id.equals(loanId))).write(
               LoansCompanion(
                 closedAt: Value(occurredAt),
                 updatedAt: Value(now),
@@ -170,6 +204,8 @@ class TransactionsRepository {
     String? note,
     String? loanId,
     bool clearLoanId = false,
+    String? eventId,
+    bool clearEventId = false,
   }) async {
     if (amount != null && amount <= 0) {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
@@ -178,29 +214,45 @@ class TransactionsRepository {
     await db.transaction(() async {
       final companion = TransactionsCompanion(
         amount: amount != null ? Value(amount) : const Value.absent(),
-        categoryId: categoryId != null ? Value(categoryId) : const Value.absent(),
-        occurredAt: occurredAt != null ? Value(occurredAt.toUtc()) : const Value.absent(),
+        categoryId: categoryId != null
+            ? Value(categoryId)
+            : const Value.absent(),
+        occurredAt: occurredAt != null
+            ? Value(occurredAt.toUtc())
+            : const Value.absent(),
         merchant: merchant != null ? Value(merchant) : const Value.absent(),
         note: note != null ? Value(note) : const Value.absent(),
-        loanId: clearLoanId ? const Value(null) : (loanId != null ? Value(loanId) : const Value.absent()),
+        loanId: clearLoanId
+            ? const Value(null)
+            : (loanId != null ? Value(loanId) : const Value.absent()),
+        eventId: clearEventId
+            ? const Value(null)
+            : (eventId != null ? Value(eventId) : const Value.absent()),
         updatedAt: Value(_now()),
       );
 
-      await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(companion);
+      await (db.update(
+        db.transactions,
+      )..where((t) => t.id.equals(id))).write(companion);
 
       if (merchant != null && merchant.trim().isNotEmpty) {
         String effectiveCatId = categoryId ?? '';
         DateTime effectiveOccurredAt = occurredAt ?? _now();
         if (categoryId == null || occurredAt == null) {
-          final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
-              .getSingleOrNull();
+          final tx = await (db.select(
+            db.transactions,
+          )..where((t) => t.id.equals(id))).getSingleOrNull();
           if (tx != null) {
             effectiveCatId = categoryId ?? tx.categoryId;
             effectiveOccurredAt = occurredAt ?? tx.occurredAt;
           }
         }
         if (effectiveCatId.isNotEmpty) {
-          await _upsertMerchantMemory(merchant, effectiveCatId, effectiveOccurredAt.toUtc());
+          await _upsertMerchantMemory(
+            merchant,
+            effectiveCatId,
+            effectiveOccurredAt.toUtc(),
+          );
         }
       }
     });
@@ -208,8 +260,9 @@ class TransactionsRepository {
     final notif = notifier;
     if (notif != null) {
       try {
-        final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
-            .getSingleOrNull();
+        final tx = await (db.select(
+          db.transactions,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
         if (tx != null && tx.type == TxType.expense) {
           await evaluateBudgetAlerts(
             tx.categoryId,
@@ -225,10 +278,7 @@ class TransactionsRepository {
   Future<void> softDelete(String id) async {
     final now = _now();
     await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(
-      TransactionsCompanion(
-        deletedAt: Value(now),
-        updatedAt: Value(now),
-      ),
+      TransactionsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
     );
   }
 
@@ -241,7 +291,12 @@ class TransactionsRepository {
     );
   }
 
-  Stream<int> watchMonthTotal(int year, int month, TxType type, {DatePeriod? period}) {
+  Stream<int> watchMonthTotal(
+    int year,
+    int month,
+    TxType type, {
+    DatePeriod? period,
+  }) {
     final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
     final query = db.selectOnly(db.transactions)
@@ -249,8 +304,12 @@ class TransactionsRepository {
       ..where(
         db.transactions.deletedAt.isNull() &
             db.transactions.type.equalsValue(type) &
-            db.transactions.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
+            db.transactions.occurredAt.isBiggerOrEqualValue(
+              effectivePeriod.startUtc,
+            ) &
+            db.transactions.occurredAt.isSmallerThanValue(
+              effectivePeriod.endUtc,
+            ),
       );
 
     return query.watchSingle().map((row) => row.read(sumAmount) ?? 0);
@@ -276,9 +335,11 @@ class TransactionsRepository {
   }) {
     final query = db.select(db.transactions)
       ..where((t) {
-        var pred = t.deletedAt.isNull() &
+        var pred =
+            t.deletedAt.isNull() &
             t.type.equalsValue(TxType.income) &
-            (t.source.equalsValue(TxSource.incomeSchedule) | t.categoryId.equals(categoryId));
+            (t.source.equalsValue(TxSource.incomeSchedule) |
+                t.categoryId.equals(categoryId));
         if (beforeOrOnLocalDay != null) {
           final endUtc = dayRangeUtc(beforeOrOnLocalDay).endUtc;
           pred = pred & t.occurredAt.isSmallerThanValue(endUtc);
@@ -288,26 +349,37 @@ class TransactionsRepository {
       ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])
       ..limit(1);
 
-    return query.watchSingleOrNull().map((tx) => tx != null ? toLocal(tx.occurredAt) : null);
+    return query.watchSingleOrNull().map(
+      (tx) => tx != null ? toLocal(tx.occurredAt) : null,
+    );
   }
 
-  Stream<List<CategoryTotal>> watchMonthCategoryTotals(int year, int month, {DatePeriod? period}) {
+  Stream<List<CategoryTotal>> watchMonthCategoryTotals(
+    int year,
+    int month, {
+    DatePeriod? period,
+  }) {
     final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
 
-    final query = db.select(db.categories).join([
-      innerJoin(
-        db.transactions,
-        db.transactions.categoryId.equalsExp(db.categories.id) &
-            db.transactions.deletedAt.isNull() &
-            db.transactions.type.equalsValue(TxType.expense) &
-            db.transactions.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
-      ),
-    ])
-      ..addColumns([sumAmount])
-      ..groupBy([db.categories.id])
-      ..orderBy([OrderingTerm.desc(sumAmount)]);
+    final query =
+        db.select(db.categories).join([
+            innerJoin(
+              db.transactions,
+              db.transactions.categoryId.equalsExp(db.categories.id) &
+                  db.transactions.deletedAt.isNull() &
+                  db.transactions.type.equalsValue(TxType.expense) &
+                  db.transactions.occurredAt.isBiggerOrEqualValue(
+                    effectivePeriod.startUtc,
+                  ) &
+                  db.transactions.occurredAt.isSmallerThanValue(
+                    effectivePeriod.endUtc,
+                  ),
+            ),
+          ])
+          ..addColumns([sumAmount])
+          ..groupBy([db.categories.id])
+          ..orderBy([OrderingTerm.desc(sumAmount)]);
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -318,14 +390,20 @@ class TransactionsRepository {
     });
   }
 
-  Stream<Map<int, int>> watchDailyExpenseTotals(int year, int month, {DatePeriod? period}) {
+  Stream<Map<int, int>> watchDailyExpenseTotals(
+    int year,
+    int month, {
+    DatePeriod? period,
+  }) {
     final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final query = db.select(db.transactions)
-      ..where((t) =>
-          t.deletedAt.isNull() &
-          t.type.equalsValue(TxType.expense) &
-          t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
-          t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc));
+      ..where(
+        (t) =>
+            t.deletedAt.isNull() &
+            t.type.equalsValue(TxType.expense) &
+            t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
+      );
 
     return query.watch().map((txs) {
       final map = <int, int>{};
@@ -342,11 +420,15 @@ class TransactionsRepository {
   }
 
   Future<List<TxView>> getAllActive() async {
-    final query = db.select(db.transactions).join([
-      innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
-    ])
-      ..where(db.transactions.deletedAt.isNull())
-      ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
+    final query =
+        db.select(db.transactions).join([
+            innerJoin(
+              db.categories,
+              db.categories.id.equalsExp(db.transactions.categoryId),
+            ),
+          ])
+          ..where(db.transactions.deletedAt.isNull())
+          ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
 
     final rows = await query.get();
     return rows.map((row) {
@@ -358,12 +440,16 @@ class TransactionsRepository {
   }
 
   Stream<List<TxView>> watchRecent({int limit = 20}) {
-    final query = db.select(db.transactions).join([
-      innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
-    ])
-      ..where(db.transactions.deletedAt.isNull())
-      ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)])
-      ..limit(limit);
+    final query =
+        db.select(db.transactions).join([
+            innerJoin(
+              db.categories,
+              db.categories.id.equalsExp(db.transactions.categoryId),
+            ),
+          ])
+          ..where(db.transactions.deletedAt.isNull())
+          ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)])
+          ..limit(limit);
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -377,15 +463,21 @@ class TransactionsRepository {
 
   Stream<List<TxView>> watchDay(DateTime localDay) {
     final range = dayRangeUtc(localDay);
-    final query = db.select(db.transactions).join([
-      innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
-    ])
-      ..where(
-        db.transactions.deletedAt.isNull() &
-            db.transactions.occurredAt.isBiggerOrEqualValue(range.startUtc) &
-            db.transactions.occurredAt.isSmallerThanValue(range.endUtc),
-      )
-      ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
+    final query =
+        db.select(db.transactions).join([
+            innerJoin(
+              db.categories,
+              db.categories.id.equalsExp(db.transactions.categoryId),
+            ),
+          ])
+          ..where(
+            db.transactions.deletedAt.isNull() &
+                db.transactions.occurredAt.isBiggerOrEqualValue(
+                  range.startUtc,
+                ) &
+                db.transactions.occurredAt.isSmallerThanValue(range.endUtc),
+          )
+          ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -416,26 +508,33 @@ class TransactionsRepository {
 
     if (fromLocal != null) {
       final startUtc = dayRangeUtc(fromLocal).startUtc;
-      predicate = predicate & db.transactions.occurredAt.isBiggerOrEqualValue(startUtc);
+      predicate =
+          predicate & db.transactions.occurredAt.isBiggerOrEqualValue(startUtc);
     }
 
     if (toLocal != null) {
       final endUtc = dayRangeUtc(toLocal).endUtc;
-      predicate = predicate & db.transactions.occurredAt.isSmallerThanValue(endUtc);
+      predicate =
+          predicate & db.transactions.occurredAt.isSmallerThanValue(endUtc);
     }
 
     if (query != null && query.trim().isNotEmpty) {
       final cleanQuery = '%${query.trim().toLowerCase()}%';
-      predicate = predicate &
+      predicate =
+          predicate &
           (db.transactions.merchant.lower().like(cleanQuery) |
               db.transactions.note.lower().like(cleanQuery));
     }
 
-    final joined = db.select(db.transactions).join([
-      innerJoin(db.categories, db.categories.id.equalsExp(db.transactions.categoryId)),
-    ])
-      ..where(predicate)
-      ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
+    final joined =
+        db.select(db.transactions).join([
+            innerJoin(
+              db.categories,
+              db.categories.id.equalsExp(db.transactions.categoryId),
+            ),
+          ])
+          ..where(predicate)
+          ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
 
     return joined.watch().map((rows) {
       return rows.map((row) {
@@ -457,11 +556,13 @@ class TransactionsRepository {
     final endUtc = dayRangeUtc(untilLocal).endUtc;
 
     final query = db.select(db.transactions)
-      ..where((t) =>
-          t.deletedAt.isNull() &
-          t.type.equalsValue(TxType.expense) &
-          t.occurredAt.isBiggerOrEqualValue(startUtc) &
-          t.occurredAt.isSmallerOrEqualValue(endUtc));
+      ..where(
+        (t) =>
+            t.deletedAt.isNull() &
+            t.type.equalsValue(TxType.expense) &
+            t.occurredAt.isBiggerOrEqualValue(startUtc) &
+            t.occurredAt.isSmallerOrEqualValue(endUtc),
+      );
 
     final rows = await query.get();
     return rows.map((r) {

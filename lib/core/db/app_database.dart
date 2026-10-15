@@ -25,6 +25,8 @@ part 'app_database.g.dart';
     Loans,
     Goals,
     GoalContributions,
+    EntryShortcuts,
+    Events,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -32,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -249,6 +251,11 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(goals);
           await m.createTable(goalContributions);
         }
+        if (from < 11) {
+          await m.createTable(entryShortcuts);
+          await m.createTable(events);
+          await m.addColumn(transactions, transactions.eventId);
+        }
       },
     );
   }
@@ -346,6 +353,8 @@ class AppDatabase extends _$AppDatabase {
       await delete(loans).go();
       await delete(goalContributions).go();
       await delete(goals).go();
+      await delete(entryShortcuts).go();
+      await delete(events).go();
       await delete(suggestedTransactions).go();
       await delete(merchantMemory).go();
       await delete(budgets).go();

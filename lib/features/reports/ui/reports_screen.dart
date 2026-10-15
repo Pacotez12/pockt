@@ -15,6 +15,7 @@ import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/reports/data/reports_repository.dart';
+import 'package:pockt/features/reports/domain/ant_expenses.dart';
 import 'package:pockt/features/reports/domain/compare.dart';
 import 'package:pockt/features/reports/ui/charts.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
@@ -68,6 +69,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     'Evolución',
     'Comparación',
     'Por comercio',
+    'Hormiga',
   ];
 
   DateTime get _now => widget.nowLocal ?? DateTime.now();
@@ -159,6 +161,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     isDark: isDark,
                   ),
                   _MerchantsView(year: _year, month: _month, isDark: isDark),
+                  _AntExpensesView(year: _year, month: _month, isDark: isDark),
                 ],
               ),
             ),
@@ -284,7 +287,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   Widget _buildTabSelector(PocktColors colors) {
-    return Padding(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.all(3),
@@ -294,41 +299,43 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           border: Border.all(color: colors.glassBorder),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < _tabTitles.length; i++)
-              Expanded(
-                child: Pressable(
-                  onTap: () {
-                    Haptics.tick();
-                    _pageController.animateToPage(
-                      i,
-                      duration: const Duration(milliseconds: 280),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 7),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(17),
-                      color: _currentPage == i
-                          ? colors.glassBorder
-                          : Colors.transparent,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _tabTitles[i],
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: _currentPage == i
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color: _currentPage == i
-                              ? colors.textPrimary
-                              : colors.textTertiary,
-                        ),
+              Pressable(
+                onTap: () {
+                  Haptics.tick();
+                  _pageController.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(17),
+                    color: _currentPage == i
+                        ? colors.glassBorder
+                        : Colors.transparent,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _tabTitles[i],
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: _currentPage == i
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: _currentPage == i
+                            ? colors.textPrimary
+                            : colors.textTertiary,
                       ),
                     ),
                   ),
@@ -1495,6 +1502,309 @@ class _MerchantsView extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// VISTA 5: Gastos hormiga
+// -----------------------------------------------------------------------------
+
+class _AntExpensesView extends ConsumerWidget {
+  final int year;
+  final int month;
+  final bool isDark;
+
+  const _AntExpensesView({
+    required this.year,
+    required this.month,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.pockt;
+    final repo = ref.watch(reportsRepositoryProvider);
+    final mode =
+        ref.watch(monthStartModeProvider).value ?? MonthStartMode.calendar;
+    final schedule = ref.watch(currentIncomeScheduleProvider).value;
+    final threshold = ref.watch(reportsAntThresholdProvider).value ?? 30000;
+    final nowLocal = toLocal(DateTime.now());
+    final isCurrent = year == nowLocal.year && month == nowLocal.month;
+    final period = periodFor(
+      isCurrent ? nowLocal : DateTime(year, month, 15),
+      mode: mode,
+      schedule: schedule,
+    );
+
+    return StreamBuilder<AntExpensesSummary>(
+      stream: repo.watchAntExpenses(
+        year,
+        month,
+        period: period,
+        threshold: threshold,
+      ),
+      builder: (context, snapshot) {
+        final summary = snapshot.data ?? AntExpensesSummary.empty;
+        final list = summary.groups;
+
+        if (list.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(uiIcon('coins'), size: 44, color: colors.textTertiary),
+                const SizedBox(height: 12),
+                Text(
+                  'Sin gastos hormiga este mes',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textTertiary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Gastos menores o iguales a ${formatGs(threshold)}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: colors.textTertiary.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+          physics: const BouncingScrollPhysics(),
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Gastos hormiga',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.glassFill,
+                    borderRadius: BorderRadius.circular(PocktRadii.m),
+                    border: Border.all(color: colors.glassBorder),
+                  ),
+                  child: Text(
+                    '≤ ${formatGs(threshold)}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Tarjetas de métricas: Total hormiga, Cantidad, Proyección anual
+            Row(
+              children: [
+                Expanded(
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total hormiga',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          formatGs(summary.total),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${summary.count} ${summary.count == 1 ? 'compra' : 'compras'}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Proyección anual',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          formatGs(summary.annualProjection),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'total × 12',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // Desglose agrupado por comercio o categoría
+            GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  for (var i = 0; i < list.length; i++) ...[
+                    _AntGroupRow(group: list[i], isDark: isDark),
+                    if (i < list.length - 1)
+                      Divider(
+                        height: 1,
+                        color: colors.glassBorder.withValues(alpha: 0.5),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AntGroupRow extends StatelessWidget {
+  final AntExpenseGroup group;
+  final bool isDark;
+
+  const _AntGroupRow({required this.group, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final catColor =
+        (isDark ? group.colorDark : group.colorLight) ?? 0xFF8BA4B5;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(catColor).withValues(alpha: 0.16),
+            ),
+            child: Center(
+              child: Icon(
+                uiIcon(group.categoryIcon),
+                size: 18,
+                color: Color(catColor),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  group.name,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${group.count} ${group.count == 1 ? 'compra' : 'compras'} · Promedio ${formatGs(group.average)}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: colors.textTertiary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            formatGs(group.total),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: colors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

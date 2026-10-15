@@ -161,7 +161,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
     // 1. Schema version actualizado a 10
-    expect(db.schemaVersion, equals(10));
+    expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     // 2. Datos existentes intactos
     final txs = await db.select(db.transactions).get();
@@ -197,7 +197,7 @@ void main() {
     // 4. Verificar a nivel de SQLite raw que la columna shift_to_previous_business_day no existe
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(10));
+    expect(userVersionResult.first['user_version'], equals(db.schemaVersion));
 
     final tableInfo = rawDb.select('PRAGMA table_info(income_schedules);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();

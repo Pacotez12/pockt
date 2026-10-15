@@ -7,12 +7,14 @@ class PlannedReminder {
   final int notificationId;
   final String title;
   final String body;
+  final String? payload;
 
   const PlannedReminder({
     required this.atLocal,
     required this.notificationId,
     required this.title,
     required this.body,
+    this.payload,
   });
 
   @override
@@ -23,14 +25,16 @@ class PlannedReminder {
           atLocal == other.atLocal &&
           notificationId == other.notificationId &&
           title == other.title &&
-          body == other.body;
+          body == other.body &&
+          payload == other.payload;
 
   @override
-  int get hashCode => Object.hash(atLocal, notificationId, title, body);
+  int get hashCode =>
+      Object.hash(atLocal, notificationId, title, body, payload);
 
   @override
   String toString() =>
-      'PlannedReminder(atLocal: $atLocal, notificationId: $notificationId, title: $title, body: $body)';
+      'PlannedReminder(atLocal: $atLocal, notificationId: $notificationId, title: $title, body: $body, payload: $payload)';
 }
 
 /// Verifica si un horario determinado (hora y minuto) cae dentro del rango de silencio.

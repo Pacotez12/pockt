@@ -5,6 +5,7 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
+import 'package:pockt/features/reports/domain/ant_expenses.dart';
 import 'package:pockt/features/reports/domain/compare.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
@@ -83,21 +84,24 @@ class ReportsRepository {
     final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
     final sumAmount = db.transactions.amount.sum();
 
-    final query = db.select(db.categories).join([
-      innerJoin(
-        db.transactions,
-        db.transactions.categoryId.equalsExp(db.categories.id) &
-            db.transactions.deletedAt.isNull() &
-            db.transactions.type.equalsValue(TxType.expense) &
-            db.transactions.occurredAt
-                .isBiggerOrEqualValue(effectivePeriod.startUtc) &
-            db.transactions.occurredAt
-                .isSmallerThanValue(effectivePeriod.endUtc),
-      ),
-    ])
-      ..addColumns([sumAmount])
-      ..groupBy([db.categories.id])
-      ..orderBy([OrderingTerm.desc(sumAmount)]);
+    final query =
+        db.select(db.categories).join([
+            innerJoin(
+              db.transactions,
+              db.transactions.categoryId.equalsExp(db.categories.id) &
+                  db.transactions.deletedAt.isNull() &
+                  db.transactions.type.equalsValue(TxType.expense) &
+                  db.transactions.occurredAt.isBiggerOrEqualValue(
+                    effectivePeriod.startUtc,
+                  ) &
+                  db.transactions.occurredAt.isSmallerThanValue(
+                    effectivePeriod.endUtc,
+                  ),
+            ),
+          ])
+          ..addColumns([sumAmount])
+          ..groupBy([db.categories.id])
+          ..orderBy([OrderingTerm.desc(sumAmount)]);
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -135,10 +139,12 @@ class ReportsRepository {
     final endUtc = monthRangeUtc(newest.year, newest.month).endUtc;
 
     final query = db.select(db.transactions)
-      ..where((t) =>
-          t.deletedAt.isNull() &
-          t.occurredAt.isBiggerOrEqualValue(startUtc) &
-          t.occurredAt.isSmallerThanValue(endUtc));
+      ..where(
+        (t) =>
+            t.deletedAt.isNull() &
+            t.occurredAt.isBiggerOrEqualValue(startUtc) &
+            t.occurredAt.isSmallerThanValue(endUtc),
+      );
 
     return query.watch().map((txs) {
       // Agrupar transacciones por año y mes local
@@ -179,12 +185,14 @@ class ReportsRepository {
     final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
 
     final query = db.select(db.transactions)
-      ..where((t) =>
-          t.deletedAt.isNull() &
-          t.type.equalsValue(TxType.expense) &
-          t.merchant.isNotNull() &
-          t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
-          t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc));
+      ..where(
+        (t) =>
+            t.deletedAt.isNull() &
+            t.type.equalsValue(TxType.expense) &
+            t.merchant.isNotNull() &
+            t.occurredAt.isBiggerOrEqualValue(effectivePeriod.startUtc) &
+            t.occurredAt.isSmallerThanValue(effectivePeriod.endUtc),
+      );
 
     return query.watch().map((txs) {
       final groups = <String, ({int total, Map<String, int> spellings})>{};
@@ -197,10 +205,7 @@ class ReportsRepository {
 
         final current = groups[norm];
         if (current == null) {
-          groups[norm] = (
-            total: tx.amount,
-            spellings: {raw: 1},
-          );
+          groups[norm] = (total: tx.amount, spellings: {raw: 1});
         } else {
           final spellings = current.spellings;
           spellings[raw] = (spellings[raw] ?? 0) + 1;
@@ -252,11 +257,13 @@ class ReportsRepository {
     final curRange = monthRangeUtc(curYear, curMonth);
 
     final query = db.select(db.transactions)
-      ..where((t) =>
-          t.deletedAt.isNull() &
-          t.type.equalsValue(TxType.expense) &
-          t.occurredAt.isBiggerOrEqualValue(prevRange.startUtc) &
-          t.occurredAt.isSmallerThanValue(curRange.endUtc));
+      ..where(
+        (t) =>
+            t.deletedAt.isNull() &
+            t.type.equalsValue(TxType.expense) &
+            t.occurredAt.isBiggerOrEqualValue(prevRange.startUtc) &
+            t.occurredAt.isSmallerThanValue(curRange.endUtc),
+      );
 
     return query.watch().map((txs) {
       final dailyMap = <DateTime, int>{};
@@ -270,6 +277,47 @@ class ReportsRepository {
         todayLocal: todayLocal,
         dailyExpenseByLocalDay: dailyMap,
       );
+    });
+  }
+
+  /// Emite el resumen y desglose de gastos hormiga del período.
+  Stream<AntExpensesSummary> watchAntExpenses(
+    int year,
+    int month, {
+    DatePeriod? period,
+    int threshold = 30000,
+  }) {
+    final effectivePeriod = period ?? periodFor(DateTime(year, month, 1));
+    final query =
+        db.select(db.transactions).join([
+            innerJoin(
+              db.categories,
+              db.categories.id.equalsExp(db.transactions.categoryId),
+            ),
+          ])
+          ..where(
+            db.transactions.deletedAt.isNull() &
+                db.transactions.type.equalsValue(TxType.expense) &
+                db.transactions.amount.isSmallerOrEqualValue(threshold) &
+                db.transactions.occurredAt.isBiggerOrEqualValue(
+                  effectivePeriod.startUtc,
+                ) &
+                db.transactions.occurredAt.isSmallerThanValue(
+                  effectivePeriod.endUtc,
+                ),
+          )
+          ..orderBy([OrderingTerm.desc(db.transactions.occurredAt)]);
+
+    return query.watch().map((rows) {
+      final items = rows
+          .map(
+            (r) => TxView(
+              tx: r.readTable(db.transactions),
+              category: r.readTable(db.categories),
+            ),
+          )
+          .toList();
+      return calculateAntExpenses(transactions: items, threshold: threshold);
     });
   }
 }

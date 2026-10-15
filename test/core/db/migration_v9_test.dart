@@ -122,7 +122,7 @@ void main() {
       final db = openDb();
       addTearDown(db.close);
 
-      expect(db.schemaVersion, equals(10));
+      expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
       final txs = {
         for (final t in await db.select(db.transactions).get()) t.id: t,

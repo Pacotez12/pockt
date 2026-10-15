@@ -40,10 +40,14 @@ abstract class SettingsKeys {
   static const budgetAlertLow = 'budget.alertLow';
   static const budgetAlertHigh = 'budget.alertHigh';
   static const toneLevel = 'tone.level';
+  static const weeklySummaryEnabled = 'reminders.weeklySummary';
 
   // Privacidad y datos (§7b)
   static const securityLockAfter = 'security.lockAfter';
   static const privacyHideAmounts = 'privacy.hideAmounts';
+
+  // Reportes (§7d)
+  static const reportsAntThreshold = 'reports.antThreshold';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -259,4 +263,18 @@ enum HomeHeadline {
 final homeHeadlineProvider = StreamProvider<HomeHeadline>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
   return repo.watch(SettingsKeys.homeHeadline).map(HomeHeadline.parse);
+});
+
+final reportsAntThresholdProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.reportsAntThreshold)
+      .map((val) => int.tryParse(val ?? '') ?? 30000);
+});
+
+final weeklySummaryEnabledProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.weeklySummaryEnabled)
+      .map((val) => val == null || val == 'true');
 });

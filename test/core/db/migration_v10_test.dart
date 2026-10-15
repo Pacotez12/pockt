@@ -104,7 +104,7 @@ void main() {
     final db = openDb();
     addTearDown(db.close);
 
-    expect(db.schemaVersion, equals(10));
+    expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     // Verificar datos existentes preservados
     final cat = await db.select(db.categories).getSingle();

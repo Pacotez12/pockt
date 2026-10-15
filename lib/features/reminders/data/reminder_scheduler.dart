@@ -4,6 +4,7 @@ import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/domain/reminder_plan.dart';
+import 'package:pockt/features/reports/domain/weekly_summary.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
 /// Servicio encargado de aplicar y reprogramar el plan de recordatorios
@@ -61,26 +62,32 @@ class ReminderScheduler {
     // 4. Cancelar todos los recordatorios previos
     await notifier.cancelAllReminders();
 
-    // Si está apagado, terminar aquí
-    if (intensity == ReminderIntensity.off) {
-      return;
+    // Si está apagado el recordatorio diario, no programa los slots diarios
+    if (intensity != ReminderIntensity.off) {
+      // 5. Planificar
+      final plan = planReminders(
+        nowLocal: nowLocal,
+        intensity: intensity,
+        daysWithExpense: expenseDays,
+        noSpendDays: noSpendDays,
+        quietStart: quietStart,
+        quietEnd: quietEnd,
+        days: 7,
+      );
+
+      // 6. Programar cada recordatorio diario
+      for (final reminder in plan) {
+        await notifier.schedule(reminder);
+      }
     }
 
-    // 5. Planificar
-    final plan = planReminders(
+    // 7. Programar resumen semanal
+    await scheduleWeeklySummary(
+      db: txRepo.db,
+      notifier: notifier,
+      settingsRepo: settingsRepo,
       nowLocal: nowLocal,
-      intensity: intensity,
-      daysWithExpense: expenseDays,
-      noSpendDays: noSpendDays,
-      quietStart: quietStart,
-      quietEnd: quietEnd,
-      days: 7,
     );
-
-    // 6. Programar cada recordatorio
-    for (final reminder in plan) {
-      await notifier.schedule(reminder);
-    }
   }
 
   ({int h, int m}) _parseTime(

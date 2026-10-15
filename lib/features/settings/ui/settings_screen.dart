@@ -13,6 +13,7 @@ import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/backup/ui/backup_screen.dart';
 import 'package:pockt/features/home/ui/home_cards_screen.dart';
+import 'package:pockt/features/events/ui/events_screen.dart';
 import 'package:pockt/features/goals/ui/goals_screen.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/loans/ui/loans_screen.dart';
@@ -250,6 +251,18 @@ class SettingsScreen extends ConsumerWidget {
           Haptics.tick();
           Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const GoalsScreen()));
+        },
+      ),
+      _SettingsTile(
+        key: const ValueKey('settings-events-tile'),
+        icon: 'calendar-star',
+        title: 'Eventos',
+        subtitle: 'Viajes, fiestas y gastos agrupados',
+        iconColor: colors.brandAt(0),
+        onTap: () {
+          Haptics.tick();
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const EventsScreen()));
         },
       ),
     ];
@@ -508,6 +521,16 @@ class SettingsScreen extends ConsumerWidget {
           (value: ToneLevel.spicy, label: 'Picante'),
         ],
         onSelected: (val) => repo.set(SettingsKeys.toneLevel, val.key),
+      ),
+      _SettingsSwitchTile(
+        key: const ValueKey('settings-weekly-summary-switch'),
+        icon: 'calendar-check',
+        title: 'Resumen semanal',
+        subtitle: 'Notificación los domingos 19:00 con el gasto de la semana',
+        iconColor: colors.brandAt(3),
+        value: ref.watch(weeklySummaryEnabledProvider).value ?? true,
+        onChanged: (val) =>
+            repo.set(SettingsKeys.weeklySummaryEnabled, val.toString()),
       ),
     ];
   }

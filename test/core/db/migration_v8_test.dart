@@ -167,7 +167,7 @@ void main() {
       ),
     );
 
-    expect(db.schemaVersion, equals(10));
+    expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     // Verify existing transaction and category are preserved
     final txs = await db.select(db.transactions).get();

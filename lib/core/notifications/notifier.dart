@@ -17,12 +17,13 @@ class LocalNotifier implements Notifier {
   int _nextId = 0;
 
   LocalNotifier({FlutterLocalNotificationsPlugin? plugin})
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   Future<void> _init() async {
     if (_initialized) return;
-    const androidSettings =
-        AndroidInitializationSettings('ic_launcher_monochrome');
+    const androidSettings = AndroidInitializationSettings(
+      'ic_launcher_monochrome',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(settings: initSettings);
     _initialized = true;
@@ -31,8 +32,10 @@ class LocalNotifier implements Notifier {
   @override
   Future<bool> ensurePermission() async {
     await _init();
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     final granted = await android?.requestNotificationsPermission();
     return granted ?? false;
   }
@@ -91,7 +94,7 @@ class LocalNotifier implements Notifier {
       scheduledDate: scheduledDate,
       notificationDetails: details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'reminder:${r.notificationId}',
+      payload: r.payload ?? 'reminder:${r.notificationId}',
     );
   }
 

@@ -198,7 +198,7 @@ void main() {
 
   test('base nueva se crea con la paleta nueva de §6.2b', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
-    expect(db.schemaVersion, equals(10));
+    expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     final cats = await db.select(db.categories).get();
     expect(cats.length, equals(14));
@@ -244,7 +244,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
     // 1. Schema version actualizado a 10
-    expect(db.schemaVersion, equals(10));
+    expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     final cats = await db.select(db.categories).get();
     final catsById = {for (final c in cats) c.id: c};
@@ -318,7 +318,7 @@ void main() {
     // 6. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(10));
+    expect(userVersionResult.first['user_version'], equals(db.schemaVersion));
     rawDb.close();
   });
 }

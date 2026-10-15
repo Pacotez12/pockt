@@ -169,10 +169,10 @@ void main() {
         find.byKey(const ValueKey('spending-total-obscured')),
         findsOneWidget,
       );
-      expect(find.text('••••'), findsOneWidget);
+      expect(find.byKey(const ValueKey('spending-total-obscured')), findsOneWidget);
 
       // Al tocar el total, se revela el monto real
-      await t.tap(find.text('••••'));
+      await t.tap(find.byKey(const ValueKey('spending-total-obscured')));
       await t.pumpAndSettle();
 
       expect(

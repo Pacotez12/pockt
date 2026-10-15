@@ -200,6 +200,16 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'gift': PhosphorIconsRegular.gift,
   'graduation-cap': PhosphorIconsRegular.graduationCap,
   'target': PhosphorIconsRegular.target,
+  'calendar-star': PhosphorIconsRegular.calendarStar,
+  'calendar-check': PhosphorIconsRegular.calendarCheck,
+  'push-pin': PhosphorIconsRegular.pushPin,
+  'push-pin-slash': PhosphorIconsRegular.pushPinSlash,
+  'confetti': PhosphorIconsRegular.confetti,
+  'beer-bottle': PhosphorIconsRegular.beerBottle,
+  'airplane': PhosphorIconsRegular.airplane,
+  'music-notes': PhosphorIconsRegular.musicNotes,
+  'popcorn': PhosphorIconsRegular.popcorn,
+  'cake': PhosphorIconsRegular.cake,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -272,7 +282,30 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'gift': PhosphorIconsFill.gift,
   'graduation-cap': PhosphorIconsFill.graduationCap,
   'target': PhosphorIconsFill.target,
+  'calendar-star': PhosphorIconsFill.calendarStar,
+  'calendar-check': PhosphorIconsFill.calendarCheck,
+  'push-pin': PhosphorIconsFill.pushPin,
+  'confetti': PhosphorIconsFill.confetti,
+  'beer-bottle': PhosphorIconsFill.beerBottle,
+  'airplane': PhosphorIconsFill.airplane,
+  'music-notes': PhosphorIconsFill.musicNotes,
+  'popcorn': PhosphorIconsFill.popcorn,
+  'cake': PhosphorIconsFill.cake,
 };
+
+/// Claves de íconos curados para eventos especiales (spec §7d).
+const List<String> kEventIconKeys = [
+  'calendar-star',
+  'confetti',
+  'beer-bottle',
+  'airplane',
+  'sparkle',
+  'gift',
+  'popcorn',
+  'music-notes',
+  'cake',
+  'coins',
+];
 
 /// Claves de íconos curados para metas de ahorro (spec §7d).
 const List<String> kGoalIconKeys = [
