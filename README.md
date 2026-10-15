@@ -14,7 +14,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/versión-0.3-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-0.5-FF8A3D)](#estado)
 
 <br>
 
@@ -47,7 +47,16 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Recordatorios con intensidad**: de "suave" a "insistente", con textos que cambian cada día, y solo si ese día no anotaste nada.
 - **Widget y acceso rápido**: tus 4 categorías más usadas en la pantalla de inicio y un tile en el panel de ajustes rápidos para anotar sin abrir la app.
 - **Sueldo mensual con reparto**: por ejemplo 30 % el 15 y 70 % a fin de mes; cada cobro se sugiere con su monto.
-- **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura y ranking por comercio.
+- **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura, ranking por comercio y **gastos hormiga** (lo chico y frecuente, con lo que suma en un año).
+- **Podés gastar hoy**: el número grande del inicio es cuánto podés gastar por día hasta el próximo cobro, ya descontados los gastos por confirmar, las recurrentes que vienen y lo que tus metas necesitan. Si preferís, se cambia por "Gastado en el mes".
+- **Saldo arrastrado**: si te pasaste en la quincena, la siguiente lo descuenta; si te sobró, Pockt te ofrece pasarlo a una meta o sumarlo.
+- **Metas de ahorro**: objetivo, fecha, ritmo necesario y proyección a tu ritmo real ("a tiempo" o "N meses tarde"). Los aportes se apartan de lo que te queda y aparecen en Movimientos sin contar como gasto.
+- **¿Lo compro?**: mantené apretado el **＋** y mirá el antes y el después de una compra: cuánto podrías gastar hoy, cómo queda el presupuesto y cuántos días se atrasan tus metas. Con tono suave, normal o picante.
+- **Préstamos y cuotas**: lo que debés, lo que prestaste y las compras en cuotas, con avance, pagos extra y aviso de vencimiento.
+- **Sueldo con descuentos**: bruto, descuentos fijos o en porcentaje, y el neto de cada cobro.
+- **Atajos de carga**: tus gastos repetidos (el almuerzo, el Bolt) a un toque.
+- **Eventos**: agrupá los gastos de un viaje o una fiesta y mirá cuánto costó.
+- **Resumen semanal** opcional el domingo.
 
 ## Diseño
 
@@ -56,7 +65,8 @@ Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y m
 ## Privacidad
 
 - **Local-first**: tus datos viven en tu teléfono (SQLite).
-- **Backup cifrado** (AES-256-GCM) en una carpeta de **tu propio** Google Drive. La clave sale de una contraseña que solo vos conocés.
+- **Copia de seguridad cifrada** (AES-256-GCM) automática cada 48 horas en `Documentos/Pockt` del teléfono, que sobrevive a desinstalar la app. La clave sale de una contraseña que solo vos conocés. Podés exportar una copia y compartirla donde quieras, y restaurar desde cualquier archivo `.pockt`.
+- **Bloqueo opcional** con huella o PIN y opción de **ocultar montos** hasta tocar el total.
 - **Sin servidor, sin analíticas, sin publicidad.**
 
 ## Stack
@@ -90,13 +100,18 @@ Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y m
 - **[flutter_test](https://docs.flutter.dev/testing) + [mocktail](https://pub.dev/packages/mocktail)** — tests unitarios, de base de datos y de widgets. La lógica de fechas y montos se escribe con tests primero.
 - **integration_test** — mide los tiempos de cada frame en un teléfono real (en una variante aparte, sin tocar tus datos).
 
-**Próximamente**
+**Seguridad y respaldo**
 
-- **workmanager** — backup automático en segundo plano, solo con WiFi.
-- **home_widget** — widget de pantalla de inicio con tus categorías más usadas.
-- **local_auth** — bloqueo opcional con huella.
-- **google_sign_in + googleapis (Drive)** — backup en tu propio Google Drive.
-- **cryptography** — cifrado AES-256-GCM con clave derivada por Argon2id.
+- **[cryptography](https://pub.dev/packages/cryptography)** — cifrado AES-256-GCM con clave derivada por Argon2id.
+- **[flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage)** — guarda la clave derivada en el almacén seguro de Android.
+- **[local_auth](https://pub.dev/packages/local_auth)** — bloqueo con huella o PIN.
+- **[share_plus](https://pub.dev/packages/share_plus)** — exportar una copia o un CSV a cualquier app.
+
+**Sistema**
+
+- **[workmanager](https://pub.dev/packages/workmanager)** — tareas en segundo plano (avisos de presupuesto, recordatorios).
+- **[home_widget](https://pub.dev/packages/home_widget)** — widget de pantalla de inicio con tus categorías más usadas.
+- **[phosphor_flutter](https://pub.dev/packages/phosphor_flutter)** — los íconos de toda la app.
 
 ## Arquitectura
 
@@ -117,9 +132,11 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 1** | Base, carga de gastos, inicio, calendario de calor, movimientos, texto natural que aprende | ✅ v0.1 |
 | **Plan 2** | Presupuestos, recurrentes, cobro quincenal con días hábiles y feriados, bandeja de sugeridos, Ajustes | ✅ v0.2 |
 | **Plan 3** | Reportes, recordatorios, apariencia, logotipo y apertura animada, widget y acceso rápido | ✅ v0.3 |
-| **Plan 4** | Backup cifrado, restauración, bloqueo con huella, primer uso | 🔨 backup, restauración y bloqueo listos; falta primer uso y conectar Drive |
-| **Plan 4b** | Ajustes por secciones y descuentos del sueldo | ⏳ |
-| **Plan 4c** | Préstamos y compras en cuotas: avance, pagos y vencimientos | ⏳ |
+| **Plan 4** | Copia cifrada local automática, restauración, bloqueo con huella, primer uso | ✅ |
+| **Plan 4b** | Ajustes por secciones y descuentos del sueldo | ✅ |
+| **Plan 4c** | Préstamos y compras en cuotas: avance, pagos y vencimientos | ✅ |
+| **Plan 5** | Metas, Podés gastar hoy, ¿Lo compro?, saldo arrastrado, gastos hormiga, atajos, resumen semanal y eventos | ✅ v0.5 |
+| **Plan 6** | Pulido visual de las pantallas nuevas | 🔨 |
 | **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
