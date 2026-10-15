@@ -129,7 +129,7 @@ docs/backup-setup.md                                (guía para configurar Googl
 
 **Files:** Create `lib/features/onboarding/ui/onboarding_flow.dart`; Modify `lib/app.dart` (si `onboarding.done` no está, mostrar el flujo); Test `test/features/onboarding/onboarding_flow_test.dart`.
 
-Tres pasos, todos salteables, con el logotipo "pockt" arriba y la transición de la apertura (plan 3, Task 7b) llevando al primero: 1) **esquema de cobro** (reusa la pantalla del plan 2/3, con sueldo mensual y reparto); 2) **presupuestos** (sugerencia de 3 categorías con montos editables); 3) **backup** (conectar Google y elegir la contraseña de respaldo con la advertencia). Al terminar o saltear, `onboarding.done = true`. Una base con movimientos (app ya en uso) **no** muestra el primer uso.
+Tres pasos, todos salteables, con el logotipo "pockt" arriba y la transición de la apertura (plan 3, Task 7b) llevando al primero: 1) **esquema de cobro** (reusa la pantalla del plan 2/3, con sueldo mensual y reparto); 2) **presupuestos** (sugerencia de 3 categorías con montos editables); 3) **copia de seguridad** (elegir la contraseña de respaldo con la advertencia; las copias son locales en Documentos/Pockt, spec §7 y plan 4d, sin Google). Al terminar o saltear, `onboarding.done = true`. Una base con movimientos (app ya en uso) **no** muestra el primer uso.
 
 - [ ] **Step 1:** Tests que fallan: base vacía → aparece el primer uso; con movimientos → no; saltear los 3 pasos lleva al Inicio y no vuelve a aparecer.
 - [ ] **Step 2–4.** **Step 5:** Checkpoint. `feat: primer uso`.
