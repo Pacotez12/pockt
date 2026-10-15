@@ -317,6 +317,26 @@ Módulo para seguir lo que se debe, lo que se prestó y las compras en cuotas. *
 
 **Aviso de vencimiento:** notificación local N días antes de cada `dueDay` (por defecto 2, configurable en el detalle), con los mismos canales de los recordatorios; no se envía si la cuota del mes ya está pagada.
 
+## 7d. Metas, ¿Lo compro?, hormiga y extras (decidido 2026-10-15, maquetas aprobadas)
+
+Ideas tomadas de Kapé (app paraguaya en lista de espera) y de PocketGuard/Copilot/Finny, adaptadas a Pockt local-first y a su sistema visual (§6.2b; solo íconos Phosphor, sin emojis). **Descartado:** logros, medallas y misiones.
+
+**Podés gastar hoy (dominio):** `quedan` del período de cobro actual − recurrentes pendientes hasta el próximo cobro − aporte mensual necesario de metas con fecha prorrateado a esos días, dividido por los días que faltan hasta el cobro (mínimo 1). Puede ser negativo. Su ubicación en el Inicio está **pendiente de decisión** (opciones A/B/C de la maqueta); el calendario de calor se mantiene.
+
+**Metas (opción B):** tabla `goals` (id, nombre, ícono Phosphor, monto objetivo, fecha objetivo opcional, creada, archivada) y `goal_contributions` (id, goalId, monto, fecha, nota). Los aportes **descuentan de "quedan"** del período en que se hacen (plata apartada), no son gastos de categoría. Pantalla **lista**: encabezado "Ahorrado: Gs. X en N metas", tarjeta por meta con ícono, nombre, fecha, porcentaje, barra con el degradé de marca, ritmo necesario por mes y estado **a tiempo** (positivo) / **N meses tarde** (aviso) según la proyección al ritmo real (promedio de aportes de los últimos 90 días). Detalle con anillo, aportar, retirar, editar y archivar. Tarjeta "Metas" en el Inicio (registrada en Tarjetas del Inicio, hasta 2 metas).
+
+**¿Lo compro? (opción A):** hoja que se abre manteniendo apretado el ＋. Monto + categoría y lista **antes → después**: podés gastar hoy, presupuesto de la categoría (si tiene) y días de atraso de cada meta con fecha (monto ÷ ritmo diario de aporte). Peligro/aviso solo cuando el después cruza un límite. Mensaje corto según el **tono** (Suave / Normal / Picante, ajuste en Avisos; textos en español paraguayo, Picante con humor sin insultar). Botones "No, gracias" (cierra) y "Lo compro" (abre la carga con monto y categoría puestos).
+
+**Gastos hormiga (opción A):** nueva vista "Hormiga" en Reportes: movimientos de gasto ≤ umbral (por defecto Gs. 30.000, ajustable) del período, total, cantidad, proyección anual (total del mes × 12) y agrupados por comercio (o categoría si no hay comercio) con cantidad y promedio.
+
+**Atajos de carga:** hasta 6 atajos (comercio/nota + monto + categoría) sugeridos automáticamente por repetición en 60 días y fijables/quitables a mano; chips sobre la grilla de la carga, un toque guarda (con deshacer).
+
+**Resumen semanal:** notificación el domingo 19:00 (respeta silencio) con total de la semana, diferencia porcentual con la anterior y categoría principal; tocarla abre Reportes.
+
+**Eventos:** tabla `events` (id, nombre, ícono, inicio, fin opcional) y `eventId` nullable en movimientos. Un evento "activo" asigna los gastos nuevos automáticamente; pantalla de evento con total y desglose por categoría.
+
+**Racha:** pendiente de confirmar junto con el Inicio (se descartaron los logros).
+
 ## 8. Manejo de errores
 
 - Nada falla en silencio: todo error de escritura, backup o permisos se muestra en la UI.
