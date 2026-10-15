@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/income/domain/salary_deduction.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
@@ -16,6 +17,67 @@ class IncomeScheduleRepository {
   IncomeScheduleRepository(this._db, {DateTime Function()? clock, Uuid? uuid})
     : _clock = clock ?? DateTime.now,
       _uuid = uuid ?? const Uuid();
+
+  /// Saldo arrastrado al período que arranca en [periodStartLocalDay]:
+  /// ingresos − gastos − aportes a metas desde el primer esquema de cobro
+  /// hasta el día anterior al período (spec §7e). 0 si no hay esquema.
+  Future<int> carryOverBefore(DateTime periodStartLocalDay) async {
+    final first =
+        await (_db.selectOnly(_db.incomeSchedules)
+              ..addColumns([_db.incomeSchedules.effectiveFrom.min()]))
+            .map((r) => r.read(_db.incomeSchedules.effectiveFrom.min()))
+            .getSingle();
+    if (first == null) return 0;
+    final fromDay = DateTime(first.year, first.month, first.day);
+    final toDay = DateTime(
+      periodStartLocalDay.year,
+      periodStartLocalDay.month,
+      periodStartLocalDay.day,
+    );
+    if (!fromDay.isBefore(toDay)) return 0;
+
+    final fromUtc = dayRangeUtc(fromDay).startUtc;
+    final toUtc = dayRangeUtc(toDay).startUtc;
+    final txs =
+        await (_db.select(_db.transactions)..where(
+              (t) =>
+                  t.deletedAt.isNull() &
+                  t.occurredAt.isBiggerOrEqualValue(fromUtc) &
+                  t.occurredAt.isSmallerThanValue(toUtc),
+            ))
+            .get();
+    final contribs =
+        await (_db.select(_db.goalContributions)..where(
+              (c) =>
+                  c.date.isBiggerOrEqualValue(fromDay) &
+                  c.date.isSmallerThanValue(toDay),
+            ))
+            .get();
+
+    var net = 0;
+    for (final t in txs) {
+      net += t.type == TxType.income ? t.amount : -t.amount;
+    }
+    for (final c in contribs) {
+      net -= c.amount;
+    }
+    return net;
+  }
+
+  /// Versión reactiva de [carryOverBefore].
+  Stream<int> watchCarryOverBefore(DateTime periodStartLocalDay) {
+    return _db
+        .customSelect(
+          'SELECT 1',
+          readsFrom: {
+            _db.transactions,
+            _db.goalContributions,
+            _db.incomeSchedules,
+          },
+        )
+        .watch()
+        .asyncMap((_) => carryOverBefore(periodStartLocalDay));
+  }
 
   DateTime _todayLocal() {
     final now = _clock();

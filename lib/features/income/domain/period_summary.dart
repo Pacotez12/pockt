@@ -28,6 +28,10 @@ class PeriodLine {
   /// en vez de ingresos reales confirmados.
   final bool isEstimate;
 
+  /// Saldo arrastrado de los períodos anteriores (ya incluido en
+  /// [remaining]): negativo si se gastó de más, positivo si sobró (spec §7e).
+  final int carryOver;
+
   const PeriodLine({
     required this.label,
     required this.remaining,
@@ -36,6 +40,7 @@ class PeriodLine {
     this.nextPayWindow,
     required this.periodStartDate,
     this.isEstimate = false,
+    this.carryOver = 0,
   });
 
   /// Mensaje del próximo cobro según los días restantes o rango.
@@ -120,6 +125,7 @@ PeriodLine? periodLine({
   DateTime? lastConfirmedSalaryDate,
   int? expectedForPeriod,
   Iterable<SalaryDeductionLike> deductions = const [],
+  int carryOver = 0,
 }) {
   if (schedule == null) return null;
 
@@ -182,10 +188,12 @@ PeriodLine? periodLine({
   if (incomeSincePay <= 0 &&
       effectiveExpected != null &&
       effectiveExpected > 0) {
-    remaining = effectiveExpected - expenseSincePay - contributionsSincePay;
+    remaining =
+        effectiveExpected - expenseSincePay - contributionsSincePay + carryOver;
     isEstimate = true;
   } else {
-    remaining = incomeSincePay - expenseSincePay - contributionsSincePay;
+    remaining =
+        incomeSincePay - expenseSincePay - contributionsSincePay + carryOver;
     isEstimate = false;
   }
 
@@ -197,5 +205,6 @@ PeriodLine? periodLine({
     nextPayWindow: nextWindow,
     periodStartDate: periodStart,
     isEstimate: isEstimate,
+    carryOver: carryOver,
   );
 }

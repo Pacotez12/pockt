@@ -337,6 +337,13 @@ Ideas tomadas de Kapé (app paraguaya en lista de espera) y de PocketGuard/Copil
 
 **Racha:** descartada (2026-10-15), igual que logros, medallas y misiones.
 
+## 7e. Saldo arrastrado entre períodos (decidido 2026-10-15, opción C)
+
+"Quedan" del período actual suma el **saldo arrastrado**: ingresos − gastos − aportes a metas desde el `effectiveFrom` del primer esquema de cobro hasta el día anterior al inicio del período. Aplica también al estimado (cobro aún no confirmado) y, por lo tanto, a "Podés gastar hoy".
+
+- **Negativo** (se gastó de más): se descuenta siempre, sin preguntar. Debajo de la línea del período, texto chico "incluye −Gs. X de la quincena anterior" (o "del mes anterior" en modo mensual).
+- **Positivo** (sobró): ya está sumado. Mientras no se decida, el Inicio muestra una tarjeta "Te sobraron Gs. X de la quincena anterior" con **Pasar a una meta** (elige meta; crea un aporte por el total con fecha de hoy, que descuenta de "quedan") y **Sumar a esta quincena** (solo cierra). La decisión se guarda por período (`carryover.decidedFor` = inicio del período). Sin metas activas, solo aparece "Sumar". Respeta "Ocultar montos".
+
 ## 8. Manejo de errores
 
 - Nada falla en silencio: todo error de escritura, backup o permisos se muestra en la UI.

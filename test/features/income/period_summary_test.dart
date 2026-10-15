@@ -473,5 +473,53 @@ void main() {
         expect(line.remaining, equals(3700000));
       },
     );
+
+    group('saldo arrastrado (spec §7e)', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+
+      test('el negativo de la quincena anterior se descuenta de quedan', () {
+        final line = periodLine(
+          todayLocal: DateTime(2026, 10, 16),
+          schedule: schedule,
+          incomeSincePay: 3200000,
+          expenseSincePay: 200000,
+          carryOver: -300000,
+        )!;
+        expect(line.remaining, 2700000);
+        expect(line.carryOver, -300000);
+      });
+
+      test('lo que sobró se suma a quedan', () {
+        final line = periodLine(
+          todayLocal: DateTime(2026, 10, 16),
+          schedule: schedule,
+          incomeSincePay: 3200000,
+          expenseSincePay: 0,
+          carryOver: 500000,
+        )!;
+        expect(line.remaining, 3700000);
+      });
+
+      test('el arrastre también aplica al estimado sin cobro confirmado', () {
+        final line = periodLine(
+          todayLocal: DateTime(2026, 10, 16),
+          schedule: schedule,
+          incomeSincePay: 0,
+          expenseSincePay: 100000,
+          expectedForPeriod: 3200000,
+          carryOver: -300000,
+        )!;
+        expect(line.isEstimate, isTrue);
+        expect(line.remaining, 2800000);
+      });
+    });
   });
 }

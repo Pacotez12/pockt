@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show DatabaseConnection;
+import 'package:drift/drift.dart' show DatabaseConnection, Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -257,6 +257,93 @@ void main() {
     final oldIds = oldDeds.map((d) => d.id).toSet();
     final newIds = newDeds.map((d) => d.id).toSet();
     expect(oldIds.intersection(newIds), isEmpty);
+  });
+
+  group('carryOverBefore (spec §7e)', () {
+    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+    const comidaCatId = '018f0000-0000-7000-8000-000000000001';
+    var n = 0;
+
+    Future<void> tx(
+      TxType type,
+      int amount,
+      DateTime at, {
+      bool deleted = false,
+    }) => db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            id: 'tx-${n++}',
+            type: type,
+            amount: amount,
+            categoryId: type == TxType.income ? sueldoCatId : comidaCatId,
+            occurredAt: at,
+            createdAt: at,
+            updatedAt: at,
+            source: TxSource.manual,
+            deletedAt: Value(deleted ? at : null),
+          ),
+        );
+
+    Future<void> schedule() => db
+        .into(db.incomeSchedules)
+        .insert(
+          IncomeSchedulesCompanion.insert(
+            id: 'sched-1',
+            mode: 'biweekly',
+            payDays: '[15, -1]',
+            payDayRules: '["either", "previous"]',
+            paySplitPercents: '[50, 50]',
+            categoryId: sueldoCatId,
+            effectiveFrom: DateTime(2026, 10, 1),
+          ),
+        );
+
+    test('sin esquema no hay arrastre', () async {
+      await tx(TxType.expense, 100000, DateTime(2026, 10, 5));
+      expect(await repo.carryOverBefore(DateTime(2026, 10, 15)), 0);
+    });
+
+    test('saldo neto antes del período: ingresos − gastos − aportes', () async {
+      await schedule();
+      await tx(
+        TxType.expense,
+        50000,
+        DateTime(2026, 9, 20),
+      ); // antes del esquema
+      await tx(TxType.income, 3200000, DateTime(2026, 10, 1, 8));
+      await tx(TxType.expense, 3300000, DateTime(2026, 10, 10, 12));
+      await tx(TxType.expense, 999999, DateTime(2026, 10, 11), deleted: true);
+      await tx(
+        TxType.expense,
+        70000,
+        DateTime(2026, 10, 15, 9),
+      ); // período actual
+      await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              id: 'g1',
+              name: 'PC',
+              icon: 'laptop',
+              targetAmount: 1000000,
+              createdAt: DateTime(2026, 10, 1),
+            ),
+          );
+      await db
+          .into(db.goalContributions)
+          .insert(
+            GoalContributionsCompanion.insert(
+              id: 'c1',
+              goalId: 'g1',
+              amount: 200000,
+              date: DateTime(2026, 10, 12),
+              createdAt: DateTime(2026, 10, 12),
+            ),
+          );
+
+      expect(await repo.carryOverBefore(DateTime(2026, 10, 15)), -300000);
+    });
   });
 }
 
