@@ -20,6 +20,7 @@ abstract final class PocktSprings {
 class Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final HitTestBehavior behavior;
 
   /// Texto que lee TalkBack; obligatorio en la práctica cuando el hijo es solo un ícono.
@@ -29,6 +30,7 @@ class Pressable extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.behavior = HitTestBehavior.opaque,
     this.semanticLabel,
   });
@@ -93,6 +95,7 @@ class _PressableState extends State<Pressable>
         child: GestureDetector(
           behavior: widget.behavior,
           onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {

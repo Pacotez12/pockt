@@ -85,6 +85,7 @@ Future<void> showEntryFlow(
   BuildContext context, {
   TxType initialType = TxType.expense,
   String? initialCategoryId,
+  int? initialAmount,
   TxView? editing,
 }) async {
   if (editing != null) {
@@ -138,7 +139,7 @@ Future<void> showEntryFlow(
             category: category,
             type: initialType,
             initialLoanId: loanId,
-            initialAmount: prefilledAmount,
+            initialAmount: initialAmount ?? prefilledAmount,
           ),
           transitionsBuilder: entrySpringTransitionsBuilder,
         ),

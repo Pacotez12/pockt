@@ -24,6 +24,7 @@ import 'package:pockt/features/home/domain/home_cards_config.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/ui/goals_screen.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
@@ -1047,6 +1048,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colors = context.pockt;
     final monthNameLower = _kMonthNames[_month - 1].toLowerCase();
     final obscure = ref.watch(shouldObscureAmountsProvider);
+    final headline =
+        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend;
+
+    if (headline == HomeHeadline.monthSpent) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            ref.read(amountsRevealedProvider.notifier).toggle();
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Gastado en $monthNameLower',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              RepaintBoundary(
+                child: obscure
+                    ? Text(
+                        '••••',
+                        key: const ValueKey('spending-total-obscured'),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 42,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -1.5,
+                          color: colors.textPrimary,
+                        ),
+                      )
+                    : TweenAnimationBuilder<int>(
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOutCubic,
+                        tween: IntTween(
+                          begin: _previousTotal,
+                          end: _monthTotal,
+                        ),
+                        builder: (context, animatedValue, _) {
+                          return Text(
+                            formatGs(animatedValue),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 42,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -1.5,
+                              color: colors.textPrimary,
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Default: HomeHeadline.safeToSpend
+    final safeToSpend = ref.watch(safeToSpendProvider).value;
+    final amount = safeToSpend?.amount ?? 0;
+    final quedan = safeToSpend?.quedan ?? 0;
+    final isNegative = amount < 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1059,7 +1128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gastado en $monthNameLower',
+              'Podés gastar hoy',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
@@ -1080,23 +1149,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: colors.textPrimary,
                       ),
                     )
-                  : TweenAnimationBuilder<int>(
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutCubic,
-                      tween: IntTween(begin: _previousTotal, end: _monthTotal),
-                      builder: (context, animatedValue, _) {
-                        return Text(
-                          formatGs(animatedValue),
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 42,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -1.5,
-                            color: colors.textPrimary,
-                          ),
-                        );
-                      },
+                  : Text(
+                      formatGs(amount),
+                      key: const ValueKey('safe-to-spend-amount'),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 42,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.5,
+                        color: isNegative ? colors.danger : colors.textPrimary,
+                      ),
                     ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              obscure
+                  ? 'Gastado •••• · Quedan ••••'
+                  : 'Gastado ${formatGs(_monthTotal)} · Quedan ${formatGs(quedan)}',
+              key: const ValueKey('safe-to-spend-subtitle'),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: colors.textSecondary,
+              ),
             ),
           ],
         ),

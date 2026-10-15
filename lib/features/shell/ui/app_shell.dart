@@ -6,10 +6,12 @@ import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/features/budgets/ui/budgets_screen.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/reports/ui/reports_screen.dart';
+import 'package:pockt/features/safe_to_spend/ui/buy_simulator_sheet.dart';
 import 'package:pockt/features/transactions/ui/transactions_screen.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
 
@@ -169,18 +171,20 @@ class _AppShellState extends ConsumerState<AppShell> {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  height: 1.0,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? colors.textPrimary : colors.textTertiary,
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    height: 1.0,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected
+                        ? colors.textPrimary
+                        : colors.textTertiary,
+                  ),
                 ),
-              ),
               ),
             ],
           ),
@@ -198,6 +202,10 @@ class _AppShellState extends ConsumerState<AppShell> {
         semanticLabel: 'Cargar movimiento',
         key: const ValueKey('shell-plus-button'),
         onTap: () => showEntryFlow(context),
+        onLongPress: () {
+          Haptics.tick();
+          showBuySimulatorSheet(context);
+        },
         child: Container(
           width: 48,
           height: 48,

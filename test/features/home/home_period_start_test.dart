@@ -30,7 +30,10 @@ void main() {
   setUp(() async {
     setLocalZone('America/Asuncion');
     testDb = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     settingsRepo = SettingsRepository(testDb);
     txRepo = TransactionsRepository(testDb);
@@ -38,7 +41,9 @@ void main() {
 
     // Crear categoría de comida
     categoryId = 'cat-comida';
-    await testDb.into(testDb.categories).insert(
+    await testDb
+        .into(testDb.categories)
+        .insert(
           CategoriesCompanion.insert(
             id: categoryId,
             name: 'Comida',
@@ -67,7 +72,9 @@ void main() {
     await testDb.close();
   });
 
-  testWidgets('totales del Inicio respetan ajuste period.monthStart', (tester) async {
+  testWidgets('totales del Inicio respetan ajuste period.monthStart', (
+    tester,
+  ) async {
     // Gasto 1: el 30/09/2026 a las 12:00 (Gs. 100.000)
     await txRepo.add(
       type: TxType.expense,
@@ -89,6 +96,9 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(testDb),
+          homeHeadlineProvider.overrideWith(
+            (ref) => Stream.value(HomeHeadline.monthSpent),
+          ),
         ],
         child: MaterialApp(
           theme: buildDarkTheme(),
@@ -120,7 +130,9 @@ void main() {
 
   testWidgets('presupuestos respetan ajuste period.monthStart', (tester) async {
     // Presupuesto de 150.000 para Comida
-    await testDb.into(testDb.budgets).insert(
+    await testDb
+        .into(testDb.budgets)
+        .insert(
           BudgetsCompanion.insert(
             id: 'b-1',
             categoryId: categoryId,
@@ -139,9 +151,7 @@ void main() {
     // Con calendar: el gasto de 30/09 no cuenta en octubre (gastado: Gs. 0, quedan: Gs. 150.000)
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(testDb),
-        ],
+        overrides: [databaseProvider.overrideWithValue(testDb)],
         child: MaterialApp(
           theme: buildDarkTheme(),
           home: BudgetsScreen(

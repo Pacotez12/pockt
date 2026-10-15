@@ -22,6 +22,7 @@ import 'package:pockt/features/security/app_lock.dart';
 import 'package:pockt/features/settings/domain/export_csv.dart';
 import 'package:pockt/features/settings/domain/wipe_data.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
+import 'package:pockt/features/safe_to_spend/domain/tone.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 
@@ -348,6 +349,20 @@ class SettingsScreen extends ConsumerWidget {
               .push(MaterialPageRoute(builder: (_) => const HomeCardsScreen()));
         },
       ),
+      _SettingsSegmentTile<HomeHeadline>(
+        key: const ValueKey('settings-home-headline'),
+        icon: 'gauge',
+        title: 'Número principal',
+        subtitle: 'Información destacada en la portada',
+        iconColor: colors.brandAt(2),
+        selectedValue:
+            ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend,
+        options: const [
+          (value: HomeHeadline.safeToSpend, label: 'Podés gastar hoy'),
+          (value: HomeHeadline.monthSpent, label: 'Gastado en el mes'),
+        ],
+        onSelected: (val) => repo.set(SettingsKeys.homeHeadline, val.name),
+      ),
       _SettingsSegmentTile<int>(
         key: const ValueKey('settings-recent-count'),
         icon: 'list-numbers',
@@ -479,6 +494,20 @@ class SettingsScreen extends ConsumerWidget {
         ],
         onSelected: (val) =>
             repo.set(SettingsKeys.budgetAlertHigh, val.toString()),
+      ),
+      _SettingsSegmentTile<ToneLevel>(
+        key: const ValueKey('settings-tone-level'),
+        icon: 'sparkle',
+        title: 'Tono de los avisos',
+        subtitle: 'Estilo de los mensajes del simulador ¿Lo compro?',
+        iconColor: colors.brandAt(3),
+        selectedValue: ref.watch(toneLevelProvider).value ?? ToneLevel.normal,
+        options: const [
+          (value: ToneLevel.soft, label: 'Suave'),
+          (value: ToneLevel.normal, label: 'Normal'),
+          (value: ToneLevel.spicy, label: 'Picante'),
+        ],
+        onSelected: (val) => repo.set(SettingsKeys.toneLevel, val.key),
       ),
     ];
   }

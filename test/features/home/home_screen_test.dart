@@ -12,6 +12,7 @@ import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
@@ -20,6 +21,7 @@ import 'package:pockt/features/settings/ui/settings_screen.dart';
 import 'package:pockt/features/shell/ui/app_shell.dart';
 import 'package:pockt/features/transactions/data/categories_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 void main() {
@@ -36,7 +38,10 @@ void main() {
   setUp(() async {
     setLocalZone('America/Asuncion');
     testDb = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     catRepo = CategoriesRepository(testDb);
     txRepo = TransactionsRepository(testDb);
@@ -53,11 +58,13 @@ void main() {
     int year = 2026,
     int month = 10,
     DateTime? nowLocal,
+    HomeHeadline headline = HomeHeadline.monthSpent,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(testDb),
+          homeHeadlineProvider.overrideWith((ref) => Stream.value(headline)),
         ],
         child: MaterialApp(
           theme: buildDarkTheme(),
@@ -73,15 +80,18 @@ void main() {
   }
 
   Future<void> pumpAppShell(WidgetTester tester) async {
+    final fakePlatform = FakeHomeWidgetPlatform();
+    addTearDown(fakePlatform.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(testDb),
+          homeWidgetPlatformProvider.overrideWithValue(fakePlatform),
+          homeHeadlineProvider.overrideWith(
+            (ref) => Stream.value(HomeHeadline.monthSpent),
+          ),
         ],
-        child: MaterialApp(
-          theme: buildDarkTheme(),
-          home: const AppShell(),
-        ),
+        child: MaterialApp(theme: buildDarkTheme(), home: const AppShell()),
       ),
     );
     await tester.pumpAndSettle();
@@ -96,7 +106,9 @@ void main() {
   });
 
   testWidgets('total y glow siguen a la categoría con más gasto', (t) async {
-    final categories = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final categories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
     final hogar = categories.firstWhere((c) => c.name == 'Hogar');
     final comida = categories.firstWhere((c) => c.name == 'Comida');
 
@@ -135,7 +147,9 @@ void main() {
   });
 
   testWidgets('tocar un día en el calendario abre el detalle', (t) async {
-    final categories = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final categories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
     final comida = categories.firstWhere((c) => c.name == 'Comida');
 
     await t.runAsync(() async {
@@ -170,206 +184,253 @@ void main() {
   });
 
   testWidgets(
-      'durante el vuelo (abrir y cerrar) no hay ningún Text descendiente del shuttle',
-      (t) async {
-    final categories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final comida = categories.firstWhere((c) => c.name == 'Comida');
+    'durante el vuelo (abrir y cerrar) no hay ningún Text descendiente del shuttle',
+    (t) async {
+      final categories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final comida = categories.firstWhere((c) => c.name == 'Comida');
 
-    await t.runAsync(() async {
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 500000,
-        categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+      await t.runAsync(() async {
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 500000,
+          categoryId: comida.id,
+          occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+        );
+      });
+
+      await pumpHomeScreen(t);
+
+      // 1. Abrir detalle del día 5 y verificar a mitad de vuelo
+      await t.tap(find.text('5'));
+      await t.pump(); // Inicia el push
+      await t.pump(
+        const Duration(milliseconds: 150),
+      ); // Mitad de vuelo al abrir (duration: 350ms)
+
+      final openShuttleFinder = find.byKey(
+        const ValueKey('day-detail-flight-shuttle'),
       );
-    });
+      expect(openShuttleFinder, findsOneWidget);
 
+      // Ningún Text descendiente del shuttle durante el vuelo de apertura (sin texto fantasma)
+      expect(
+        find.descendant(of: openShuttleFinder, matching: find.byType(Text)),
+        findsNothing,
+      );
+
+      // Completar la apertura: la hoja real muestra su contenido
+      await t.pumpAndSettle();
+      expect(find.byType(DayDetailSheet), findsOneWidget);
+      expect(find.text('Lunes 5 de octubre'), findsOneWidget);
+
+      // 2. Cerrar tocando afuera de la hoja y verificar a mitad de vuelo
+      await t.tapAt(const Offset(50, 50));
+      await t.pump(); // Inicia el pop
+      await t.pump(
+        const Duration(milliseconds: 140),
+      ); // Mitad de vuelo al cerrar (reverseDuration: 300ms)
+
+      final closeShuttleFinder = find.byKey(
+        const ValueKey('day-detail-flight-shuttle'),
+      );
+      expect(closeShuttleFinder, findsOneWidget);
+
+      // El shuttle tiene tamaño intermedio a mitad de vuelo (mucho mayor que la celda de ~40px)
+      final shuttleSize = t.getSize(closeShuttleFinder);
+      expect(shuttleSize.width, greaterThan(100));
+      expect(shuttleSize.height, greaterThan(100));
+
+      // La superficie del shuttle debe ser sheetSurface, NO el color de intensidad de la celda
+      final shuttleContainer = t.widget<Container>(closeShuttleFinder);
+      final boxDecoration = shuttleContainer.decoration as BoxDecoration;
+      expect(
+        boxDecoration.color,
+        PocktColors.dark.sheetSurface.withValues(alpha: 0.96),
+      );
+
+      // Ningún Text descendiente del shuttle durante el vuelo de cierre (sin texto fantasma)
+      expect(
+        find.descendant(of: closeShuttleFinder, matching: find.byType(Text)),
+        findsNothing,
+      );
+
+      // Completar el cierre
+      await t.pumpAndSettle();
+      expect(find.byType(DayDetailSheet), findsNothing);
+      expect(find.text('5'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'con reduce motion al abrir y cerrar detalle no hay Hero en vuelo',
+    (t) async {
+      t.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(() => t.platformDispatcher.clearAllTestValues());
+
+      final categories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final comida = categories.firstWhere((c) => c.name == 'Comida');
+
+      await t.runAsync(() async {
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 25000,
+          categoryId: comida.id,
+          occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+        );
+      });
+
+      await pumpHomeScreen(t);
+
+      await t.tap(find.text('5'));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 100));
+
+      // Con reduce motion no hay Hero en vuelo
+      expect(
+        find.byKey(const ValueKey('day-detail-flight-shuttle')),
+        findsNothing,
+      );
+
+      await t.pumpAndSettle();
+      expect(find.byType(DayDetailSheet), findsOneWidget);
+
+      await t.tapAt(const Offset(50, 50));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.byKey(const ValueKey('day-detail-flight-shuttle')),
+        findsNothing,
+      );
+
+      await t.pumpAndSettle();
+      expect(find.byType(DayDetailSheet), findsNothing);
+    },
+  );
+
+  testWidgets('tarjeta de sugerencias oculta cuando hay 0 pendientes', (
+    t,
+  ) async {
     await pumpHomeScreen(t);
-
-    // 1. Abrir detalle del día 5 y verificar a mitad de vuelo
-    await t.tap(find.text('5'));
-    await t.pump(); // Inicia el push
-    await t.pump(const Duration(milliseconds: 150)); // Mitad de vuelo al abrir (duration: 350ms)
-
-    final openShuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
-    expect(openShuttleFinder, findsOneWidget);
-
-    // Ningún Text descendiente del shuttle durante el vuelo de apertura (sin texto fantasma)
-    expect(find.descendant(of: openShuttleFinder, matching: find.byType(Text)), findsNothing);
-
-    // Completar la apertura: la hoja real muestra su contenido
-    await t.pumpAndSettle();
-    expect(find.byType(DayDetailSheet), findsOneWidget);
-    expect(find.text('Lunes 5 de octubre'), findsOneWidget);
-
-    // 2. Cerrar tocando afuera de la hoja y verificar a mitad de vuelo
-    await t.tapAt(const Offset(50, 50));
-    await t.pump(); // Inicia el pop
-    await t.pump(const Duration(milliseconds: 140)); // Mitad de vuelo al cerrar (reverseDuration: 300ms)
-
-    final closeShuttleFinder = find.byKey(const ValueKey('day-detail-flight-shuttle'));
-    expect(closeShuttleFinder, findsOneWidget);
-
-    // El shuttle tiene tamaño intermedio a mitad de vuelo (mucho mayor que la celda de ~40px)
-    final shuttleSize = t.getSize(closeShuttleFinder);
-    expect(shuttleSize.width, greaterThan(100));
-    expect(shuttleSize.height, greaterThan(100));
-
-    // La superficie del shuttle debe ser sheetSurface, NO el color de intensidad de la celda
-    final shuttleContainer = t.widget<Container>(closeShuttleFinder);
-    final boxDecoration = shuttleContainer.decoration as BoxDecoration;
     expect(
-      boxDecoration.color,
-      PocktColors.dark.sheetSurface.withValues(alpha: 0.96),
+      find.byKey(const ValueKey('pending-suggestions-card')),
+      findsNothing,
     );
-
-    // Ningún Text descendiente del shuttle durante el vuelo de cierre (sin texto fantasma)
-    expect(find.descendant(of: closeShuttleFinder, matching: find.byType(Text)), findsNothing);
-
-    // Completar el cierre
-    await t.pumpAndSettle();
-    expect(find.byType(DayDetailSheet), findsNothing);
-    expect(find.text('5'), findsOneWidget);
   });
 
-  testWidgets('con reduce motion al abrir y cerrar detalle no hay Hero en vuelo', (t) async {
-    t.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(() => t.platformDispatcher.clearAllTestValues());
+  testWidgets(
+    'tarjeta de sugerencias visible con 2 y texto correcto, tapping abre InboxScreen',
+    (t) async {
+      final categories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final comida = categories.firstWhere((c) => c.name == 'Comida');
 
-    final categories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final comida = categories.firstWhere((c) => c.name == 'Comida');
+      await t.runAsync(() async {
+        await sugRepo.createIfAbsent(
+          type: TxType.expense,
+          amount: 55000,
+          categoryId: comida.id,
+          merchant: 'Netflix',
+          occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
+          source: TxSource.recurring,
+          sourceRef: 'netflix-1',
+        );
+        await sugRepo.createIfAbsent(
+          type: TxType.expense,
+          amount: 120000,
+          categoryId: comida.id,
+          merchant: 'ANDE',
+          occurredAt: DateTime.utc(2026, 10, 6, 10, 0),
+          source: TxSource.recurring,
+          sourceRef: 'ande-1',
+        );
+      });
 
-    await t.runAsync(() async {
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 25000,
-        categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 5, 14, 0),
+      await pumpHomeScreen(t);
+
+      expect(
+        find.byKey(const ValueKey('pending-suggestions-card')),
+        findsOneWidget,
       );
-    });
+      expect(find.text('2 por confirmar · Netflix, ANDE'), findsOneWidget);
 
-    await pumpHomeScreen(t);
+      await t.tap(find.byKey(const ValueKey('pending-suggestions-card')));
+      await t.pumpAndSettle();
 
-    await t.tap(find.text('5'));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 100));
+      expect(find.byType(InboxScreen), findsOneWidget);
+    },
+  );
 
-    // Con reduce motion no hay Hero en vuelo
-    expect(find.byKey(const ValueKey('day-detail-flight-shuttle')), findsNothing);
-
-    await t.pumpAndSettle();
-    expect(find.byType(DayDetailSheet), findsOneWidget);
-
-    await t.tapAt(const Offset(50, 50));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 100));
-
-    expect(find.byKey(const ValueKey('day-detail-flight-shuttle')), findsNothing);
-
-    await t.pumpAndSettle();
-    expect(find.byType(DayDetailSheet), findsNothing);
-  });
-
-  testWidgets('tarjeta de sugerencias oculta cuando hay 0 pendientes', (t) async {
-    await pumpHomeScreen(t);
-    expect(find.byKey(const ValueKey('pending-suggestions-card')), findsNothing);
-  });
-
-  testWidgets('tarjeta de sugerencias visible con 2 y texto correcto, tapping abre InboxScreen', (t) async {
-    final categories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final comida = categories.firstWhere((c) => c.name == 'Comida');
-
-    await t.runAsync(() async {
-      await sugRepo.createIfAbsent(
-        type: TxType.expense,
-        amount: 55000,
-        categoryId: comida.id,
-        merchant: 'Netflix',
-        occurredAt: DateTime.utc(2026, 10, 5, 10, 0),
-        source: TxSource.recurring,
-        sourceRef: 'netflix-1',
-      );
-      await sugRepo.createIfAbsent(
-        type: TxType.expense,
-        amount: 120000,
-        categoryId: comida.id,
-        merchant: 'ANDE',
-        occurredAt: DateTime.utc(2026, 10, 6, 10, 0),
-        source: TxSource.recurring,
-        sourceRef: 'ande-1',
-      );
-    });
-
-    await pumpHomeScreen(t);
-
-    expect(find.byKey(const ValueKey('pending-suggestions-card')), findsOneWidget);
-    expect(find.text('2 por confirmar · Netflix, ANDE'), findsOneWidget);
-
-    await t.tap(find.byKey(const ValueKey('pending-suggestions-card')));
-    await t.pumpAndSettle();
-
-    expect(find.byType(InboxScreen), findsOneWidget);
-  });
-
-  testWidgets('sin esquema de cobro la línea de quincena no se muestra', (t) async {
+  testWidgets('sin esquema de cobro la línea de quincena no se muestra', (
+    t,
+  ) async {
     await pumpHomeScreen(t);
     expect(find.byKey(const ValueKey('period-line')), findsNothing);
   });
 
-  testWidgets('esquema [15,-1] sin corrimiento, hoy 9/10, sueldo 30/09 y gastos entre 30/09 y 9/10 -> quedan 1.045.000', (t) async {
-    final expenseCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final incomeCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
-    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
-    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+  testWidgets(
+    'esquema [15,-1] sin corrimiento, hoy 9/10, sueldo 30/09 y gastos entre 30/09 y 9/10 -> quedan 1.045.000',
+    (t) async {
+      final expenseCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final incomeCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.income).first,
+      ))!;
+      final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+      final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
 
-    await t.runAsync(() async {
-      await scheduleRepo.setSchedule(
-        mode: PayMode.biweekly,
-        payDays: [15, -1],
-        shiftToPreviousBusinessDay: false,
-        categoryId: sueldo.id,
-      );
-      // Sueldo el 30/09
-      await txRepo.add(
-        type: TxType.income,
-        amount: 3500000,
-        categoryId: sueldo.id,
-        occurredAt: DateTime(2026, 9, 30, 8, 30),
-      );
-      // Gastos entre 30/09 y 9/10 (2.455.000 total)
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 455000,
-        categoryId: comida.id,
-        occurredAt: DateTime(2026, 9, 30, 19, 0),
-      );
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 2000000,
-        categoryId: comida.id,
-        occurredAt: DateTime(2026, 10, 5, 12, 0),
-      );
-    });
+      await t.runAsync(() async {
+        await scheduleRepo.setSchedule(
+          mode: PayMode.biweekly,
+          payDays: [15, -1],
+          shiftToPreviousBusinessDay: false,
+          categoryId: sueldo.id,
+        );
+        // Sueldo el 30/09
+        await txRepo.add(
+          type: TxType.income,
+          amount: 3500000,
+          categoryId: sueldo.id,
+          occurredAt: DateTime(2026, 9, 30, 8, 30),
+        );
+        // Gastos entre 30/09 y 9/10 (2.455.000 total)
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 455000,
+          categoryId: comida.id,
+          occurredAt: DateTime(2026, 9, 30, 19, 0),
+        );
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 2000000,
+          categoryId: comida.id,
+          occurredAt: DateTime(2026, 10, 5, 12, 0),
+        );
+      });
 
-    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 12, 0));
+      await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 12, 0));
 
-    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-    expect(find.textContaining('1ª quincena'), findsOneWidget);
-    expect(find.textContaining('Gs. 1.045.000'), findsOneWidget);
-    expect(find.textContaining('cobrás en 6 días'), findsOneWidget);
-  });
+      expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+      expect(find.textContaining('1ª quincena'), findsOneWidget);
+      expect(find.textContaining('Gs. 1.045.000'), findsOneWidget);
+      expect(find.textContaining('cobrás en 6 días'), findsOneWidget);
+    },
+  );
 
   testWidgets('hoy 15/10 (día de cobro) cuenta desde el 15', (t) async {
-    final expenseCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final incomeCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final expenseCategories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
+    final incomeCategories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.income).first,
+    ))!;
     final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
     final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
 
@@ -415,48 +476,55 @@ void main() {
     expect(find.textContaining('cobrás hoy'), findsOneWidget);
   });
 
-  testWidgets('con esquema quincenal y movimientos muestra quincena, restante y cobro', (t) async {
-    final expenseCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final incomeCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
-    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
-    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+  testWidgets(
+    'con esquema quincenal y movimientos muestra quincena, restante y cobro',
+    (t) async {
+      final expenseCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final incomeCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.income).first,
+      ))!;
+      final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+      final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
 
-    await t.runAsync(() async {
-      await scheduleRepo.setSchedule(
-        mode: PayMode.biweekly,
-        payDays: [15, -1],
-        shiftToPreviousBusinessDay: true,
-        categoryId: sueldo.id,
-      );
-      await txRepo.add(
-        type: TxType.income,
-        amount: 5000000,
-        categoryId: sueldo.id,
-        occurredAt: DateTime.utc(2026, 10, 15, 10, 0),
-      );
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 4180000,
-        categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 15, 14, 0),
-      );
-    });
+      await t.runAsync(() async {
+        await scheduleRepo.setSchedule(
+          mode: PayMode.biweekly,
+          payDays: [15, -1],
+          shiftToPreviousBusinessDay: true,
+          categoryId: sueldo.id,
+        );
+        await txRepo.add(
+          type: TxType.income,
+          amount: 5000000,
+          categoryId: sueldo.id,
+          occurredAt: DateTime.utc(2026, 10, 15, 10, 0),
+        );
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 4180000,
+          categoryId: comida.id,
+          occurredAt: DateTime.utc(2026, 10, 15, 14, 0),
+        );
+      });
 
-    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 16, 12, 0));
+      await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 16, 12, 0));
 
-    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-    expect(find.textContaining('2ª quincena'), findsOneWidget);
-    expect(find.textContaining('Gs. 820.000'), findsOneWidget);
-    expect(find.textContaining('cobrás en 14 días'), findsOneWidget);
-  });
+      expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+      expect(find.textContaining('2ª quincena'), findsOneWidget);
+      expect(find.textContaining('Gs. 820.000'), findsOneWidget);
+      expect(find.textContaining('cobrás en 14 días'), findsOneWidget);
+    },
+  );
 
   testWidgets('restante negativo usa el token danger', (t) async {
-    final expenseCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final incomeCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
+    final expenseCategories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
+    final incomeCategories = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.income).first,
+    ))!;
     final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
     final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
 
@@ -486,64 +554,74 @@ void main() {
     expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
     expect(find.textContaining('−Gs. 820.000'), findsOneWidget);
 
-    final textWidget = t.widget<Text>(find.byKey(const ValueKey('period-line-remaining')));
+    final textWidget = t.widget<Text>(
+      find.byKey(const ValueKey('period-line-remaining')),
+    );
     final span = textWidget.textSpan as TextSpan;
     final remainingSpan = span.children!.first as TextSpan;
     expect(remainingSpan.style?.color, PocktColors.dark.danger);
   });
 
-  testWidgets('sin ingreso confirmado muestra ~Gs. X (estimado); al confirmar sugerencia pasa a real', (t) async {
-    final expenseCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    final incomeCategories =
-        (await t.runAsync(() => catRepo.watchActive(CategoryKind.income).first))!;
-    final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
-    final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
+  testWidgets(
+    'sin ingreso confirmado muestra ~Gs. X (estimado); al confirmar sugerencia pasa a real',
+    (t) async {
+      final expenseCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      final incomeCategories = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.income).first,
+      ))!;
+      final comida = expenseCategories.firstWhere((c) => c.name == 'Comida');
+      final sueldo = incomeCategories.firstWhere((c) => c.name == 'Sueldo');
 
-    await t.runAsync(() async {
-      final schedRepoWithClock = IncomeScheduleRepository(
-        testDb,
-        clock: () => DateTime(2026, 10, 9, 10, 0),
+      await t.runAsync(() async {
+        final schedRepoWithClock = IncomeScheduleRepository(
+          testDb,
+          clock: () => DateTime(2026, 10, 9, 10, 0),
+        );
+        await schedRepoWithClock.setSchedule(
+          mode: PayMode.biweekly,
+          payDays: [15, -1],
+          payDayRules: [PayDayRule.either, PayDayRule.previous],
+          monthlyAmount: 7000000,
+          paySplitPercents: [30, 70],
+          categoryId: sueldo.id,
+        );
+        await txRepo.add(
+          type: TxType.expense,
+          amount: 820000,
+          categoryId: comida.id,
+          occurredAt: DateTime.utc(2026, 10, 5, 12, 0),
+        );
+      });
+
+      await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 14, 0));
+
+      expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
+      expect(find.textContaining('~Gs. 4.080.000'), findsOneWidget);
+      expect(find.textContaining('(estimado)'), findsOneWidget);
+
+      final textWidget = t.widget<Text>(
+        find.byKey(const ValueKey('period-line-remaining')),
       );
-      await schedRepoWithClock.setSchedule(
-        mode: PayMode.biweekly,
-        payDays: [15, -1],
-        payDayRules: [PayDayRule.either, PayDayRule.previous],
-        monthlyAmount: 7000000,
-        paySplitPercents: [30, 70],
-        categoryId: sueldo.id,
-      );
-      await txRepo.add(
-        type: TxType.expense,
-        amount: 820000,
-        categoryId: comida.id,
-        occurredAt: DateTime.utc(2026, 10, 5, 12, 0),
-      );
-    });
+      final span = textWidget.textSpan as TextSpan;
+      final estimadoSpan = span.children!.firstWhere(
+        (s) => (s as TextSpan).text == '(estimado)',
+      ) as TextSpan;
+      expect(estimadoSpan.style?.color, PocktColors.dark.textSecondary);
 
-    await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 14, 0));
+      // Confirmar la sugerencia pendiente
+      await t.runAsync(() async {
+        final pending = await sugRepo.watchPending().first;
+        expect(pending, hasLength(1));
+        await sugRepo.confirm(pending.first.suggestion.id);
+      });
 
-    expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-    expect(find.textContaining('~Gs. 4.080.000'), findsOneWidget);
-    expect(find.textContaining('(estimado)'), findsOneWidget);
+      await t.pumpAndSettle();
 
-    final textWidget = t.widget<Text>(find.byKey(const ValueKey('period-line-remaining')));
-    final span = textWidget.textSpan as TextSpan;
-    final estimadoSpan = span.children!.firstWhere((s) => (s as TextSpan).text == '(estimado)') as TextSpan;
-    expect(estimadoSpan.style?.color, PocktColors.dark.textSecondary);
-
-    // Confirmar la sugerencia pendiente
-    await t.runAsync(() async {
-      final pending = await sugRepo.watchPending().first;
-      expect(pending, hasLength(1));
-      await sugRepo.confirm(pending.first.suggestion.id);
-    });
-
-    await t.pumpAndSettle();
-
-    expect(find.textContaining('Gs. 4.080.000'), findsOneWidget);
-    expect(find.textContaining('~'), findsNothing);
-    expect(find.textContaining('(estimado)'), findsNothing);
-  });
+      expect(find.textContaining('Gs. 4.080.000'), findsOneWidget);
+      expect(find.textContaining('~'), findsNothing);
+      expect(find.textContaining('(estimado)'), findsNothing);
+    },
+  );
 }
-

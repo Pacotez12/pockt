@@ -28,6 +28,7 @@ abstract class SettingsKeys {
 
   // Inicio y apariencia (§7b)
   static const homeCards = 'home.cards';
+  static const homeHeadline = 'home.headline';
   static const homeRecentCount = 'home.recentCount';
   static const glowMode = 'glow.mode';
   static const glowReactsToBudget = 'glow.reactsToBudget';
@@ -38,6 +39,7 @@ abstract class SettingsKeys {
   static const budgetAlertsEnabled = 'budget.alertsEnabled';
   static const budgetAlertLow = 'budget.alertLow';
   static const budgetAlertHigh = 'budget.alertHigh';
+  static const toneLevel = 'tone.level';
 
   // Privacidad y datos (§7b)
   static const securityLockAfter = 'security.lockAfter';
@@ -65,11 +67,10 @@ class SettingsRepository {
 
   /// Guarda o actualiza [key] con [value].
   Future<void> set(String key, String value) async {
-    await _db.into(_db.settings).insertOnConflictUpdate(
-          SettingsCompanion(
-            key: Value(key),
-            value: Value(value),
-          ),
+    await _db
+        .into(_db.settings)
+        .insertOnConflictUpdate(
+          SettingsCompanion(key: Value(key), value: Value(value)),
         );
   }
 }
@@ -155,7 +156,9 @@ final categoryOrderProvider = StreamProvider<CategoryOrder>((ref) {
 
 final quickKeyProvider = StreamProvider<String>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.entryQuickKey).map((val) => val == '00' ? '00' : '000');
+  return repo
+      .watch(SettingsKeys.entryQuickKey)
+      .map((val) => val == '00' ? '00' : '000');
 });
 
 final askNoteProvider = StreamProvider<bool>((ref) {
@@ -193,7 +196,9 @@ final glowModeProvider = StreamProvider<GlowMode>((ref) {
 
 final glowReactsToBudgetProvider = StreamProvider<bool>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.glowReactsToBudget).map((val) => val == null ? true : val == 'true');
+  return repo
+      .watch(SettingsKeys.glowReactsToBudget)
+      .map((val) => val == null ? true : val == 'true');
 });
 
 final weekStartProvider = StreamProvider<WeekStart>((ref) {
@@ -208,26 +213,50 @@ final motionReduceProvider = StreamProvider<bool>((ref) {
 
 final budgetAlertsEnabledProvider = StreamProvider<bool>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.budgetAlertsEnabled).map((val) => val == null || val.isEmpty || val == 'true');
+  return repo
+      .watch(SettingsKeys.budgetAlertsEnabled)
+      .map((val) => val == null || val.isEmpty || val == 'true');
 });
 
 final budgetAlertLowProvider = StreamProvider<int>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.budgetAlertLow).map((val) => int.tryParse(val ?? '') ?? 80);
+  return repo
+      .watch(SettingsKeys.budgetAlertLow)
+      .map((val) => int.tryParse(val ?? '') ?? 80);
 });
 
 final budgetAlertHighProvider = StreamProvider<int>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.budgetAlertHigh).map((val) => int.tryParse(val ?? '') ?? 100);
+  return repo
+      .watch(SettingsKeys.budgetAlertHigh)
+      .map((val) => int.tryParse(val ?? '') ?? 100);
 });
 
 final securityLockAfterProvider = StreamProvider<int>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.securityLockAfter).map((val) => int.tryParse(val ?? '') ?? 1);
+  return repo
+      .watch(SettingsKeys.securityLockAfter)
+      .map((val) => int.tryParse(val ?? '') ?? 1);
 });
 
 final privacyHideAmountsProvider = StreamProvider<bool>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
-  return repo.watch(SettingsKeys.privacyHideAmounts).map((val) => val == 'true');
+  return repo
+      .watch(SettingsKeys.privacyHideAmounts)
+      .map((val) => val == 'true');
 });
 
+enum HomeHeadline {
+  safeToSpend,
+  monthSpent;
+
+  static HomeHeadline parse(String? raw) {
+    if (raw == 'monthSpent') return HomeHeadline.monthSpent;
+    return HomeHeadline.safeToSpend;
+  }
+}
+
+final homeHeadlineProvider = StreamProvider<HomeHeadline>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.homeHeadline).map(HomeHeadline.parse);
+});
