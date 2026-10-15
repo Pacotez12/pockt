@@ -499,7 +499,7 @@ class GoalDetailScreen extends ConsumerWidget {
                   const Divider(height: 18),
                   _statRow(
                     context,
-                    label: 'Ritmo real (90 días)',
+                    label: 'Ritmo real',
                     value: progress.realDailyPace > 0
                         ? '${_formatGs(progress.realMonthlyPace)} / mes'
                         : 'Sin aportes recientes',

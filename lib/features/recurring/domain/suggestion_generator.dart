@@ -214,6 +214,9 @@ class SuggestionGenerator {
         payDaysToCreate.sort((a, b) => a.date.compareTo(b.date));
 
         for (final item in payDaysToCreate) {
+          if (await _salaryAlreadyLogged(currentSchedule.categoryId, item.date)) {
+            continue;
+          }
           final created = await _suggestionsRepo.createIfAbsent(
             type: TxType.income,
             amount: item.amount,
@@ -231,6 +234,21 @@ class SuggestionGenerator {
       }
     }
 
+    // 2b. Cobros pendientes que el usuario ya cargó a mano: se descartan
+    // para que confirmarlos no duplique el sueldo.
+    final pendingPay =
+        await (_db.select(_db.suggestedTransactions)..where(
+              (t) =>
+                  t.source.equalsValue(TxSource.incomeSchedule) &
+                  t.status.equals('pending'),
+            ))
+            .get();
+    for (final sug in pendingPay) {
+      if (await _salaryAlreadyLogged(sug.categoryId, sug.occurredAt)) {
+        await _suggestionsRepo.dismiss(sug.id);
+      }
+    }
+
     // 3. Notificación si se creó al menos 1 sugerencia
     if (createdCount >= 1) {
       final body = createdCount == 1
@@ -240,6 +258,30 @@ class SuggestionGenerator {
     }
 
     return createdCount;
+  }
+}
+
+extension on SuggestionGenerator {
+  /// Hay un ingreso cargado a mano (no confirmado desde una sugerencia) en la
+  /// categoría del sueldo, entre 3 días antes y 3 días después de [day]
+  /// (el cobro puede correrse por feriados o fines de semana).
+  Future<bool> _salaryAlreadyLogged(String? categoryId, DateTime day) async {
+    final date = DateTime(day.year, day.month, day.day);
+    final from = date.subtract(const Duration(days: 3));
+    final to = date.add(const Duration(days: 4));
+    final query = _db.select(_db.transactions)
+      ..where(
+        (t) =>
+            t.type.equalsValue(TxType.income) &
+            t.deletedAt.isNull() &
+            t.suggestionId.isNull() &
+            t.occurredAt.isBiggerOrEqualValue(from) &
+            t.occurredAt.isSmallerThanValue(to),
+      );
+    if (categoryId != null) {
+      query.where((t) => t.categoryId.equals(categoryId));
+    }
+    return (await query.get()).isNotEmpty;
   }
 }
 

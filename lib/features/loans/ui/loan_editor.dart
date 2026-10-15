@@ -283,7 +283,6 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                           ),
                           Switch(
                             value: _calculateFromInstallments,
-                            activeThumbColor: colors.brandStart,
                             onChanged: (val) {
                               Haptics.tick();
                               setState(() {
@@ -475,7 +474,6 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                       ),
                       Switch(
                         value: _recordInitialDisbursement,
-                        activeThumbColor: colors.brandStart,
                         onChanged: (val) {
                           Haptics.tick();
                           setState(() => _recordInitialDisbursement = val);

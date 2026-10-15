@@ -150,6 +150,46 @@ void main() {
       expect(progress.projectedFinishDate!.isBefore(goal.targetDate!), isTrue);
     });
 
+    test('meta nueva con un solo aporte: el ritmo no se diluye en 90 días', () {
+      // Caso real: meta creada hoy, aporte de 1.200.000 hoy, objetivo 10M a jul 2027.
+      final goal = makeGoal(
+        targetAmount: 10000000,
+        targetDate: DateTime(2027, 7, 31),
+        createdAt: now,
+      );
+      final progress = calculateGoalProgress(
+        goal: goal,
+        contributions: [makeContribution(amount: 1200000, date: now)],
+        now: now,
+      );
+
+      // Ventana mínima de 30 días: 1.200.000 / 30 = 40.000 Gs/día.
+      expect(progress.realDailyPace, closeTo(40000.0, 0.1));
+      // 8.800.000 / 40.000 = 220 días -> mayo 2027, antes del objetivo.
+      expect(progress.status, equals(const GoalStatus.onTrack()));
+    });
+
+    test('meses de atraso se redondean, no se inflan hacia arriba', () {
+      // 1.000 Gs/día durante 90 días; faltan 365.000 -> 365 días -> 15/10/2027.
+      final goal = makeGoal(
+        targetAmount: 455000,
+        targetDate: DateTime(2026, 10, 1),
+      );
+      final contributions = [
+        makeContribution(
+          amount: 90000,
+          date: now.subtract(const Duration(days: 90)),
+        ),
+      ];
+      final progress = calculateGoalProgress(
+        goal: goal,
+        contributions: contributions,
+        now: now,
+      );
+      // 379 días tarde ≈ 12,45 meses -> 12, no 13.
+      expect(progress.status, equals(const GoalStatus.late(12)));
+    });
+
     test('meta con proyección atrasada resulta en late(meses)', () {
       final goal = makeGoal(
         targetAmount: 10000000,

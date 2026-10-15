@@ -379,7 +379,6 @@ class _RecurringRuleCard extends ConsumerWidget {
                       Switch.adaptive(
                         key: ValueKey('toggle-active-${rule.id}'),
                         value: rule.active,
-                        activeTrackColor: colors.brandStart,
                         onChanged: (active) {
                           Haptics.tick();
                           repo.setActive(rule.id, active);

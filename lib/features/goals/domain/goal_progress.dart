@@ -110,8 +110,17 @@ GoalProgress calculateGoalProgress({
     }
   }
 
-  // Ritmo real: promedio de aportes de los últimos 90 días
-  final windowStart = currentNow.subtract(const Duration(days: 90));
+  // Ritmo real: promedio de aportes de los últimos 90 días. Si la meta
+  // tiene menos historia, la ventana arranca en el primer aporte (mínimo
+  // 30 días) para no diluir los primeros aportes en 90 días.
+  final firstDate = contributions.isEmpty
+      ? currentNow
+      : contributions.map((c) => c.date).reduce((a, b) => a.isBefore(b) ? a : b);
+  final ninetyDaysAgo = currentNow.subtract(const Duration(days: 90));
+  final windowStart = firstDate.isAfter(ninetyDaysAgo)
+      ? firstDate
+      : ninetyDaysAgo;
+  final windowDays = currentNow.difference(windowStart).inDays.clamp(30, 90);
   final recentContributions = contributions.where(
     (c) => !c.date.isBefore(windowStart) && !c.date.isAfter(currentNow),
   );
@@ -120,7 +129,7 @@ GoalProgress calculateGoalProgress({
     (sum, c) => sum + c.amount,
   );
 
-  final double realDailyPace = netInWindow > 0 ? netInWindow / 90.0 : 0.0;
+  final double realDailyPace = netInWindow > 0 ? netInWindow / windowDays : 0.0;
   final int realMonthlyPace = (realDailyPace * 30.4375).round();
 
   // Fecha proyectada de finalización
@@ -151,7 +160,7 @@ GoalProgress calculateGoalProgress({
       final daysLate = projectedFinishDate != null
           ? projectedFinishDate.difference(goal.targetDate!).inDays
           : 30;
-      final months = max(1, (daysLate / 30.4375).ceil());
+      final months = max(1, (daysLate / 30.4375).round());
       status = GoalStatus.late(months);
     }
   }

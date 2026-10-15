@@ -330,7 +330,6 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                         ),
                         Switch(
                           value: _hasTargetDate,
-                          activeThumbColor: colors.brandAt(0),
                           onChanged: (val) {
                             Haptics.tick();
                             setState(() {

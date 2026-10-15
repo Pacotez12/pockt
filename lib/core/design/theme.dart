@@ -233,7 +233,7 @@ SwitchThemeData _buildSwitchTheme(PocktColors colors) {
     ),
     trackColor: WidgetStateProperty.resolveWith(
       (states) => states.contains(WidgetState.selected)
-          ? colors.brandStart
+          ? colors.brandEnd
           : colors.glassFill,
     ),
     trackOutlineColor: WidgetStateProperty.resolveWith(

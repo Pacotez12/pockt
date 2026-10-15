@@ -186,6 +186,65 @@ void main() {
     expect(second, 0);
   });
 
+  Future<void> insertSchedule() => db.into(db.incomeSchedules).insert(
+        IncomeSchedulesCompanion.insert(
+          id: 'sched-1',
+          mode: 'biweekly',
+          payDays: jsonEncode([15, -1]),
+          payDayRules: jsonEncode(['either', 'previous']),
+          monthlyAmount: const Value(8000000),
+          paySplitPercents: jsonEncode([50, 50]),
+          categoryId: sueldoId,
+          effectiveFrom: DateTime(2026, 10, 1),
+        ),
+      );
+
+  Future<void> insertManualSalary(DateTime at) =>
+      db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              id: 'tx-manual',
+              type: TxType.income,
+              amount: 4000000,
+              categoryId: sueldoId,
+              merchant: const Value('Empresa'),
+              occurredAt: at,
+              createdAt: at,
+              updatedAt: at,
+              source: TxSource.manual,
+            ),
+          );
+
+  test('no sugiere el cobro si el sueldo ya se cargó a mano', () async {
+    await insertSchedule();
+    await insertManualSalary(DateTime(2026, 10, 15, 8, 30));
+
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 16, 9, 0),
+    );
+
+    expect(await generator.run(), 0);
+    expect(await db.select(db.suggestedTransactions).get(), isEmpty);
+    expect(notifier.shown, isEmpty);
+  });
+
+  test('descarta el cobro pendiente si después se cargó el sueldo a mano', () async {
+    await insertSchedule();
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 16, 9, 0),
+    );
+    expect(await generator.run(), 1);
+
+    await insertManualSalary(DateTime(2026, 10, 16, 8, 0));
+    await generator.run();
+
+    final sugs = await db.select(db.suggestedTransactions).get();
+    expect(sugs.single.status, 'dismissed');
+  });
+
   test('el generador crea 2100000 el 15 y 4900000 el último día con [30, 70]', () async {
     await db.into(db.incomeSchedules).insert(
           IncomeSchedulesCompanion.insert(

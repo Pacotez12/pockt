@@ -816,7 +816,6 @@ class _SettingsSwitchTile extends StatelessWidget {
             ),
             Switch(
               value: value,
-              activeThumbColor: iconColor,
               onChanged: (val) {
                 Haptics.tick();
                 onChanged(val);
