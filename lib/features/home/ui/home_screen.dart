@@ -78,7 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<int>? _monthTotalSub;
   StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
   StreamSubscription<Map<int, int>>? _dailyTotalsSub;
-  StreamSubscription<List<TxView>>? _recentSub;
+  StreamSubscription<List<MovementEntry>>? _recentSub;
   StreamSubscription<int>? _recentCountSub;
   StreamSubscription<List<SuggestionView>>? _suggestionsSub;
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
@@ -101,7 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<SalaryDeduction> _deductions = const [];
   List<CategoryTotal> _categoryTotals = const [];
   Map<int, int> _dailyTotals = const {};
-  List<TxView> _recentTxs = const [];
+  List<MovementEntry> _recentMovements = const [];
   List<SuggestionView> _pendingSuggestions = const [];
   List<BudgetView> _budgets = const [];
   StreamSubscription<List<BudgetView>>? _budgetsSub;
@@ -395,10 +395,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .listen((count) {
           if (mounted) {
             _recentSub?.cancel();
-            _recentSub = repo.watchRecent(limit: count).listen((recent) {
+            final goalsRepo = ref.read(goalsRepositoryProvider);
+            final movementsStream = combineMovements(
+              txStream: repo.watchRecent(limit: count),
+              contribStream: goalsRepo.watchContributionsWithGoal(limit: count),
+              limit: count,
+            );
+            _recentSub = movementsStream.listen((recent) {
               if (mounted) {
                 setState(() {
-                  _recentTxs = recent;
+                  _recentMovements = recent;
                 });
               }
             });
@@ -1299,10 +1305,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 6),
         TxGroupCard(
-          items: _recentTxs,
+          entries: _recentMovements,
           cardRadius: 24,
           subtitleBuilder: (item) =>
               formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
+          contribSubtitleBuilder: (item) =>
+              formatTxWhen(toLocal(item.contribution.date), _getNow()),
           emptyPlaceholder: Text(
             'Sin movimientos aún',
             style: TextStyle(

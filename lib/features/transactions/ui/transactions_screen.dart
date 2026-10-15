@@ -6,6 +6,7 @@ import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/transactions/ui/tx_row.dart';
 
@@ -39,10 +40,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final colors = context.pockt;
     final now = _getNow();
     final repo = ref.watch(transactionsRepositoryProvider);
+    final goalsRepo = ref.watch(goalsRepositoryProvider);
 
     final txStream = repo.watchFiltered(
       query: _query.isEmpty ? null : _query,
       type: _typeFilter,
+    );
+    final contribStream = goalsRepo.watchContributionsWithGoal();
+
+    final movementStream = combineMovements(
+      txStream: txStream,
+      contribStream: contribStream,
+      query: _query.isEmpty ? null : _query,
+      typeFilter: _typeFilter,
     );
 
     return Scaffold(
@@ -150,8 +160,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             const SizedBox(height: 10),
             // Lista agrupada por día local
             Expanded(
-              child: StreamBuilder<List<TxView>>(
-                stream: txStream,
+              child: StreamBuilder<List<MovementEntry>>(
+                stream: movementStream,
                 builder: (context, snapshot) {
                   final list = snapshot.data ?? const [];
 
@@ -171,11 +181,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   }
 
                   // Agrupar por día local
-                  final groups = <DateTime, List<TxView>>{};
-                  for (final view in list) {
-                    final local = toLocal(view.tx.occurredAt);
+                  final groups = <DateTime, List<MovementEntry>>{};
+                  for (final entry in list) {
+                    final local = toLocal(entry.date);
                     final dayKey = DateTime(local.year, local.month, local.day);
-                    groups.putIfAbsent(dayKey, () => []).add(view);
+                    groups.putIfAbsent(dayKey, () => []).add(entry);
                   }
 
                   final sortedDays = groups.keys.toList()
@@ -206,9 +216,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             ),
                           ),
                           TxGroupCard(
-                            items: items,
+                            entries: items,
                             cardRadius: 20,
                             subtitleBuilder: (item) => _rowSubtitle(item, now),
+                            contribSubtitleBuilder: (item) =>
+                                _contribSubtitle(item, now),
                           ),
                         ],
                       );
@@ -262,6 +274,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final merchant = view.tx.merchant?.trim();
     if (merchant != null && merchant.isNotEmpty) {
       return '${view.category.name} · $timeStr';
+    }
+    return timeStr;
+  }
+
+  String _contribSubtitle(GoalContributionWithGoal item, DateTime now) {
+    final localTime = toLocal(item.contribution.date);
+    final timeStr =
+        '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
+    final note = item.contribution.note?.trim();
+    if (note != null && note.isNotEmpty) {
+      return '$note · $timeStr';
     }
     return timeStr;
   }

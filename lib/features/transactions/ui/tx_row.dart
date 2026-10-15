@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/providers.dart';
@@ -5,9 +7,13 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
+import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
+import 'package:pockt/features/goals/data/goals_repository.dart';
+import 'package:pockt/features/goals/ui/goal_detail_screen.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 
 /// Distancia desde el borde inferior para que el aviso flote sobre la barra
@@ -157,17 +163,25 @@ class TxRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            isIncome
-                ? '+${formatGs(view.tx.amount, symbol: false)}'
-                : formatGs(view.tx.amount, symbol: false),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              fontFeatures: const [FontFeature.tabularFigures()],
-              color: isIncome ? colors.positive : colors.textPrimary,
-            ),
+          Consumer(
+            builder: (context, ref, _) {
+              final obscure = ref.watch(shouldObscureAmountsProvider);
+              final text = obscure
+                  ? '••••'
+                  : (isIncome
+                        ? '+${formatGs(view.tx.amount, symbol: false)}'
+                        : formatGs(view.tx.amount, symbol: false));
+              return Text(
+                text,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  color: isIncome ? colors.positive : colors.textPrimary,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -298,25 +312,151 @@ class _SwipeableTxRowState extends ConsumerState<SwipeableTxRow> {
   }
 }
 
-/// Tarjeta de vidrio para agrupar filas de movimientos en una sola tarjeta visual
-/// sin recortes en los bordes y asegurando esquinas continuas.
-class TxGroupCard extends StatelessWidget {
-  final List<TxView> items;
-  final String Function(TxView view) subtitleBuilder;
-  final double cardRadius;
-  final Widget? emptyPlaceholder;
+sealed class MovementEntry {
+  DateTime get date;
+}
 
-  const TxGroupCard({
+class TxMovementEntry extends MovementEntry {
+  final TxView view;
+  TxMovementEntry(this.view);
+
+  @override
+  DateTime get date => view.tx.occurredAt;
+}
+
+class GoalContributionMovementEntry extends MovementEntry {
+  final GoalContributionWithGoal item;
+  GoalContributionMovementEntry(this.item);
+
+  @override
+  DateTime get date => item.contribution.date;
+}
+
+class GoalContributionRow extends ConsumerWidget {
+  final GoalContributionWithGoal item;
+  final String subtitle;
+  final EdgeInsetsGeometry padding;
+
+  const GoalContributionRow({
     super.key,
-    required this.items,
-    required this.subtitleBuilder,
-    this.cardRadius = 24.0,
-    this.emptyPlaceholder,
+    required this.item,
+    required this.subtitle,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
   });
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.pockt;
+    final isWithdraw = item.contribution.amount < 0;
+    final title = isWithdraw
+        ? 'Retiro · ${item.goal.name}'
+        : 'Aporte · ${item.goal.name}';
+    final obscure = ref.watch(shouldObscureAmountsProvider);
+    final absAmount = item.contribution.amount.abs();
+    final amountStr = obscure ? '••••' : formatGs(absAmount, symbol: false);
+
+    return Pressable(
+      key: ValueKey('goal-contrib-${item.contribution.id}'),
+      onTap: () {
+        Haptics.tick();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GoalDetailScreen(goalId: item.goal.id),
+          ),
+        );
+      },
+      child: Padding(
+        padding: padding,
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.glassFill,
+                border: Border.all(color: colors.glassBorder),
+              ),
+              child: Center(
+                child: Icon(
+                  uiIcon(item.goal.icon, filled: true),
+                  size: 17,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: colors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              amountStr,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de vidrio para agrupar filas de movimientos en una sola tarjeta visual
+/// sin recortes en los bordes y asegurando esquinas continuas.
+class TxGroupCard extends StatelessWidget {
+  final List<MovementEntry> entries;
+  final String Function(TxView view)? subtitleBuilder;
+  final String Function(GoalContributionWithGoal item)? contribSubtitleBuilder;
+  final double cardRadius;
+  final Widget? emptyPlaceholder;
+
+  TxGroupCard({
+    super.key,
+    List<TxView>? items,
+    List<MovementEntry>? entries,
+    this.subtitleBuilder,
+    this.contribSubtitleBuilder,
+    this.cardRadius = 24.0,
+    this.emptyPlaceholder,
+  }) : entries =
+           entries ?? (items?.map(TxMovementEntry.new).toList() ?? const []);
+
+  @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (entries.isEmpty) {
       if (emptyPlaceholder != null) {
         return GlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
@@ -333,16 +473,89 @@ class TxGroupCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (int i = 0; i < items.length; i++)
-            SwipeableTxRow(
-              view: items[i],
-              subtitle: subtitleBuilder(items[i]),
-              isFirst: i == 0,
-              isLast: i == items.length - 1,
-              cardRadius: cardRadius,
-            ),
+          for (int i = 0; i < entries.length; i++) ...[
+            switch (entries[i]) {
+              TxMovementEntry(:final view) => SwipeableTxRow(
+                view: view,
+                subtitle: subtitleBuilder != null ? subtitleBuilder!(view) : '',
+                isFirst: i == 0,
+                isLast: i == entries.length - 1,
+                cardRadius: cardRadius,
+              ),
+              GoalContributionMovementEntry(:final item) => GoalContributionRow(
+                item: item,
+                subtitle: contribSubtitleBuilder != null
+                    ? contribSubtitleBuilder!(item)
+                    : (item.contribution.note?.isNotEmpty == true
+                          ? item.contribution.note!
+                          : ''),
+              ),
+            },
+          ],
         ],
       ),
     );
   }
+}
+
+/// Combina movimientos normales y aportes a metas en un único flujo ordenado
+/// cronológicamente de forma descendente.
+Stream<List<MovementEntry>> combineMovements({
+  required Stream<List<TxView>> txStream,
+  required Stream<List<GoalContributionWithGoal>> contribStream,
+  String? query,
+  TxType? typeFilter,
+  int? limit,
+}) {
+  late StreamController<List<MovementEntry>> controller;
+  List<TxView> lastTxs = const [];
+  List<GoalContributionWithGoal> lastContribs = const [];
+  StreamSubscription? sub1;
+  StreamSubscription? sub2;
+
+  void emit() {
+    final entries = <MovementEntry>[];
+    for (final tx in lastTxs) {
+      entries.add(TxMovementEntry(tx));
+    }
+    // Los aportes no son gastos de categoría ni ingresos: solo se muestran si no hay filtro de tipo
+    if (typeFilter == null) {
+      for (final c in lastContribs) {
+        if (query != null && query.trim().isNotEmpty) {
+          final q = query.trim().toLowerCase();
+          final matchesGoal = c.goal.name.toLowerCase().contains(q);
+          final matchesNote =
+              c.contribution.note?.toLowerCase().contains(q) ?? false;
+          if (!matchesGoal && !matchesNote) continue;
+        }
+        entries.add(GoalContributionMovementEntry(c));
+      }
+    }
+    entries.sort((a, b) => b.date.compareTo(a.date));
+    if (limit != null && entries.length > limit) {
+      controller.add(entries.sublist(0, limit));
+    } else {
+      controller.add(entries);
+    }
+  }
+
+  controller = StreamController<List<MovementEntry>>(
+    onListen: () {
+      sub1 = txStream.listen((txs) {
+        lastTxs = txs;
+        emit();
+      }, onError: controller.addError);
+
+      sub2 = contribStream.listen((contribs) {
+        lastContribs = contribs;
+        emit();
+      }, onError: controller.addError);
+    },
+    onCancel: () {
+      sub1?.cancel();
+      sub2?.cancel();
+    },
+  );
+
+  return controller.stream;
 }

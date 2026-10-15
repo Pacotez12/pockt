@@ -17,6 +17,16 @@ class GoalWithProgress {
   });
 }
 
+class GoalContributionWithGoal {
+  final GoalContribution contribution;
+  final Goal goal;
+
+  const GoalContributionWithGoal({
+    required this.contribution,
+    required this.goal,
+  });
+}
+
 class GoalsRepository {
   final AppDatabase _db;
   final _uuid = const Uuid();
@@ -134,41 +144,72 @@ class GoalsRepository {
         .watch();
   }
 
-  Stream<List<GoalWithProgress>> watchActiveWithProgress({DateTime? now}) {
-    // Escucha cambios tanto en goals como en goalContributions
-    return _db
-        .customSelect(
-          'SELECT 1',
-          readsFrom: {_db.goals, _db.goalContributions},
-        )
-        .watch()
-        .asyncMap((_) async {
-      final active =
-          await (_db.select(_db.goals)
-                ..where((g) => g.archived.equals(false))
-                ..orderBy([(g) => OrderingTerm.asc(g.createdAt)]))
-              .get();
+  Stream<List<GoalContributionWithGoal>> watchContributionsWithGoal({
+    DateTime? from,
+    DateTime? to,
+    int? limit,
+  }) {
+    final query = _db.select(_db.goalContributions).join([
+      innerJoin(
+        _db.goals,
+        _db.goals.id.equalsExp(_db.goalContributions.goalId),
+      ),
+    ]);
+    if (from != null) {
+      query.where(_db.goalContributions.date.isBiggerOrEqualValue(from));
+    }
+    if (to != null) {
+      query.where(_db.goalContributions.date.isSmallerOrEqualValue(to));
+    }
+    query.orderBy([OrderingTerm.desc(_db.goalContributions.date)]);
+    if (limit != null) {
+      query.limit(limit);
+    }
 
-      final allContributions = await _db.select(_db.goalContributions).get();
-      final contribsByGoal = <String, List<GoalContribution>>{};
-      for (final c in allContributions) {
-        contribsByGoal.putIfAbsent(c.goalId, () => []).add(c);
-      }
-
-      return active.map((goal) {
-        final contribs = contribsByGoal[goal.id] ?? const [];
-        final progress = calculateGoalProgress(
-          goal: goal,
-          contributions: contribs,
-          now: now,
-        );
-        return GoalWithProgress(
-          goal: goal,
-          progress: progress,
-          contributions: contribs,
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return GoalContributionWithGoal(
+          contribution: row.readTable(_db.goalContributions),
+          goal: row.readTable(_db.goals),
         );
       }).toList();
     });
+  }
+
+  Stream<List<GoalWithProgress>> watchActiveWithProgress({DateTime? now}) {
+    // Escucha cambios tanto en goals como en goalContributions
+    return _db
+        .customSelect('SELECT 1', readsFrom: {_db.goals, _db.goalContributions})
+        .watch()
+        .asyncMap((_) async {
+          final active =
+              await (_db.select(_db.goals)
+                    ..where((g) => g.archived.equals(false))
+                    ..orderBy([(g) => OrderingTerm.asc(g.createdAt)]))
+                  .get();
+
+          final allContributions = await _db
+              .select(_db.goalContributions)
+              .get();
+          final contribsByGoal = <String, List<GoalContribution>>{};
+          for (final c in allContributions) {
+            contribsByGoal.putIfAbsent(c.goalId, () => []).add(c);
+          }
+
+          return active.map((goal) {
+            final contribs = contribsByGoal[goal.id] ?? const [];
+            final progress = calculateGoalProgress(
+              goal: goal,
+              contributions: contribs,
+              now: now,
+            );
+            return GoalWithProgress(
+              goal: goal,
+              progress: progress,
+              contributions: contribs,
+            );
+          }).toList();
+        });
   }
 
   /// Calcula el total neto aportado (aportes - retiros) desde [since].
