@@ -18,6 +18,11 @@ const kCarryOverDecidedKey = 'carryover.decidedFor';
 String _periodKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+/// Valor guardado de [kCarryOverDecidedKey].
+final carryOverDecidedProvider = StreamProvider<String?>(
+  (ref) => ref.watch(settingsRepositoryProvider).watch(kCarryOverDecidedKey),
+);
+
 /// true si ya se eligió "Sumar" o "Pasar a una meta" en este período.
 bool carryOverDecided(String? saved, DateTime periodStart) =>
     saved == _periodKey(periodStart);

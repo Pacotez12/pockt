@@ -327,6 +327,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
             incomeSincePay: incomeSincePay,
             expenseSincePay: expenseSincePay,
             contributionsSincePay: contribsSincePay,
+            carryOver: await schedRepo.carryOverBefore(periodStart),
             lastConfirmedSalaryDate: salaryDate,
             deductions: deductions,
             expectedForPeriod: expectedAmountForPeriod(

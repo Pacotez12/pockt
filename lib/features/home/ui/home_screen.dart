@@ -28,6 +28,7 @@ import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/ui/goals_screen.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
+import 'package:pockt/features/income/ui/carry_over_card.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/ui/loans_screen.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
@@ -85,6 +86,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<int>? _payIncomeSub;
   StreamSubscription<int>? _payExpenseSub;
   StreamSubscription<int>? _payContributionsSub;
+  StreamSubscription<int>? _carrySub;
   StreamSubscription<List<SalaryDeduction>>? _deductionsSub;
 
   int _monthTotal = 0;
@@ -92,6 +94,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _incomeSincePay = 0;
   int _expenseSincePay = 0;
   int _contributionsSincePay = 0;
+  int _carryOver = 0;
+  DateTime? _payPeriodStart;
   DateTime? _lastSalaryDate;
   IncomeSchedule? _schedule;
   List<SalaryDeduction> _deductions = const [];
@@ -141,6 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
     _payContributionsSub?.cancel();
+    _carrySub?.cancel();
     _budgetsSub?.cancel();
     _deductionsSub?.cancel();
     _monthStartSub?.cancel();
@@ -156,6 +161,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _payIncomeSub = null;
     _payExpenseSub = null;
     _payContributionsSub = null;
+    _carrySub?.cancel();
+    _carrySub = null;
     _deductionsSub?.cancel();
     _deductionsSub = null;
 
@@ -166,6 +173,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _incomeSincePay = 0;
           _expenseSincePay = 0;
           _contributionsSincePay = 0;
+          _carryOver = 0;
+          _payPeriodStart = null;
           _deductions = const [];
         });
       }
@@ -193,6 +202,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _incomeSincePay = 0;
           _expenseSincePay = 0;
           _contributionsSincePay = 0;
+          _carryOver = 0;
+          _payPeriodStart = null;
         });
       }
       return;
@@ -222,6 +233,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _payIncomeSub?.cancel();
           _payExpenseSub?.cancel();
           _payContributionsSub?.cancel();
+          _carrySub?.cancel();
+
+          _carrySub = ref
+              .read(incomeScheduleRepositoryProvider)
+              .watchCarryOverBefore(periodStart)
+              .listen((carry) {
+                if (mounted) {
+                  setState(() {
+                    _carryOver = carry;
+                    _payPeriodStart = periodStart;
+                  });
+                }
+              });
 
           _payIncomeSub = repo
               .watchTotalSince(periodStart, TxType.income)
@@ -445,6 +469,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       incomeSincePay: _incomeSincePay,
       expenseSincePay: _expenseSincePay,
       contributionsSincePay: _contributionsSincePay,
+      carryOver: _carryOver,
       lastConfirmedSalaryDate: _lastSalaryDate,
       deductions: _deductions,
       expectedForPeriod: _schedule != null
@@ -530,9 +555,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (id) {
       case 'period':
         if (pLine == null) return null;
+        final decided = ref.watch(carryOverDecidedProvider).value;
+        final showCarryCard =
+            pLine.carryOver > 0 &&
+            _payPeriodStart != null &&
+            !carryOverDecided(decided, _payPeriodStart!);
         return Padding(
           padding: const EdgeInsets.only(top: 10),
-          child: _buildPeriodLine(context, pLine),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPeriodLine(context, pLine),
+              if (showCarryCard) ...[
+                const SizedBox(height: 12),
+                CarryOverCard(
+                  amount: pLine.carryOver,
+                  periodStart: _payPeriodStart!,
+                  monthly: _schedule?.mode.toLowerCase() == 'monthly',
+                ),
+              ],
+            ],
+          ),
         );
       case 'loans':
         return _buildLoansCard(context);
@@ -1403,64 +1446,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildPeriodLine(BuildContext context, PeriodLine line) {
     final colors = context.pockt;
+    final carry = line.carryOver;
+    final previous = _schedule?.mode.toLowerCase() == 'monthly'
+        ? 'del mes anterior'
+        : 'de la quincena anterior';
+    final carryText = ref.watch(shouldObscureAmountsProvider)
+        ? 'incluye •••• $previous'
+        : 'incluye ${carry > 0 ? '+' : '−'}${formatGs(carry.abs())} $previous';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Row(
-        key: const ValueKey('period-line'),
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Flexible(
-            // Con letra grande, la línea se achica en vez de partir "Gs." del monto.
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text.rich(
-                TextSpan(
-                  text: '${line.label} · quedan ',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: colors.textSecondary.withValues(alpha: 0.75),
-                  ),
-                  children: [
-                    TextSpan(
-                      text: line.isEstimate
-                          ? '~${formatGs(line.remaining)} '
-                          : formatGs(line.remaining),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: line.remaining < 0
-                            ? colors.danger
-                            : colors.textPrimary,
-                      ),
-                    ),
-                    if (line.isEstimate)
-                      TextSpan(
-                        text: '(estimado)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w400,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                  ],
+          _buildPeriodRow(context, line),
+          if (carry != 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                carryText,
+                key: const ValueKey('period-line-carry'),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: colors.textSecondary.withValues(alpha: 0.55),
                 ),
-                key: const ValueKey('period-line-remaining'),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            line.payDayText,
-            key: const ValueKey('period-line-payday'),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              color: colors.textSecondary.withValues(alpha: 0.55),
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPeriodRow(BuildContext context, PeriodLine line) {
+    final colors = context.pockt;
+
+    return Row(
+      key: const ValueKey('period-line'),
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          // Con letra grande, la línea se achica en vez de partir "Gs." del monto.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                text: '${line.label} · quedan ',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: colors.textSecondary.withValues(alpha: 0.75),
+                ),
+                children: [
+                  TextSpan(
+                    text: line.isEstimate
+                        ? '~${formatGs(line.remaining)} '
+                        : formatGs(line.remaining),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: line.remaining < 0
+                          ? colors.danger
+                          : colors.textPrimary,
+                    ),
+                  ),
+                  if (line.isEstimate)
+                    TextSpan(
+                      text: '(estimado)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+              key: const ValueKey('period-line-remaining'),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          line.payDayText,
+          key: const ValueKey('period-line-payday'),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            color: colors.textSecondary.withValues(alpha: 0.55),
+          ),
+        ),
+      ],
     );
   }
 }
