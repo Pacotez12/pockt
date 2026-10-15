@@ -335,7 +335,7 @@ Ideas tomadas de Kapé (app paraguaya en lista de espera) y de PocketGuard/Copil
 
 **Eventos:** tabla `events` (id, nombre, ícono, inicio, fin opcional) y `eventId` nullable en movimientos. Un evento "activo" asigna los gastos nuevos automáticamente; pantalla de evento con total y desglose por categoría.
 
-**Racha:** pendiente de confirmar junto con el Inicio (se descartaron los logros).
+**Racha:** descartada (2026-10-15), igual que logros, medallas y misiones.
 
 ## 8. Manejo de errores
 
