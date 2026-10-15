@@ -237,7 +237,12 @@ Reglas complementarias: en gráficos de Evolución los gastos van en marca y los
 
 ## 7. Backup, restauración y seguridad
 
-> **Decisión 2026-10-11 (autor): eliminar la integración con Google Drive.** No se configura Google Cloud ni se usa `google_sign_in`/`googleapis`. Pendiente de diseñar el reemplazo (por ejemplo backup `.pockt` cifrado guardado o compartido como archivo local y restauración desde archivo); hasta entonces el código de Drive queda sin conectar y se elimina en un plan propio.
+> **Decisión 2026-10-11/15 (autor): sin Google Drive.** Reemplazo aprobado el 2026-10-15: **backup local automático + compartir**.
+> - **Automático:** al abrir o volver a la app, si hay contraseña de respaldo y pasaron 2 días (o nunca se hizo), Pockt genera el `.pockt` cifrado y lo guarda en **Documentos/Pockt** del teléfono (MediaStore, carpeta visible que sobrevive a desinstalar la app). Conserva las últimas 7. No usa tareas en segundo plano (la tarea `pockt-backup` de Workmanager se cancela).
+> - **Exportar copia:** genera un `.pockt` nuevo y abre el menú de compartir de Android (Drive, WhatsApp, correo…).
+> - **Restaurar:** lista las copias de Documentos/Pockt o **"Elegir archivo…"** con el selector de Android (sirve tras reinstalar o cambiar de teléfono); vista previa, contraseña y vuelta atrás como antes.
+> - **Aviso:** "backup atrasado" a los 5 días y también si nunca se hizo un backup (con contraseña sin configurar se invita a configurarla).
+> - Se eliminan `google_sign_in`, `googleapis`, `extension_google_sign_in_as_googleapis_auth`, `http`, `DriveBackupStore` y `docs/backup-setup.md`.
 
 
 ### 7.1 Backup
