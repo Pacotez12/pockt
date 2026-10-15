@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -174,24 +175,48 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
     try {
-      expect(db.schemaVersion, 9);
+      expect(db.schemaVersion, 10);
 
       // 1. Movimientos intactos
       final txs = await db.select(db.transactions).get();
       expect(txs, hasLength(2));
-      expect(txs.any((t) => t.id == 'tx-1' && t.amount == 380000 && t.merchant == 'Superseis'), isTrue);
-      expect(txs.any((t) => t.id == 'tx-2' && t.amount == 28500 && t.merchant == 'Bolt'), isTrue);
+      expect(
+        txs.any(
+          (t) =>
+              t.id == 'tx-1' && t.amount == 380000 && t.merchant == 'Superseis',
+        ),
+        isTrue,
+      );
+      expect(
+        txs.any(
+          (t) => t.id == 'tx-2' && t.amount == 28500 && t.merchant == 'Bolt',
+        ),
+        isTrue,
+      );
 
       // 2. Palabras clave intactas
       final keywords = await db.select(db.categoryKeywords).get();
       expect(keywords, hasLength(2));
-      expect(keywords.any((k) => k.keyword == 'pizza' && k.source == KeywordSource.seed), isTrue);
-      expect(keywords.any((k) => k.keyword == 'uber' && k.source == KeywordSource.user), isTrue);
+      expect(
+        keywords.any(
+          (k) => k.keyword == 'pizza' && k.source == KeywordSource.seed,
+        ),
+        isTrue,
+      );
+      expect(
+        keywords.any(
+          (k) => k.keyword == 'uber' && k.source == KeywordSource.user,
+        ),
+        isTrue,
+      );
 
       // 3. Memoria de comercios intacta
       final memories = await db.select(db.merchantMemory).get();
       expect(memories, hasLength(2));
-      expect(memories.any((m) => m.merchantKey == 'superseis' && m.uses == 5), isTrue);
+      expect(
+        memories.any((m) => m.merchantKey == 'superseis' && m.uses == 5),
+        isTrue,
+      );
 
       // 4. Sugerencia previa intacta
       final sugs = await db.select(db.suggestedTransactions).get();
@@ -199,20 +224,17 @@ void main() {
       expect(sugs.first.id, 'sug-1');
 
       // 5. El índice único rechaza duplicados con el mismo (source, sourceRef, occurredAt)
-      expect(
-        () async {
-          final rawDb = sqlite.sqlite3.open(dbFile.path);
-          try {
-            rawDb.execute('''
+      expect(() async {
+        final rawDb = sqlite.sqlite3.open(dbFile.path);
+        try {
+          rawDb.execute('''
               INSERT INTO suggested_transactions (id, type, amount, category_id, occurred_at, source, source_ref, status, created_at) VALUES
               ('sug-2', 'expense', 75000, '018f0000-0000-7000-8000-000000000001', 1728000000, 'recurring', 'rec-1', 'pending', 1728000000);
             ''');
-          } finally {
-            rawDb.close();
-          }
-        },
-        throwsA(isA<sqlite.SqliteException>()),
-      );
+        } finally {
+          rawDb.close();
+        }
+      }, throwsA(isA<sqlite.SqliteException>()));
     } finally {
       await db.close();
     }

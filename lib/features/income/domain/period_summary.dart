@@ -75,7 +75,11 @@ int? expectedAmountForPeriod(
     schedule.paySplitPercents,
     count: payDays.length,
   );
-  final splitList = safeNetPayAmounts(schedule.monthlyAmount!, splits, deductions);
+  final splitList = safeNetPayAmounts(
+    schedule.monthlyAmount!,
+    splits,
+    deductions,
+  );
   final prevWindow = previousPayWindow(todayLocal, payDays, rules);
   if (prevWindow == null) return null;
 
@@ -112,6 +116,7 @@ PeriodLine? periodLine({
   required IncomeSchedule? schedule,
   required int incomeSincePay,
   required int expenseSincePay,
+  int contributionsSincePay = 0,
   DateTime? lastConfirmedSalaryDate,
   int? expectedForPeriod,
   Iterable<SalaryDeductionLike> deductions = const [],
@@ -127,7 +132,11 @@ PeriodLine? periodLine({
   if (nextWindow == null) return null;
 
   final today = DateTime(todayLocal.year, todayLocal.month, todayLocal.day);
-  final target = DateTime(nextWindow.earliest.year, nextWindow.earliest.month, nextWindow.earliest.day);
+  final target = DateTime(
+    nextWindow.earliest.year,
+    nextWindow.earliest.month,
+    nextWindow.earliest.day,
+  );
   final daysToNextPay = target.difference(today).inDays;
 
   final String label;
@@ -164,7 +173,8 @@ PeriodLine? periodLine({
     }
   }
 
-  final effectiveExpected = expectedForPeriod ??
+  final effectiveExpected =
+      expectedForPeriod ??
       expectedAmountForPeriod(schedule, todayLocal, deductions: deductions);
   final bool isEstimate;
   final int remaining;
@@ -172,10 +182,10 @@ PeriodLine? periodLine({
   if (incomeSincePay <= 0 &&
       effectiveExpected != null &&
       effectiveExpected > 0) {
-    remaining = effectiveExpected - expenseSincePay;
+    remaining = effectiveExpected - expenseSincePay - contributionsSincePay;
     isEstimate = true;
   } else {
-    remaining = incomeSincePay - expenseSincePay;
+    remaining = incomeSincePay - expenseSincePay - contributionsSincePay;
     isEstimate = false;
   }
 
@@ -189,4 +199,3 @@ PeriodLine? periodLine({
     isEstimate: isEstimate,
   );
 }
-

@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,10 +161,13 @@ void main() {
     createV7DatabaseWithData(dbFile);
 
     final db = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase(dbFile), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase(dbFile),
+        closeStreamsSynchronously: true,
+      ),
     );
 
-    expect(db.schemaVersion, equals(9));
+    expect(db.schemaVersion, equals(10));
 
     // Verify existing transaction and category are preserved
     final txs = await db.select(db.transactions).get();
@@ -177,7 +181,9 @@ void main() {
     expect(loans, isEmpty);
 
     // Verify category "Préstamos" exists
-    final prestamosCat = await (db.select(db.categories)..where((c) => c.name.equals('Préstamos'))).getSingleOrNull();
+    final prestamosCat = await (db.select(
+      db.categories,
+    )..where((c) => c.name.equals('Préstamos'))).getSingleOrNull();
     expect(prestamosCat, isNotNull);
     expect(prestamosCat!.name, equals('Préstamos'));
     expect(prestamosCat.kind, equals(CategoryKind.expense));

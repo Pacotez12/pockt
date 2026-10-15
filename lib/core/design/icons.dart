@@ -127,16 +127,13 @@ PhosphorDuotoneIconData categoryIconData(String key) {
 /// Widget de ícono para categorías en estilo Duotone.
 /// Clave desconocida → ícono `package`.
 Widget categoryIcon(String key, {double size = 24, Color? color}) {
-  return PhosphorIcon(
-    categoryIconData(key),
-    size: size,
-    color: color,
-  );
+  return PhosphorIcon(categoryIconData(key), size: size, color: color);
 }
 
 /// Mapeo estático a constantes de Phosphor Regular para UI general.
 const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'plus': PhosphorIconsRegular.plus,
+  'minus': PhosphorIconsRegular.minus,
   'x': PhosphorIconsRegular.x,
   'close': PhosphorIconsRegular.x,
   'check': PhosphorIconsRegular.check,
@@ -194,11 +191,21 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'file-csv': PhosphorIconsRegular.fileCsv,
   'info': PhosphorIconsRegular.info,
   'hand-coins': PhosphorIconsRegular.handCoins,
+  'airplane-tilt': PhosphorIconsRegular.airplaneTilt,
+  'laptop': PhosphorIconsRegular.laptop,
+  'shield-check': PhosphorIconsRegular.shieldCheck,
+  'piggy-bank': PhosphorIconsRegular.piggyBank,
+  'house-line': PhosphorIconsRegular.houseLine,
+  'car': PhosphorIconsRegular.car,
+  'gift': PhosphorIconsRegular.gift,
+  'graduation-cap': PhosphorIconsRegular.graduationCap,
+  'target': PhosphorIconsRegular.target,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
 const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'plus': PhosphorIconsFill.plus,
+  'minus': PhosphorIconsFill.minus,
   'x': PhosphorIconsFill.x,
   'close': PhosphorIconsFill.x,
   'check': PhosphorIconsFill.check,
@@ -256,7 +263,32 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'file-csv': PhosphorIconsFill.fileCsv,
   'info': PhosphorIconsFill.info,
   'hand-coins': PhosphorIconsFill.handCoins,
+  'airplane-tilt': PhosphorIconsFill.airplaneTilt,
+  'laptop': PhosphorIconsFill.laptop,
+  'shield-check': PhosphorIconsFill.shieldCheck,
+  'piggy-bank': PhosphorIconsFill.piggyBank,
+  'house-line': PhosphorIconsFill.houseLine,
+  'car': PhosphorIconsFill.car,
+  'gift': PhosphorIconsFill.gift,
+  'graduation-cap': PhosphorIconsFill.graduationCap,
+  'target': PhosphorIconsFill.target,
 };
+
+/// Claves de íconos curados para metas de ahorro (spec §7d).
+const List<String> kGoalIconKeys = [
+  'target',
+  'piggy-bank',
+  'airplane-tilt',
+  'car',
+  'house-line',
+  'laptop',
+  'graduation-cap',
+  'shield-check',
+  'gift',
+  'coins',
+  'sparkle',
+  'device-mobile',
+];
 
 /// Devuelve el [IconData] de Phosphor en estilo Regular o Fill según [filled].
 IconData uiIcon(String key, {bool filled = false}) {

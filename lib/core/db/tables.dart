@@ -191,3 +191,28 @@ class MerchantMemory extends Table {
   @override
   Set<Column> get primaryKey => {merchantKey, categoryId};
 }
+
+class Goals extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get icon => text()();
+  IntColumn get targetAmount => integer()();
+  DateTimeColumn get targetDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class GoalContributions extends Table {
+  TextColumn get id => text()();
+  TextColumn get goalId => text().references(Goals, #id)();
+  IntColumn get amount => integer()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

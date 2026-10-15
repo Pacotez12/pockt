@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
@@ -152,12 +153,10 @@ void main() {
   test('migración v5 a v6 crea tabla salary_deductions y conserva el esquema existente', () async {
     createV5DatabaseWithData(dbFile);
 
-    final db = AppDatabase.forTesting(
-      NativeDatabase(dbFile),
-    );
+    final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
-    // 1. Schema version actualizado a 7
-    expect(db.schemaVersion, equals(9));
+    // 1. Schema version actualizado a 10
+    expect(db.schemaVersion, equals(10));
 
     // 2. Datos existentes intactos
     final txs = await db.select(db.transactions).get();
@@ -172,7 +171,9 @@ void main() {
     expect(sched.paySplitPercents, equals('[30,70]'));
 
     // 3. Tabla salary_deductions utilizable a través de drift
-    await db.into(db.salaryDeductions).insert(
+    await db
+        .into(db.salaryDeductions)
+        .insert(
           SalaryDeductionsCompanion.insert(
             id: 'ded-1',
             scheduleId: 'sched-1',
@@ -193,7 +194,7 @@ void main() {
     // 4. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(9));
+    expect(userVersionResult.first['user_version'], equals(10));
 
     final tableInfo = rawDb.select('PRAGMA table_info(salary_deductions);');
     final columnNames = tableInfo.map((row) => row['name'] as String).toList();

@@ -24,6 +24,8 @@ import 'package:pockt/features/home/domain/home_cards_config.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
+import 'package:pockt/features/goals/data/goals_repository.dart';
+import 'package:pockt/features/goals/ui/goals_screen.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/ui/loans_screen.dart';
@@ -81,12 +83,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   StreamSubscription<DateTime?>? _lastSalarySub;
   StreamSubscription<int>? _payIncomeSub;
   StreamSubscription<int>? _payExpenseSub;
+  StreamSubscription<int>? _payContributionsSub;
   StreamSubscription<List<SalaryDeduction>>? _deductionsSub;
 
   int _monthTotal = 0;
   int _previousTotal = 0;
   int _incomeSincePay = 0;
   int _expenseSincePay = 0;
+  int _contributionsSincePay = 0;
   DateTime? _lastSalaryDate;
   IncomeSchedule? _schedule;
   List<SalaryDeduction> _deductions = const [];
@@ -135,6 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _lastSalarySub?.cancel();
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
+    _payContributionsSub?.cancel();
     _budgetsSub?.cancel();
     _deductionsSub?.cancel();
     _monthStartSub?.cancel();
@@ -146,8 +151,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _lastSalarySub = null;
     _payIncomeSub?.cancel();
     _payExpenseSub?.cancel();
+    _payContributionsSub?.cancel();
     _payIncomeSub = null;
     _payExpenseSub = null;
+    _payContributionsSub = null;
     _deductionsSub?.cancel();
     _deductionsSub = null;
 
@@ -157,6 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _lastSalaryDate = null;
           _incomeSincePay = 0;
           _expenseSincePay = 0;
+          _contributionsSincePay = 0;
           _deductions = const [];
         });
       }
@@ -183,12 +191,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _lastSalaryDate = null;
           _incomeSincePay = 0;
           _expenseSincePay = 0;
+          _contributionsSincePay = 0;
         });
       }
       return;
     }
 
     final repo = ref.read(transactionsRepositoryProvider);
+    final goalsRepo = ref.read(goalsRepositoryProvider);
     _lastSalarySub = repo
         .watchLastConfirmedSalaryDate(
           categoryId: sched.categoryId,
@@ -210,6 +220,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           _payIncomeSub?.cancel();
           _payExpenseSub?.cancel();
+          _payContributionsSub?.cancel();
 
           _payIncomeSub = repo
               .watchTotalSince(periodStart, TxType.income)
@@ -227,6 +238,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (mounted) {
                   setState(() {
                     _expenseSincePay = expense;
+                  });
+                }
+              });
+
+          _payContributionsSub = goalsRepo
+              .watchContributionsTotalSince(periodStart)
+              .listen((contribs) {
+                if (mounted) {
+                  setState(() {
+                    _contributionsSincePay = contribs;
                   });
                 }
               });
@@ -422,6 +443,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       schedule: _schedule,
       incomeSincePay: _incomeSincePay,
       expenseSincePay: _expenseSincePay,
+      contributionsSincePay: _contributionsSincePay,
       lastConfirmedSalaryDate: _lastSalaryDate,
       deductions: _deductions,
       expectedForPeriod: _schedule != null
@@ -513,6 +535,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       case 'loans':
         return _buildLoansCard(context);
+      case 'goals':
+        return _buildGoalsCard(context);
       case 'suggestions':
         if (_pendingSuggestions.isEmpty) return null;
         return Padding(
@@ -773,6 +797,167 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       );
                     }),
                   ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      orElse: () => null,
+    );
+  }
+
+  Widget? _buildGoalsCard(BuildContext context) {
+    final colors = context.pockt;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final obscure = ref.watch(shouldObscureAmountsProvider);
+    final goalsAsync = ref.watch(activeGoalsWithProgressProvider);
+
+    return goalsAsync.maybeWhen(
+      data: (goalsWithProgress) {
+        if (goalsWithProgress.isEmpty) return null;
+
+        final displayGoals = goalsWithProgress.take(2).toList();
+        final totalSaved = goalsWithProgress.fold<int>(
+          0,
+          (sum, item) => sum + item.progress.saved,
+        );
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Pressable(
+            key: const ValueKey('home-goals-card'),
+            onTap: () {
+              Haptics.tick();
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const GoalsScreen()));
+            },
+            child: GlassCard(
+              borderRadius: BorderRadius.circular(PocktRadii.xl),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: colors
+                              .brandAt(0)
+                              .withValues(alpha: isDark ? 0.2 : 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            uiIcon('target'),
+                            size: 15,
+                            color: colors.brandAt(0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Metas',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        obscure ? '••••' : formatGs(totalSaved),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: colors.brandAt(0),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        uiIcon('caret-right'),
+                        size: 14,
+                        color: colors.textTertiary,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...displayGoals.map((item) {
+                    final goal = item.goal;
+                    final progress = item.progress;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    uiIcon(goal.icon),
+                                    size: 14,
+                                    color: colors.brandAt(0),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    goal.name,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                obscure
+                                    ? '••••'
+                                    : '${(progress.percent * 100).toInt()} %',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: SizedBox(
+                              height: 5,
+                              child: Stack(
+                                children: [
+                                  Container(color: colors.glassBorder),
+                                  FractionallySizedBox(
+                                    widthFactor: progress.percent,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            colors.brandStart,
+                                            colors.brandEnd,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -1156,37 +1341,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text.rich(
-              TextSpan(
-                text: '${line.label} · quedan ',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: colors.textSecondary.withValues(alpha: 0.75),
-                ),
-                children: [
-                  TextSpan(
-                    text: line.isEstimate
-                        ? '~${formatGs(line.remaining)} '
-                        : formatGs(line.remaining),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: line.remaining < 0
-                          ? colors.danger
-                          : colors.textPrimary,
-                    ),
+                TextSpan(
+                  text: '${line.label} · quedan ',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: colors.textSecondary.withValues(alpha: 0.75),
                   ),
-                  if (line.isEstimate)
+                  children: [
                     TextSpan(
-                      text: '(estimado)',
+                      text: line.isEstimate
+                          ? '~${formatGs(line.remaining)} '
+                          : formatGs(line.remaining),
                       style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        color: line.remaining < 0
+                            ? colors.danger
+                            : colors.textPrimary,
                       ),
                     ),
-                ],
+                    if (line.isEstimate)
+                      TextSpan(
+                        text: '(estimado)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+                key: const ValueKey('period-line-remaining'),
               ),
-              key: const ValueKey('period-line-remaining'),
-            ),
             ),
           ),
           const SizedBox(width: 8),

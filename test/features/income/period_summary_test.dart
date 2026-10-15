@@ -42,31 +42,34 @@ void main() {
       expect(line.nextPayDate, DateTime(2026, 10, 15));
     });
 
-    test('16/10 -> 2ª quincena, 14 días al viernes 30/10 (31 sábado con previous)', () {
-      final schedule = IncomeSchedule(
-        id: 'sched-1',
-        mode: 'biweekly',
-        payDays: '[15, -1]',
-        payDayRules: '["either", "previous"]',
-        paySplitPercents: '[50, 50]',
-        categoryId: 'cat-1',
-        effectiveFrom: DateTime(2026, 10, 1),
-      );
+    test(
+      '16/10 -> 2ª quincena, 14 días al viernes 30/10 (31 sábado con previous)',
+      () {
+        final schedule = IncomeSchedule(
+          id: 'sched-1',
+          mode: 'biweekly',
+          payDays: '[15, -1]',
+          payDayRules: '["either", "previous"]',
+          paySplitPercents: '[50, 50]',
+          categoryId: 'cat-1',
+          effectiveFrom: DateTime(2026, 10, 1),
+        );
 
-      final line = periodLine(
-        todayLocal: DateTime(2026, 10, 16),
-        schedule: schedule,
-        incomeSincePay: 5000000,
-        expenseSincePay: 4180000,
-      );
+        final line = periodLine(
+          todayLocal: DateTime(2026, 10, 16),
+          schedule: schedule,
+          incomeSincePay: 5000000,
+          expenseSincePay: 4180000,
+        );
 
-      expect(line, isNotNull);
-      expect(line!.label, '2ª quincena');
-      expect(line.daysToNextPay, 14);
-      expect(line.nextPayDate, DateTime(2026, 10, 30));
-      expect(line.remaining, 820000);
-      expect(line.payDayText, 'cobrás en 14 días');
-    });
+        expect(line, isNotNull);
+        expect(line!.label, '2ª quincena');
+        expect(line.daysToNextPay, 14);
+        expect(line.nextPayDate, DateTime(2026, 10, 30));
+        expect(line.remaining, 820000);
+        expect(line.payDayText, 'cobrás en 14 días');
+      },
+    );
 
     test('15/11/2026 (domingo) con either -> ventana 13/11 a 16/11: cobrás entre el vie 13 y el lun 16', () {
       final schedule = IncomeSchedule(
@@ -89,7 +92,10 @@ void main() {
       expect(line, isNotNull);
       expect(line!.nextPayWindow!.isRange, isTrue);
       expect(line.payDayText, 'cobrás entre el vie 13 y el lun 16');
-      expect(line.fullText, '1ª quincena · quedan Gs. 2.300.000 · cobrás entre el vie 13 y el lun 16');
+      expect(
+        line.fullText,
+        '1ª quincena · quedan Gs. 2.300.000 · cobrás entre el vie 13 y el lun 16',
+      );
     });
 
     test('periodLine con sueldo confirmado el 16/11 arranca el 16 aunque la ventana empiece el 13', () {
@@ -229,7 +235,10 @@ void main() {
 
       expect(line, isNotNull);
       expect(line!.label, 'Este mes');
-      expect(line.daysToNextPay, 22); // 30/10 es el último día hábil de octubre (31 sábado)
+      expect(
+        line.daysToNextPay,
+        22,
+      ); // 30/10 es el último día hábil de octubre (31 sábado)
       expect(line.remaining, 4000000);
     });
 
@@ -328,7 +337,10 @@ void main() {
       // El 9/10, el cobro que abrió el período fue el 30/09 (70% = 4.900.000)
       expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 9)), 4900000);
       // El 16/10, el cobro que abrió el período fue el 15/10 (30% = 2.100.000)
-      expect(expectedAmountForPeriod(schedule, DateTime(2026, 10, 16)), 2100000);
+      expect(
+        expectedAmountForPeriod(schedule, DateTime(2026, 10, 16)),
+        2100000,
+      );
     });
 
     test('descuentos mayores que el cobro de fin de mes no rompen el Inicio (usa el bruto)', () {
@@ -347,7 +359,11 @@ void main() {
       ];
       // 5 % de 4.000.000 = 200.000 < 400.000 de descuentos.
       expect(
-        expectedAmountForPeriod(schedule, DateTime(2026, 10, 9), deductions: deductions),
+        expectedAmountForPeriod(
+          schedule,
+          DateTime(2026, 10, 9),
+          deductions: deductions,
+        ),
         200000,
       );
     });
@@ -388,6 +404,74 @@ void main() {
       expect(line!.isEstimate, isTrue);
       expect(line.remaining, 2000000);
     });
+
+    test('aporte de 300.000 baja quedan en 300.000; retiro lo devuelve (spec §7d, Task 2)', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'monthly',
+        payDays: '[-1]',
+        payDayRules: '["previous"]',
+        paySplitPercents: '[100]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+
+      // Estado inicial: cobro real 5.000.000, gastos 1.000.000 -> quedan 4.000.000
+      final baseLine = periodLine(
+        todayLocal: DateTime(2026, 10, 15),
+        schedule: schedule,
+        incomeSincePay: 5000000,
+        expenseSincePay: 1000000,
+        contributionsSincePay: 0,
+      );
+      expect(baseLine!.remaining, equals(4000000));
+
+      // Aporte a meta de 300.000 -> quedan baja a 3.700.000
+      final lineWithContribution = periodLine(
+        todayLocal: DateTime(2026, 10, 15),
+        schedule: schedule,
+        incomeSincePay: 5000000,
+        expenseSincePay: 1000000,
+        contributionsSincePay: 300000,
+      );
+      expect(lineWithContribution!.remaining, equals(3700000));
+
+      // Retiro de la meta de 300.000 (neto 0) -> devuelto a 4.000.000
+      final lineWithWithdrawal = periodLine(
+        todayLocal: DateTime(2026, 10, 15),
+        schedule: schedule,
+        incomeSincePay: 5000000,
+        expenseSincePay: 1000000,
+        contributionsSincePay: 0, // 300.000 - 300.000 = 0
+      );
+      expect(lineWithWithdrawal!.remaining, equals(4000000));
+    });
+
+    test(
+      'aporte descuenta de quedan estimado cuando no hay cobro confirmado',
+      () {
+        final schedule = IncomeSchedule(
+          id: 'sched-1',
+          mode: 'monthly',
+          payDays: '[-1]',
+          payDayRules: '["previous"]',
+          paySplitPercents: '[100]',
+          monthlyAmount: 5000000,
+          categoryId: 'cat-1',
+          effectiveFrom: DateTime(2026, 10, 1),
+        );
+
+        // Estimado: 5.000.000 - gasto 1.000.000 - aporte 300.000 = 3.700.000
+        final line = periodLine(
+          todayLocal: DateTime(2026, 10, 15),
+          schedule: schedule,
+          incomeSincePay: 0,
+          expenseSincePay: 1000000,
+          contributionsSincePay: 300000,
+        );
+        expect(line!.isEstimate, isTrue);
+        expect(line.remaining, equals(3700000));
+      },
+    );
   });
 }
-

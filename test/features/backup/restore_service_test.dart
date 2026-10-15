@@ -179,7 +179,9 @@ void main() {
   group('RestoreService', () {
     test('preview obtiene resumen con fecha, cantidad de transacciones y schemaVersion', () async {
       final db = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await db.into(db.transactions).insert(
+      await db
+          .into(db.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: 'tx-1',
               type: TxType.expense,
@@ -199,28 +201,33 @@ void main() {
 
       final preview = await restoreService.preview(backupId, 'secret-password');
       expect(preview.transactionCount, equals(1));
-      expect(preview.schemaVersion, equals(9));
+      expect(preview.schemaVersion, equals(10));
       expect(preview.createdAt, isNotNull);
     });
 
-    test('preview con contraseña incorrecta lanza WrongPasswordException', () async {
-      final db = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      final backupId = await createBackupFromDatabase(
-        sourceDb: db,
-        password: 'correct-password',
-      );
-      await db.close();
+    test(
+      'preview con contraseña incorrecta lanza WrongPasswordException',
+      () async {
+        final db = AppDatabase.forTesting(NativeDatabase(currentDbFile));
+        final backupId = await createBackupFromDatabase(
+          sourceDb: db,
+          password: 'correct-password',
+        );
+        await db.close();
 
-      expect(
-        () => restoreService.preview(backupId, 'wrong-password'),
-        throwsA(isA<WrongPasswordException>()),
-      );
-    });
+        expect(
+          () => restoreService.preview(backupId, 'wrong-password'),
+          throwsA(isA<WrongPasswordException>()),
+        );
+      },
+    );
 
     test('restaurar reemplaza los movimientos por los del backup', () async {
       // 1. Base actual con 1 movimiento ("Tx Actual")
       final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual.into(dbActual.transactions).insert(
+      await dbActual
+          .into(dbActual.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: 'tx-actual',
               type: TxType.expense,
@@ -238,7 +245,9 @@ void main() {
       // 2. Base auxiliar para armar el backup con 2 movimientos
       final backupDbFile = File('${tempDir.path}/source_for_backup.sqlite');
       final dbBackup = AppDatabase.forTesting(NativeDatabase(backupDbFile));
-      await dbBackup.into(dbBackup.transactions).insert(
+      await dbBackup
+          .into(dbBackup.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: 'tx-b1',
               type: TxType.expense,
@@ -251,7 +260,9 @@ void main() {
               merchant: const Value('Tx Backup 1'),
             ),
           );
-      await dbBackup.into(dbBackup.transactions).insert(
+      await dbBackup
+          .into(dbBackup.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: 'tx-b2',
               type: TxType.expense,
@@ -287,7 +298,9 @@ void main() {
     test('contraseña incorrecta no toca nada', () async {
       // Base actual con 1 movimiento
       final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual.into(dbActual.transactions).insert(
+      await dbActual
+          .into(dbActual.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: 'tx-actual',
               type: TxType.expense,
@@ -341,52 +354,64 @@ void main() {
       // 3. Restaurar backup v4
       await restoreService.restore(backupId, 'v4pass');
 
-      // 4. Abrir la base restaurada: debe migrar a v5 sin fallar y tener los 3 movimientos
+      // 4. Abrir la base restaurada: debe migrar a v10 sin fallar y tener los 3 movimientos
       final migratedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      expect(migratedDb.schemaVersion, equals(9));
+      expect(migratedDb.schemaVersion, equals(10));
       final txs = await migratedDb.select(migratedDb.transactions).get();
       expect(txs.length, equals(3));
       await migratedDb.close();
     });
 
-    test('si el reemplazo falla a mitad, la base original queda intacta', () async {
-      // 1. Base actual con movimiento
-      final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual.into(dbActual.transactions).insert(
-            TransactionsCompanion.insert(
-              id: 'tx-original',
-              type: TxType.expense,
-              amount: 77000,
-              categoryId: '018f0000-0000-7000-8000-000000000001',
-              occurredAt: DateTime(2026, 10, 9),
-              createdAt: DateTime(2026, 10, 9),
-              updatedAt: DateTime(2026, 10, 9),
-              source: TxSource.manual,
-              merchant: const Value('Original Intacto'),
-            ),
-          );
-      await dbActual.close();
+    test(
+      'si el reemplazo falla a mitad, la base original queda intacta',
+      () async {
+        // 1. Base actual con movimiento
+        final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
+        await dbActual
+            .into(dbActual.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                id: 'tx-original',
+                type: TxType.expense,
+                amount: 77000,
+                categoryId: '018f0000-0000-7000-8000-000000000001',
+                occurredAt: DateTime(2026, 10, 9),
+                createdAt: DateTime(2026, 10, 9),
+                updatedAt: DateTime(2026, 10, 9),
+                source: TxSource.manual,
+                merchant: const Value('Original Intacto'),
+              ),
+            );
+        await dbActual.close();
 
-      // 2. Subir un backup que contiene bytes corruptos (no es una base SQLite válida)
-      final salt = generateSalt();
-      final key = await deriveKey('mypass', salt, memory: 1024, iterations: 1);
-      final corruptBytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-      final pocktBytes = await encodeBackup(corruptBytes, key, salt);
-      await store.upload('corrupt.pockt', pocktBytes);
-      final backupId = (await store.list()).first.id;
+        // 2. Subir un backup que contiene bytes corruptos (no es una base SQLite válida)
+        final salt = generateSalt();
+        final key = await deriveKey(
+          'mypass',
+          salt,
+          memory: 1024,
+          iterations: 1,
+        );
+        final corruptBytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        final pocktBytes = await encodeBackup(corruptBytes, key, salt);
+        await store.upload('corrupt.pockt', pocktBytes);
+        final backupId = (await store.list()).first.id;
 
-      // 3. Restaurar debe fallar al reabrir/validar la base
-      await expectLater(
-        () => restoreService.restore(backupId, 'mypass'),
-        throwsA(anything),
-      );
+        // 3. Restaurar debe fallar al reabrir/validar la base
+        await expectLater(
+          () => restoreService.restore(backupId, 'mypass'),
+          throwsA(anything),
+        );
 
-      // 4. La base original sigue intacta gracias al rollback
-      final verifiedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      final txs = await verifiedDb.select(verifiedDb.transactions).get();
-      expect(txs.length, equals(1));
-      expect(txs.first.merchant, equals('Original Intacto'));
-      await verifiedDb.close();
-    });
+        // 4. La base original sigue intacta gracias al rollback
+        final verifiedDb = AppDatabase.forTesting(
+          NativeDatabase(currentDbFile),
+        );
+        final txs = await verifiedDb.select(verifiedDb.transactions).get();
+        expect(txs.length, equals(1));
+        expect(txs.first.merchant, equals('Original Intacto'));
+        await verifiedDb.close();
+      },
+    );
   });
 }

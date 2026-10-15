@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -107,57 +108,83 @@ void main() {
   }
 
   AppDatabase openDb() => AppDatabase.forTesting(
-        DatabaseConnection(NativeDatabase(dbFile), closeStreamsSynchronously: true),
+    DatabaseConnection(NativeDatabase(dbFile), closeStreamsSynchronously: true),
+  );
+
+  test(
+    'migración v8 -> v9 agrega is_extra y marca los pagos extra por la nota',
+    () async {
+      createV8Database(
+        dbFile,
+        prestamosDark: 0xFF8BA4B5,
+        prestamosLight: 0xFF3D6176,
       );
+      final db = openDb();
+      addTearDown(db.close);
 
-  test('migración v8 -> v9 agrega is_extra y marca los pagos extra por la nota', () async {
-    createV8Database(dbFile, prestamosDark: 0xFF8BA4B5, prestamosLight: 0xFF3D6176);
-    final db = openDb();
-    addTearDown(db.close);
+      expect(db.schemaVersion, equals(10));
 
-    expect(db.schemaVersion, equals(9));
+      final txs = {
+        for (final t in await db.select(db.transactions).get()) t.id: t,
+      };
+      expect(txs.length, equals(4));
+      expect(txs['tx-regular']!.isExtra, isFalse);
+      expect(txs['tx-extra']!.isExtra, isTrue);
+      expect(txs['tx-adelanto']!.isExtra, isTrue);
+      expect(txs['tx-comun']!.isExtra, isFalse);
+    },
+  );
 
-    final txs = {for (final t in await db.select(db.transactions).get()) t.id: t};
-    expect(txs.length, equals(4));
-    expect(txs['tx-regular']!.isExtra, isFalse);
-    expect(txs['tx-extra']!.isExtra, isTrue);
-    expect(txs['tx-adelanto']!.isExtra, isTrue);
-    expect(txs['tx-comun']!.isExtra, isFalse);
-  });
+  test(
+    'migración v8 -> v9 cambia el color de Préstamos si conserva el de fábrica',
+    () async {
+      createV8Database(
+        dbFile,
+        prestamosDark: 0xFF8BA4B5,
+        prestamosLight: 0xFF3D6176,
+      );
+      final db = openDb();
+      addTearDown(db.close);
 
-  test('migración v8 -> v9 cambia el color de Préstamos si conserva el de fábrica', () async {
-    createV8Database(dbFile, prestamosDark: 0xFF8BA4B5, prestamosLight: 0xFF3D6176);
-    final db = openDb();
-    addTearDown(db.close);
+      final cat = await (db.select(
+        db.categories,
+      )..where((c) => c.name.equals('Préstamos'))).getSingle();
+      expect(cat.colorDark, equals(0xFF5FC8A6));
+      expect(cat.colorLight, equals(0xFF007E5E));
+    },
+  );
 
-    final cat = await (db.select(db.categories)
-          ..where((c) => c.name.equals('Préstamos')))
-        .getSingle();
-    expect(cat.colorDark, equals(0xFF5FC8A6));
-    expect(cat.colorLight, equals(0xFF007E5E));
-  });
+  test(
+    'migración v8 -> v9 respeta el color de Préstamos si el usuario lo cambió',
+    () async {
+      createV8Database(
+        dbFile,
+        prestamosDark: 0xFF123456,
+        prestamosLight: 0xFF654321,
+      );
+      final db = openDb();
+      addTearDown(db.close);
 
-  test('migración v8 -> v9 respeta el color de Préstamos si el usuario lo cambió', () async {
-    createV8Database(dbFile, prestamosDark: 0xFF123456, prestamosLight: 0xFF654321);
-    final db = openDb();
-    addTearDown(db.close);
-
-    final cat = await (db.select(db.categories)
-          ..where((c) => c.name.equals('Préstamos')))
-        .getSingle();
-    expect(cat.colorDark, equals(0xFF123456));
-    expect(cat.colorLight, equals(0xFF654321));
-  });
+      final cat = await (db.select(
+        db.categories,
+      )..where((c) => c.name.equals('Préstamos'))).getSingle();
+      expect(cat.colorDark, equals(0xFF123456));
+      expect(cat.colorLight, equals(0xFF654321));
+    },
+  );
 
   test('una base nueva nace con el color propio de Préstamos', () async {
     final db = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     addTearDown(db.close);
 
-    final cat = await (db.select(db.categories)
-          ..where((c) => c.name.equals('Préstamos')))
-        .getSingle();
+    final cat = await (db.select(
+      db.categories,
+    )..where((c) => c.name.equals('Préstamos'))).getSingle();
     expect(cat.colorDark, equals(0xFF5FC8A6));
     expect(cat.colorLight, equals(0xFF007E5E));
   });

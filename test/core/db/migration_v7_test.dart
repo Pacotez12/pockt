@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -197,7 +198,7 @@ void main() {
 
   test('base nueva se crea con la paleta nueva de §6.2b', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
-    expect(db.schemaVersion, equals(9));
+    expect(db.schemaVersion, equals(10));
 
     final cats = await db.select(db.categories).get();
     expect(cats.length, equals(14));
@@ -240,12 +241,10 @@ void main() {
   test('migración v6 a v7 actualiza categorías de fábrica intactas y conserva las personalizadas', () async {
     createV6DatabaseWithData(dbFile);
 
-    final db = AppDatabase.forTesting(
-      NativeDatabase(dbFile),
-    );
+    final db = AppDatabase.forTesting(NativeDatabase(dbFile));
 
-    // 1. Schema version actualizado a 9
-    expect(db.schemaVersion, equals(9));
+    // 1. Schema version actualizado a 10
+    expect(db.schemaVersion, equals(10));
 
     final cats = await db.select(db.categories).get();
     final catsById = {for (final c in cats) c.id: c};
@@ -319,7 +318,7 @@ void main() {
     // 6. Verificar PRAGMA en SQLite raw
     final rawDb = sqlite.sqlite3.open(dbFile.path);
     final userVersionResult = rawDb.select('PRAGMA user_version;');
-    expect(userVersionResult.first['user_version'], equals(9));
+    expect(userVersionResult.first['user_version'], equals(10));
     rawDb.close();
   });
 }

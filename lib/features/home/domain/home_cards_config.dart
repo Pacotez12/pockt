@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 
@@ -13,25 +14,15 @@ class HomeCardItem {
     this.visible = true,
   });
 
-  HomeCardItem copyWith({bool? visible}) => HomeCardItem(
-        id: id,
-        label: label,
-        visible: visible ?? this.visible,
-      );
+  HomeCardItem copyWith({bool? visible}) =>
+      HomeCardItem(id: id, label: label, visible: visible ?? this.visible);
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'visible': visible,
-      };
+  Map<String, dynamic> toJson() => {'id': id, 'visible': visible};
 
   factory HomeCardItem.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as String;
     final visible = json['visible'] as bool? ?? true;
-    return HomeCardItem(
-      id: id,
-      label: labelForId(id),
-      visible: visible,
-    );
+    return HomeCardItem(id: id, label: labelForId(id), visible: visible);
   }
 
   static String labelForId(String id) {
@@ -40,6 +31,8 @@ class HomeCardItem {
         return 'Quincena y cobros';
       case 'loans':
         return 'Préstamos y cuotas';
+      case 'goals':
+        return 'Metas';
       case 'suggestions':
         return 'Sugerencias';
       case 'calendar':
@@ -52,12 +45,13 @@ class HomeCardItem {
   }
 
   static List<HomeCardItem> defaultCards() => const [
-        HomeCardItem(id: 'period', label: 'Quincena y cobros', visible: true),
-        HomeCardItem(id: 'loans', label: 'Préstamos y cuotas', visible: true),
-        HomeCardItem(id: 'suggestions', label: 'Sugerencias', visible: true),
-        HomeCardItem(id: 'calendar', label: 'Calendario de calor', visible: true),
-        HomeCardItem(id: 'recent', label: 'Últimos movimientos', visible: true),
-      ];
+    HomeCardItem(id: 'period', label: 'Quincena y cobros', visible: true),
+    HomeCardItem(id: 'loans', label: 'Préstamos y cuotas', visible: true),
+    HomeCardItem(id: 'goals', label: 'Metas', visible: true),
+    HomeCardItem(id: 'suggestions', label: 'Sugerencias', visible: true),
+    HomeCardItem(id: 'calendar', label: 'Calendario de calor', visible: true),
+    HomeCardItem(id: 'recent', label: 'Últimos movimientos', visible: true),
+  ];
 
   static String encode(List<HomeCardItem> items) =>
       jsonEncode(items.map((e) => e.toJson()).toList());
