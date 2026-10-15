@@ -1,5 +1,9 @@
+import 'package:drift/drift.dart' show DatabaseConnection;
+import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
+import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/domain/goal_progress.dart';
@@ -206,6 +210,196 @@ void main() {
         expect(result.amount, isNegative);
         // (100.000 - 600.000) / 10 = -500.000 / 10 = -50.000
         expect(result.amount, equals(-50000));
+      },
+    );
+
+    test('con sugerencias de gasto pendientes: descuenta del numerador en pendingRecurring', () {
+      final today = DateTime(2026, 10, 10);
+      final nextPay = DateTime(2026, 10, 20);
+
+      final suggestions = [
+        SuggestedTransaction(
+          id: 's1',
+          type: TxType.expense,
+          amount: 150000,
+          currency: 'PYG',
+          occurredAt: DateTime(2026, 10, 5), // Vencido hace 5 días
+          source: TxSource.recurring,
+          sourceRef: 'r-ande',
+          status: 'pending',
+          createdAt: DateTime(2026, 10, 5),
+        ),
+        SuggestedTransaction(
+          id: 's2',
+          type: TxType.expense,
+          amount: 80000,
+          currency: 'PYG',
+          occurredAt: DateTime(2026, 10, 8),
+          source: TxSource.recurring,
+          sourceRef: 'r-netflix',
+          status: 'pending',
+          createdAt: DateTime(2026, 10, 8),
+        ),
+        SuggestedTransaction(
+          id: 's3',
+          type: TxType.income,
+          amount: 500000,
+          currency: 'PYG',
+          occurredAt: DateTime(2026, 10, 8),
+          source: TxSource.recurring,
+          status: 'pending',
+          createdAt: DateTime(2026, 10, 8),
+        ),
+        SuggestedTransaction(
+          id: 's4',
+          type: TxType.expense,
+          amount: 40000,
+          currency: 'PYG',
+          occurredAt: DateTime(2026, 10, 7),
+          source: TxSource.recurring,
+          status: 'confirmed', // ya confirmado
+          createdAt: DateTime(2026, 10, 7),
+        ),
+      ];
+
+      final result = safeToSpendToday(
+        todayLocal: today,
+        remaining: 1500000,
+        nextPayDate: nextPay,
+        pendingSuggestions: suggestions,
+      );
+
+      // Solo s1 (150.000) + s2 (80.000) = 230.000
+      expect(result.pendingRecurring, equals(230000));
+      // (1.500.000 - 230.000) / 10 = 1.270.000 / 10 = 127.000
+      expect(result.amount, equals(127000));
+    });
+
+    test('no cuenta dos veces una regla cuyo vencimiento ya generó una sugerencia pendiente', () {
+      final today = DateTime(2026, 10, 10);
+      final nextPay = DateTime(2026, 10, 20);
+
+      // Regla que vence hoy
+      final rules = [
+        RecurringRule(
+          id: 'r1',
+          name: 'ANDE',
+          type: TxType.expense,
+          amount: 150000,
+          categoryId: 'servicios',
+          frequency: 'monthly',
+          nextDueDate: DateTime(2026, 10, 10),
+          active: true,
+        ),
+      ];
+
+      // Sugerencia pendiente ya generada para esa regla
+      final suggestions = [
+        SuggestedTransaction(
+          id: 's1',
+          type: TxType.expense,
+          amount: 150000,
+          currency: 'PYG',
+          occurredAt: DateTime(2026, 10, 10),
+          source: TxSource.recurring,
+          sourceRef: 'r1',
+          status: 'pending',
+          createdAt: DateTime(2026, 10, 10),
+        ),
+      ];
+
+      final result = safeToSpendToday(
+        todayLocal: today,
+        remaining: 1500000,
+        nextPayDate: nextPay,
+        recurringRules: rules,
+        pendingSuggestions: suggestions,
+      );
+
+      // Debe ser 150.000, NO 300.000
+      expect(result.pendingRecurring, equals(150000));
+      // (1.500.000 - 150.000) / 10 = 1.350.000 / 10 = 135.000
+      expect(result.amount, equals(135000));
+    });
+  });
+
+  group('safeToSpendProvider reactive stream with AppDatabase', () {
+    late AppDatabase db;
+    late ProviderContainer container;
+
+    setUp(() {
+      db = AppDatabase.forTesting(
+        DatabaseConnection(
+          NativeDatabase.memory(),
+          closeStreamsSynchronously: true,
+        ),
+      );
+      container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)],
+      );
+    });
+
+    tearDown(() async {
+      container.dispose();
+      await db.close();
+    });
+
+    test(
+      'reacciona a sugerencias de gasto pendientes y las descuenta',
+      () async {
+        final cat = await (db.select(db.categories)..limit(1)).getSingle();
+
+        // 1. Ingreso de 3.000.000
+        await db
+            .into(db.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                id: 'tx-1',
+                type: TxType.income,
+                amount: 3000000,
+                categoryId: cat.id,
+                occurredAt: DateTime.now(),
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                source: TxSource.manual,
+              ),
+            );
+
+        final queue = <SafeToSpend>[];
+        final sub = container.listen(safeToSpendProvider, (prev, next) {
+          final val = next.value;
+          if (val != null) {
+            queue.add(val);
+          }
+        });
+        addTearDown(sub.close);
+
+        // Esperamos la primera emisión
+        while (queue.isEmpty) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(queue.last.pendingRecurring, equals(0));
+
+        // 2. Insertamos sugerencia de gasto pendiente
+        await db
+            .into(db.suggestedTransactions)
+            .insert(
+              SuggestedTransactionsCompanion.insert(
+                id: 'sug-1',
+                type: TxType.expense,
+                amount: 200000,
+                occurredAt: DateTime.now(),
+                source: TxSource.recurring,
+                status: 'pending',
+                createdAt: DateTime.now(),
+              ),
+            );
+
+        // Esperamos la actualización reactiva
+        while (queue.length < 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(queue.last.pendingRecurring, equals(200000));
       },
     );
   });

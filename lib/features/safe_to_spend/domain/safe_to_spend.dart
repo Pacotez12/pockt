@@ -68,6 +68,7 @@ SafeToSpend safeToSpendToday({
   DateTime? nextPayDate,
   List<RecurringRule> recurringRules = const [],
   List<GoalWithProgress> activeGoals = const [],
+  List<SuggestedTransaction> pendingSuggestions = const [],
 }) {
   final today = DateTime(todayLocal.year, todayLocal.month, todayLocal.day);
   final bool hasIncomeSchedule = nextPayDate != null;
@@ -83,8 +84,14 @@ SafeToSpend safeToSpendToday({
     daysUntilPay = max(0, targetDate.difference(today).inDays);
   }
 
-  // 1. Recurrentes pendientes hasta el próximo cobro (solo gastos activos)
+  // 1. Sugerencias de gasto pendientes de confirmar (ej. ANDE/Netflix ya vencidos)
   int pendingRecurring = 0;
+  for (final sug in pendingSuggestions) {
+    if (sug.status != 'pending' || sug.type != TxType.expense) continue;
+    pendingRecurring += sug.amount;
+  }
+
+  // 2. Recurrentes pendientes hasta el próximo cobro (solo gastos activos)
   for (final rule in recurringRules) {
     if (!rule.active || rule.type != TxType.expense) continue;
     final due = DateTime(
@@ -103,7 +110,29 @@ SafeToSpend safeToSpendToday({
       isDueBeforeCutoff = !due.isBefore(today) && !due.isAfter(targetDate);
     }
 
-    if (isDueBeforeCutoff) {
+    if (!isDueBeforeCutoff) continue;
+
+    // No contar dos veces una regla cuyo vencimiento ya generó la sugerencia
+    final alreadyGenerated = pendingSuggestions.any((s) {
+      if (s.status != 'pending' || s.type != TxType.expense) return false;
+      if (s.sourceRef != rule.id) return false;
+      final sDate = DateTime(
+        s.occurredAt.year,
+        s.occurredAt.month,
+        s.occurredAt.day,
+      );
+      if (sDate.year == due.year &&
+          sDate.month == due.month &&
+          sDate.day == due.day) {
+        return true;
+      }
+      if (rule.frequency != 'weekly' && rule.frequency != 'daily') {
+        return true;
+      }
+      return sDate.isAfter(due);
+    });
+
+    if (!alreadyGenerated) {
       pendingRecurring += rule.amount;
     }
   }
@@ -158,6 +187,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
           db.recurringRules,
           db.incomeSchedules,
           db.salaryDeductions,
+          db.suggestedTransactions,
         },
       )
       .watch()
@@ -175,6 +205,14 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
         final recurring = await (db.select(
           db.recurringRules,
         )..where((r) => r.active.equals(true))).get();
+
+        final pendingSuggestions =
+            await (db.select(db.suggestedTransactions)..where(
+                  (s) =>
+                      s.status.equals('pending') &
+                      s.type.equalsValue(TxType.expense),
+                ))
+                .get();
 
         // Metas activas con progreso
         final activeGoalsList =
@@ -247,6 +285,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
             nextPayDate: null,
             recurringRules: recurring,
             activeGoals: activeGoals,
+            pendingSuggestions: pendingSuggestions,
           );
         } else {
           final payDays = parsePayDays(sched.payDays);
@@ -346,6 +385,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
             nextPayDate: nextWin?.earliest,
             recurringRules: recurring,
             activeGoals: activeGoals,
+            pendingSuggestions: pendingSuggestions,
           );
         }
       });
