@@ -8,6 +8,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:pockt/app.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
 import 'package:pockt/features/splash/ui/pockt_splash.dart';
@@ -38,6 +39,9 @@ void main() {
     final db = AppDatabase.forTesting(
       DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
     );
+
+    // Base vacía: sin esto aparece el primer uso en vez del Inicio.
+    await SettingsRepository(db).set(SettingsKeys.onboardingDone, 'true');
 
     // Warm-up inicial previo para compilar shaders y pipelines de Vulkan/Impeller
     await tester.pumpWidget(ProviderScope(
