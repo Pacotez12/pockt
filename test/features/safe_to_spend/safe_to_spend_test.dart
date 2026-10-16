@@ -7,7 +7,9 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/domain/goal_progress.dart';
+import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 void main() {
   group('safeToSpendToday pure domain calculation', () {
@@ -323,6 +325,52 @@ void main() {
     });
   });
 
+  group('límite de hoy (spec §7d-bis)', () {
+    final today = DateTime(2026, 10, 16);
+    final payDate = DateTime(2026, 10, 30); // 14 días
+
+    test('gastar durante el día no achica el límite de hoy', () {
+      // Al empezar el día quedaban 1.400.000 → 100.000 por día.
+      final before = safeToSpendToday(
+        todayLocal: today,
+        remaining: 1400000,
+        nextPayDate: payDate,
+      );
+      final after = safeToSpendToday(
+        todayLocal: today,
+        remaining: 1370000,
+        spentToday: 30000,
+        nextPayDate: payDate,
+      );
+      expect(before.todayAllowance, 100000);
+      expect(after.todayAllowance, 100000);
+      expect(after.spentToday, 30000);
+      expect(after.leftToday, 70000);
+      expect(after.amount, 70000);
+    });
+
+    test('pasarse del límite deja leftToday negativo', () {
+      final r = safeToSpendToday(
+        todayLocal: today,
+        remaining: 1250000,
+        spentToday: 150000,
+        nextPayDate: payDate,
+      );
+      expect(r.todayAllowance, 100000);
+      expect(r.leftToday, -50000);
+    });
+
+    test('sin margen en el período el límite es negativo', () {
+      final r = safeToSpendToday(
+        todayLocal: today,
+        remaining: -280000,
+        nextPayDate: payDate,
+      );
+      expect(r.todayAllowance, -20000);
+      expect(r.leftToday, -20000);
+    });
+  });
+
   group('safeToSpendProvider reactive stream with AppDatabase', () {
     late AppDatabase db;
     late ProviderContainer container;
@@ -342,6 +390,46 @@ void main() {
     tearDown(() async {
       container.dispose();
       await db.close();
+    });
+
+    test('suma lo gastado hoy sin achicar el límite del día', () async {
+      // "Hoy" se mide en la zona de Paraguay, como en la app (y en esta máquina).
+      tz.initializeTimeZones();
+      setLocalZone(kFallbackZone);
+      final cat = await (db.select(db.categories)..limit(1)).getSingle();
+      Future<void> tx(String id, TxType type, int amount) => db
+          .into(db.transactions)
+          .insert(
+            TransactionsCompanion.insert(
+              id: id,
+              type: type,
+              amount: amount,
+              categoryId: cat.id,
+              occurredAt: DateTime.now(),
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              source: TxSource.manual,
+            ),
+          );
+      await tx('in', TxType.income, 3000000);
+
+      final values = <SafeToSpend>[];
+      final sub = container.listen(safeToSpendProvider, (_, next) {
+        if (next.value != null) values.add(next.value!);
+      });
+      addTearDown(sub.close);
+      while (values.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      final allowance = values.last.todayAllowance;
+
+      await tx('out', TxType.expense, 40000);
+      while (values.last.spentToday == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(values.last.spentToday, 40000);
+      expect(values.last.todayAllowance, allowance);
+      expect(values.last.leftToday, allowance - 40000);
     });
 
     test(

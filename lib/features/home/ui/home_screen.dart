@@ -23,6 +23,7 @@ import 'package:pockt/features/home/domain/heat_levels.dart';
 import 'package:pockt/features/home/domain/home_cards_config.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
 import 'package:pockt/features/home/ui/heat_calendar.dart';
+import 'package:pockt/features/home/ui/today_arc.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
@@ -514,8 +515,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _buildTopBar(context),
                   const SizedBox(height: 20),
                   _buildSpendingTotal(context),
-                  const SizedBox(height: 16),
-                  _buildSegmentedBar(context),
+                  if (_arcHome) ...[
+                    const SizedBox(height: 14),
+                    _buildMonthCard(context, pLine),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    _buildSegmentedBar(context),
+                  ],
                   StreamBuilder<BackupStatus>(
                     stream: ref.watch(backupServiceProvider).watchStatus(),
                     builder: (context, snapshot) {
@@ -566,14 +572,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             pLine.carryOver > 0 &&
             _payPeriodStart != null &&
             !carryOverDecided(decided, _payPeriodStart!);
+        // Con el Arco de hoy, la línea del período vive en la tarjeta del mes.
+        if (_arcHome && !showCarryCard) return null;
         return Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPeriodLine(context, pLine),
+              if (!_arcHome) _buildPeriodLine(context, pLine),
               if (showCarryCard) ...[
-                const SizedBox(height: 12),
+                if (!_arcHome) const SizedBox(height: 12),
                 CarryOverCard(
                   amount: pLine.carryOver,
                   periodStart: _payPeriodStart!,
@@ -1171,73 +1179,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    // Default: HomeHeadline.safeToSpend
-    final safeToSpend = ref.watch(safeToSpendProvider).value;
-    final amount = safeToSpend?.amount ?? 0;
-    final isNegative = amount < 0;
+    // Default: HomeHeadline.safeToSpend → Arco de hoy (spec §7d-bis).
+    final safe = ref.watch(safeToSpendProvider).value;
+    return Pressable(
+      semanticLabel: 'Alternar ocultar montos',
+      onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
+      child: TodayArc(
+        allowance: safe?.todayAllowance ?? 0,
+        spent: safe?.spentToday ?? 0,
+        obscure: obscure,
+        reduceMotion: ref.watch(motionReduceProvider).value ?? false,
+      ),
+    );
+  }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Pressable(
-        semanticLabel: 'Alternar ocultar montos',
-        onTap: () {
-          ref.read(amountsRevealedProvider.notifier).toggle();
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Podés gastar hoy',
+  bool get _arcHome =>
+      (ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend) ==
+      HomeHeadline.safeToSpend;
+
+  /// Tarjeta "Gastado en {mes}" debajo del Arco de hoy: monto del mes, barra
+  /// por categoría y la línea del período (quedan · cobrás).
+  Widget _buildMonthCard(BuildContext context, PeriodLine? pLine) {
+    final colors = context.pockt;
+    final obscure = ref.watch(shouldObscureAmountsProvider);
+    final monthNameLower = _kMonthNames[_month - 1].toLowerCase();
+    return GlassCard(
+      key: const ValueKey('home-month-card'),
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              'Gastado en $monthNameLower',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: PocktType.caption,
                 color: colors.textSecondary,
               ),
             ),
-            const SizedBox(height: 6),
-            RepaintBoundary(
-              child: obscure
-                  ? Text(
-                      '••••',
-                      key: const ValueKey('spending-total-obscured'),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 42,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -1.5,
-                        color: colors.textPrimary,
-                      ),
-                    )
-                  : Text(
-                      formatGs(amount),
-                      key: const ValueKey('safe-to-spend-amount'),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 42,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -1.5,
-                        color: isNegative ? colors.danger : colors.textPrimary,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
-                obscure
-                    ? 'Gastado en $monthNameLower ••••'
-                    : 'Gastado en $monthNameLower ${formatGs(_monthTotal)}',
-                key: const ValueKey('safe-to-spend-subtitle'),
+                obscure ? '••••' : formatGs(_monthTotal),
+                key: const ValueKey('home-month-total'),
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: PocktType.caption,
-                  color: colors.textSecondary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.8,
+                  color: colors.textPrimary,
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          _buildSegmentedBar(context),
+          if (pLine != null) ...[
+            const SizedBox(height: 12),
+            _buildPeriodLine(context, pLine),
           ],
-        ),
+        ],
       ),
     );
   }

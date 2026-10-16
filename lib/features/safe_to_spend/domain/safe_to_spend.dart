@@ -13,8 +13,19 @@ import 'package:pockt/features/income/domain/period_summary.dart';
 
 /// Resultado del cálculo de "Podés gastar hoy" (spec §7d).
 class SafeToSpend {
-  /// Monto diario disponible para gastar hoy (puede ser negativo).
+  /// Lo que todavía podés gastar hoy: [todayAllowance] − [spentToday]
+  /// (puede ser negativo).
   final int amount;
+
+  /// Límite de hoy, fijado con lo que había al empezar el día: los gastos de
+  /// hoy no lo achican (spec §7d-bis). Puede ser negativo sin margen.
+  final int todayAllowance;
+
+  /// Gastado hoy.
+  final int spentToday;
+
+  /// Alias de [amount] para la UI del arco.
+  int get leftToday => amount;
 
   /// Restante neto del período actual ("quedan").
   final int quedan;
@@ -36,6 +47,8 @@ class SafeToSpend {
 
   const SafeToSpend({
     required this.amount,
+    this.todayAllowance = 0,
+    this.spentToday = 0,
     required this.quedan,
     required this.pendingRecurring,
     required this.proratedGoals,
@@ -65,6 +78,7 @@ int calculateSafeToSpend({
 SafeToSpend safeToSpendToday({
   required DateTime todayLocal,
   required int remaining,
+  int spentToday = 0,
   DateTime? nextPayDate,
   List<RecurringRule> recurringRules = const [],
   List<GoalWithProgress> activeGoals = const [],
@@ -151,16 +165,18 @@ SafeToSpend safeToSpendToday({
     }
   }
 
-  // 3. Cálculo final
-  final amount = calculateSafeToSpend(
-    remaining: remaining,
+  // 3. Cálculo final: el límite de hoy usa lo que quedaba al empezar el día.
+  final todayAllowance = calculateSafeToSpend(
+    remaining: remaining + spentToday,
     pendingRecurring: pendingRecurring,
     proratedGoals: proratedGoals,
     daysUntilPay: daysUntilPay,
   );
 
   return SafeToSpend(
-    amount: amount,
+    amount: todayAllowance - spentToday,
+    todayAllowance: todayAllowance,
+    spentToday: spentToday,
     quedan: remaining,
     pendingRecurring: pendingRecurring,
     proratedGoals: proratedGoals,
@@ -205,6 +221,25 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
         final recurring = await (db.select(
           db.recurringRules,
         )..where((r) => r.active.equals(true))).get();
+
+        final todayRange = dayRangeUtc(today);
+        final todaySum = db.transactions.amount.sum();
+        final spentToday =
+            (await (db.selectOnly(db.transactions)
+                      ..addColumns([todaySum])
+                      ..where(
+                        db.transactions.deletedAt.isNull() &
+                            db.transactions.type.equalsValue(TxType.expense) &
+                            db.transactions.occurredAt.isBiggerOrEqualValue(
+                              todayRange.startUtc,
+                            ) &
+                            db.transactions.occurredAt.isSmallerThanValue(
+                              todayRange.endUtc,
+                            ),
+                      ))
+                    .getSingle())
+                .read(todaySum) ??
+            0;
 
         final pendingSuggestions =
             await (db.select(db.suggestedTransactions)..where(
@@ -282,6 +317,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
           return safeToSpendToday(
             todayLocal: today,
             remaining: remaining,
+            spentToday: spentToday,
             nextPayDate: null,
             recurringRules: recurring,
             activeGoals: activeGoals,
@@ -387,6 +423,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
           return safeToSpendToday(
             todayLocal: today,
             remaining: remaining,
+            spentToday: spentToday,
             nextPayDate: nextWin?.earliest,
             recurringRules: recurring,
             activeGoals: activeGoals,
