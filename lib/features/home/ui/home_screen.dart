@@ -1,58 +1,24 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pockt/features/income/domain/pay_days.dart';
-import 'package:pockt/core/db/app_database.dart';
-import 'package:pockt/core/db/providers.dart';
-import 'package:pockt/core/db/tables.dart';
-import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
-import 'package:pockt/core/design/icons.dart';
-import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
-import 'package:pockt/core/format/dates.dart';
-import 'package:pockt/core/format/money.dart';
-import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
-import 'package:pockt/features/backup/ui/backup_screen.dart';
-import 'package:pockt/features/budgets/data/budgets_repository.dart';
-import 'package:pockt/features/home/domain/heat_levels.dart';
+import 'package:pockt/features/home/data/home_providers.dart';
 import 'package:pockt/features/home/domain/home_cards_config.dart';
-import 'package:pockt/features/home/ui/day_detail_sheet.dart';
-import 'package:pockt/features/home/ui/heat_calendar.dart';
-import 'package:pockt/features/home/ui/today_arc.dart';
-import 'package:pockt/features/home/ui/month_glow.dart';
-import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
-import 'package:pockt/features/goals/data/goals_repository.dart';
-import 'package:pockt/features/goals/ui/goals_screen.dart';
-import 'package:pockt/features/income/domain/period_summary.dart';
-import 'package:pockt/features/income/ui/carry_over_card.dart';
-import 'package:pockt/features/income/ui/income_schedule_screen.dart';
-import 'package:pockt/features/loans/data/loans_repository.dart';
-import 'package:pockt/features/loans/ui/loans_screen.dart';
-import 'package:pockt/features/recurring/data/suggestions_repository.dart';
-import 'package:pockt/features/recurring/ui/inbox_screen.dart';
-import 'package:pockt/features/settings/ui/settings_screen.dart';
-import 'package:pockt/features/transactions/data/transactions_repository.dart';
-import 'package:pockt/features/transactions/ui/tx_row.dart';
+import 'package:pockt/features/home/domain/home_period_summary.dart';
+import 'package:pockt/features/home/ui/home_cards.dart';
+import 'package:pockt/features/home/ui/home_month_card.dart';
+import 'package:pockt/features/home/ui/home_spending_header.dart';
+import 'package:pockt/features/home/ui/home_top_bar.dart';
 
-const List<String> _kMonthNames = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
+export 'package:pockt/features/home/data/home_providers.dart';
+export 'package:pockt/features/home/domain/home_period_summary.dart';
+export 'package:pockt/features/home/ui/home_cards.dart';
+export 'package:pockt/features/home/ui/home_month_card.dart';
+export 'package:pockt/features/home/ui/home_spending_header.dart';
+export 'package:pockt/features/home/ui/home_top_bar.dart';
 
 /// Pantalla principal: Inicio con selector de mes, total animado,
 /// resplandor ambiental, barra segmentada por categoría, calendario de calor
@@ -76,49 +42,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late int _year;
   late int _month;
-
-  StreamSubscription<int>? _monthTotalSub;
-  StreamSubscription<List<CategoryTotal>>? _categoryTotalsSub;
-  StreamSubscription<Map<int, int>>? _dailyTotalsSub;
-  StreamSubscription<List<MovementEntry>>? _recentSub;
-  StreamSubscription<int>? _recentCountSub;
-  StreamSubscription<List<SuggestionView>>? _suggestionsSub;
-  StreamSubscription<IncomeSchedule?>? _scheduleSub;
-  StreamSubscription<DateTime?>? _lastSalarySub;
-  StreamSubscription<int>? _payIncomeSub;
-  StreamSubscription<int>? _payExpenseSub;
-  StreamSubscription<int>? _payContributionsSub;
-  StreamSubscription<int>? _carrySub;
-  StreamSubscription<List<SalaryDeduction>>? _deductionsSub;
-
-  int _monthTotal = 0;
-  int _previousTotal = 0;
-  int _incomeSincePay = 0;
-  int _expenseSincePay = 0;
-  int _contributionsSincePay = 0;
-  int _carryOver = 0;
-  DateTime? _payPeriodStart;
-  DateTime? _lastSalaryDate;
-  IncomeSchedule? _schedule;
-  List<SalaryDeduction> _deductions = const [];
-  List<CategoryTotal> _categoryTotals = const [];
-  Map<int, int> _dailyTotals = const {};
-  List<MovementEntry> _recentMovements = const [];
-  List<SuggestionView> _pendingSuggestions = const [];
-  List<BudgetView> _budgets = const [];
-  StreamSubscription<List<BudgetView>>? _budgetsSub;
-  MonthStartMode _monthStartMode = MonthStartMode.calendar;
-  StreamSubscription<MonthStartMode>? _monthStartSub;
-
-  DateTime _getNow() => widget.nowLocal ?? toLocal(DateTime.now());
+  late DateTime _nowLocal;
 
   @override
   void initState() {
     super.initState();
-    final now = _getNow();
-    _year = widget.initialYear ?? now.year;
-    _month = widget.initialMonth ?? now.month;
-    _initSubscriptions();
+    _nowLocal = widget.nowLocal ?? toLocal(DateTime.now());
+    _year = widget.initialYear ?? _nowLocal.year;
+    _month = widget.initialMonth ?? _nowLocal.month;
   }
 
   @override
@@ -127,291 +58,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (widget.initialYear != oldWidget.initialYear ||
         widget.initialMonth != oldWidget.initialMonth ||
         widget.nowLocal != oldWidget.nowLocal) {
-      final now = _getNow();
-      _year = widget.initialYear ?? now.year;
-      _month = widget.initialMonth ?? now.month;
-      _initSubscriptions();
+      _nowLocal = widget.nowLocal ?? toLocal(DateTime.now());
+      _year = widget.initialYear ?? _nowLocal.year;
+      _month = widget.initialMonth ?? _nowLocal.month;
     }
-  }
-
-  @override
-  void dispose() {
-    _monthTotalSub?.cancel();
-    _categoryTotalsSub?.cancel();
-    _dailyTotalsSub?.cancel();
-    _recentSub?.cancel();
-    _recentCountSub?.cancel();
-    _suggestionsSub?.cancel();
-    _scheduleSub?.cancel();
-    _lastSalarySub?.cancel();
-    _payIncomeSub?.cancel();
-    _payExpenseSub?.cancel();
-    _payContributionsSub?.cancel();
-    _carrySub?.cancel();
-    _budgetsSub?.cancel();
-    _deductionsSub?.cancel();
-    _monthStartSub?.cancel();
-    super.dispose();
-  }
-
-  void _updatePaySubscriptions(IncomeSchedule? sched) {
-    _lastSalarySub?.cancel();
-    _lastSalarySub = null;
-    _payIncomeSub?.cancel();
-    _payExpenseSub?.cancel();
-    _payContributionsSub?.cancel();
-    _payIncomeSub = null;
-    _payExpenseSub = null;
-    _payContributionsSub = null;
-    _carrySub?.cancel();
-    _carrySub = null;
-    _deductionsSub?.cancel();
-    _deductionsSub = null;
-
-    if (sched == null) {
-      if (mounted) {
-        setState(() {
-          _lastSalaryDate = null;
-          _incomeSincePay = 0;
-          _expenseSincePay = 0;
-          _contributionsSincePay = 0;
-          _carryOver = 0;
-          _payPeriodStart = null;
-          _deductions = const [];
-        });
-      }
-      return;
-    }
-
-    final schedRepo = ref.read(incomeScheduleRepositoryProvider);
-    _deductionsSub = schedRepo.watchDeductionsFor(sched.id).listen((deds) {
-      if (mounted) {
-        setState(() {
-          _deductions = deds;
-        });
-      }
-    });
-
-    final payDays = parsePayDays(sched.payDays);
-    final rules = parsePayDayRules(sched.payDayRules, payDays);
-
-    final prevWindow = previousPayWindow(_getNow(), payDays, rules);
-
-    if (prevWindow == null) {
-      if (mounted) {
-        setState(() {
-          _lastSalaryDate = null;
-          _incomeSincePay = 0;
-          _expenseSincePay = 0;
-          _contributionsSincePay = 0;
-          _carryOver = 0;
-          _payPeriodStart = null;
-        });
-      }
-      return;
-    }
-
-    final repo = ref.read(transactionsRepositoryProvider);
-    final goalsRepo = ref.read(goalsRepositoryProvider);
-    _lastSalarySub = repo
-        .watchLastConfirmedSalaryDate(
-          categoryId: sched.categoryId,
-          beforeOrOnLocalDay: _getNow(),
-        )
-        .listen((salaryDate) {
-          _lastSalaryDate = salaryDate;
-          DateTime periodStart = prevWindow.earliest;
-          if (salaryDate != null) {
-            final cleanSalary = DateTime(
-              salaryDate.year,
-              salaryDate.month,
-              salaryDate.day,
-            );
-            if (!cleanSalary.isBefore(prevWindow.earliest)) {
-              periodStart = cleanSalary;
-            }
-          }
-
-          _payIncomeSub?.cancel();
-          _payExpenseSub?.cancel();
-          _payContributionsSub?.cancel();
-          _carrySub?.cancel();
-
-          _carrySub = ref
-              .read(incomeScheduleRepositoryProvider)
-              .watchCarryOverBefore(periodStart)
-              .listen((carry) {
-                if (mounted) {
-                  setState(() {
-                    _carryOver = carry;
-                    _payPeriodStart = periodStart;
-                  });
-                }
-              });
-
-          _payIncomeSub = repo
-              .watchTotalSince(periodStart, TxType.income)
-              .listen((income) {
-                if (mounted) {
-                  setState(() {
-                    _incomeSincePay = income;
-                  });
-                }
-              });
-
-          _payExpenseSub = repo
-              .watchTotalSince(periodStart, TxType.expense)
-              .listen((expense) {
-                if (mounted) {
-                  setState(() {
-                    _expenseSincePay = expense;
-                  });
-                }
-              });
-
-          _payContributionsSub = goalsRepo
-              .watchContributionsTotalSince(periodStart)
-              .listen((contribs) {
-                if (mounted) {
-                  setState(() {
-                    _contributionsSincePay = contribs;
-                  });
-                }
-              });
-        });
-  }
-
-  DatePeriod get _currentPeriod {
-    final now = _getNow();
-    final isCurrent = _year == now.year && _month == now.month;
-    final day = isCurrent ? now : DateTime(_year, _month, 15);
-    return periodFor(day, mode: _monthStartMode, schedule: _schedule);
-  }
-
-  void _initMonthDataSubscriptions() {
-    _monthTotalSub?.cancel();
-    _categoryTotalsSub?.cancel();
-    _dailyTotalsSub?.cancel();
-
-    final repo = ref.read(transactionsRepositoryProvider);
-    final period = _currentPeriod;
-
-    _monthTotalSub = repo
-        .watchMonthTotal(_year, _month, TxType.expense, period: period)
-        .listen((total) {
-          if (mounted) {
-            setState(() {
-              _previousTotal = _monthTotal;
-              _monthTotal = total;
-            });
-          }
-        });
-
-    _categoryTotalsSub = repo
-        .watchMonthCategoryTotals(_year, _month, period: period)
-        .listen((totals) {
-          if (mounted) {
-            setState(() {
-              _categoryTotals = totals;
-            });
-          }
-        });
-
-    _dailyTotalsSub = repo
-        .watchDailyExpenseTotals(_year, _month, period: period)
-        .listen((daily) {
-          if (mounted) {
-            setState(() {
-              _dailyTotals = daily;
-            });
-          }
-        });
-  }
-
-  void _initSubscriptions() {
-    _recentSub?.cancel();
-    _recentCountSub?.cancel();
-    _suggestionsSub?.cancel();
-    _scheduleSub?.cancel();
-    _lastSalarySub?.cancel();
-    _payIncomeSub?.cancel();
-    _payExpenseSub?.cancel();
-    _budgetsSub?.cancel();
-    _monthStartSub?.cancel();
-
-    final repo = ref.read(transactionsRepositoryProvider);
-    final suggestionsRepo = ref.read(suggestionsRepositoryProvider);
-    final scheduleRepo = ref.read(incomeScheduleRepositoryProvider);
-    final budgetsRepo = ref.read(budgetsRepositoryProvider);
-    final settingsRepo = ref.read(settingsRepositoryProvider);
-
-    _monthStartSub = settingsRepo
-        .watch(SettingsKeys.periodMonthStart)
-        .map(MonthStartMode.parse)
-        .listen((mode) {
-          if (mounted && mode != _monthStartMode) {
-            setState(() {
-              _monthStartMode = mode;
-            });
-            _initMonthDataSubscriptions();
-          }
-        });
-
-    _budgetsSub = budgetsRepo.watchAll().listen((budgets) {
-      if (mounted) {
-        setState(() {
-          _budgets = budgets;
-        });
-      }
-    });
-
-    _scheduleSub = scheduleRepo.watchCurrent().listen((sched) {
-      if (mounted) {
-        final schedChanged =
-            _schedule?.id != sched?.id ||
-            _schedule?.payDays != sched?.payDays ||
-            _schedule?.payDayRules != sched?.payDayRules;
-        setState(() {
-          _schedule = sched;
-        });
-        _updatePaySubscriptions(sched);
-        if (schedChanged && _monthStartMode == MonthStartMode.payday) {
-          _initMonthDataSubscriptions();
-        }
-      }
-    });
-
-    _suggestionsSub = suggestionsRepo.watchPending().listen((items) {
-      if (mounted) {
-        setState(() {
-          _pendingSuggestions = items;
-        });
-      }
-    });
-
-    _initMonthDataSubscriptions();
-
-    _recentCountSub = settingsRepo
-        .watch(SettingsKeys.homeRecentCount)
-        .map((v) => int.tryParse(v ?? '') ?? 5)
-        .listen((count) {
-          if (mounted) {
-            _recentSub?.cancel();
-            final goalsRepo = ref.read(goalsRepositoryProvider);
-            final movementsStream = combineMovements(
-              txStream: repo.watchRecent(limit: count),
-              contribStream: goalsRepo.watchContributionsWithGoal(limit: count),
-              limit: count,
-            );
-            _recentSub = movementsStream.listen((recent) {
-              if (mounted) {
-                setState(() {
-                  _recentMovements = recent;
-                });
-              }
-            });
-          }
-        });
   }
 
   void _changeMonth(int delta) {
@@ -428,7 +78,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
       _month = newMonth;
       _year = newYear;
-      _initMonthDataSubscriptions();
     });
   }
 
@@ -443,66 +92,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return _HomeScreenContent(
+      year: _year,
+      month: _month,
+      nowLocal: _nowLocal,
+      onMonthSelected: (m) {
+        setState(() {
+          _month = m;
+        });
+      },
+      onHorizontalSwipe: _handleHorizontalSwipe,
+    );
+  }
+}
 
-    final glowMode = ref.watch(glowModeProvider).value ?? GlowMode.subtle;
-    final reactsToBudget = ref.watch(glowReactsToBudgetProvider).value ?? true;
+class _HomeScreenContent extends ConsumerWidget {
+  final int year;
+  final int month;
+  final DateTime nowLocal;
+  final ValueChanged<int> onMonthSelected;
+  final GestureDragEndCallback onHorizontalSwipe;
+
+  const _HomeScreenContent({
+    required this.year,
+    required this.month,
+    required this.nowLocal,
+    required this.onMonthSelected,
+    required this.onHorizontalSwipe,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.pockt;
     final weekStart = ref.watch(weekStartProvider).value ?? WeekStart.monday;
     final cardsConfig =
         ref.watch(homeCardsConfigProvider).value ?? defaultHomeCards;
+    final headline =
+        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend;
+    final arcHome = headline == HomeHeadline.safeToSpend;
 
-    final baseColor = _categoryTotals.isNotEmpty
-        ? Color(
-            isDark
-                ? _categoryTotals.first.category.colorDark
-                : _categoryTotals.first.category.colorLight,
-          )
-        : colors.brandStart;
-
-    final totalBudget = _budgets.fold<int>(
-      0,
-      (sum, b) => sum + b.budget.monthlyLimit,
-    );
-    final spentRatio = (reactsToBudget && totalBudget > 0)
-        ? _monthTotal / totalBudget
-        : null;
-    final glowColor = glowTint(baseColor, spentRatio);
-
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final pLine = periodLine(
-      todayLocal: _getNow(),
-      schedule: _schedule,
-      incomeSincePay: _incomeSincePay,
-      expenseSincePay: _expenseSincePay,
-      contributionsSincePay: _contributionsSincePay,
-      carryOver: _carryOver,
-      lastConfirmedSalaryDate: _lastSalaryDate,
-      deductions: _deductions,
-      expectedForPeriod: _schedule != null
-          ? expectedAmountForPeriod(
-              _schedule!,
-              _getNow(),
-              deductions: _deductions,
-            )
-          : null,
-    );
+    final periodSummary = ref.watch(homePeriodSummaryProvider(nowLocal));
 
     return Scaffold(
       backgroundColor: colors.background,
       body: Stack(
         children: [
           // Resplandor ambiental de mes en el fondo
-          Positioned(
-            top: -140,
-            left: (screenWidth - 470) / 2,
-            child: MonthGlow(
-              color: glowColor,
-              pulseTrigger: ref.watch(monthGlowPulseProvider),
-              mode: glowMode,
-            ),
-          ),
+          HomeGlowHost(year: year, month: month, nowLocal: nowLocal),
           // Contenido con scroll
           SafeArea(
             bottom: false,
@@ -513,15 +149,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 10),
-                  _buildTopBar(context),
+                  HomeTopBar(
+                    month: month,
+                    onMonthSelected: onMonthSelected,
+                  ),
                   const SizedBox(height: 20),
-                  _buildSpendingTotal(context),
-                  if (_arcHome) ...[
+                  HomeSpendingHeader(
+                    year: year,
+                    month: month,
+                    nowLocal: nowLocal,
+                  ),
+                  if (arcHome) ...[
                     const SizedBox(height: 14),
-                    _buildMonthCard(context, pLine),
+                    HomeMonthCard(
+                      year: year,
+                      month: month,
+                      nowLocal: nowLocal,
+                      periodLine: periodSummary.periodLine,
+                      schedule: periodSummary.schedule,
+                    ),
                   ] else ...[
                     const SizedBox(height: 16),
-                    _buildSegmentedBar(context),
+                    CategorySegmentedBar(
+                      year: year,
+                      month: month,
+                      nowLocal: nowLocal,
+                    ),
                   ],
                   StreamBuilder<BackupStatus>(
                     stream: ref.watch(backupServiceProvider).watchStatus(),
@@ -529,8 +182,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       if (snapshot.data?.isOverdue == true) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 14),
-                          child: _buildOverdueBackupBanner(
-                            context,
+                          child: HomeOverdueBackupBanner(
                             never: snapshot.data!.lastSuccessAt == null,
                           ),
                         );
@@ -542,10 +194,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       .where((item) => item.visible)
                       .map(
                         (item) => _buildCardById(
-                          context,
                           item.id,
-                          pLine: pLine,
+                          periodSummary: periodSummary,
                           weekStart: weekStart,
+                          arcHome: arcHome,
                         ),
                       )
                       .whereType<Widget>(),
@@ -560,1053 +212,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget? _buildCardById(
-    BuildContext context,
     String id, {
-    PeriodLine? pLine,
+    required HomePeriodSummary periodSummary,
     required WeekStart weekStart,
+    required bool arcHome,
   }) {
     switch (id) {
       case 'period':
-        if (pLine == null) return null;
-        final decided = ref.watch(carryOverDecidedProvider).value;
-        final showCarryCard =
-            pLine.carryOver > 0 &&
-            _payPeriodStart != null &&
-            !carryOverDecided(decided, _payPeriodStart!);
-        // Con el Arco de hoy, la línea del período vive en la tarjeta del mes.
-        if (_arcHome && !showCarryCard) return null;
-        return Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!_arcHome) _buildPeriodLine(context, pLine),
-              if (showCarryCard) ...[
-                if (!_arcHome) const SizedBox(height: 12),
-                CarryOverCard(
-                  amount: pLine.carryOver,
-                  periodStart: _payPeriodStart!,
-                  monthly: _schedule?.mode.toLowerCase() == 'monthly',
-                ),
-              ],
-            ],
-          ),
+        return HomePeriodCard(
+          periodLine: periodSummary.periodLine,
+          payPeriodStart: periodSummary.payPeriodStart,
+          schedule: periodSummary.schedule,
+          arcHome: arcHome,
         );
       case 'loans':
-        return _buildLoansCard(context);
+        return const HomeLoansCard();
       case 'goals':
-        return _buildGoalsCard(context);
+        return const HomeGoalsCard();
       case 'suggestions':
-        if (_pendingSuggestions.isEmpty) return null;
-        return Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: _buildPendingCard(context),
-        );
+        return const HomePendingSuggestionsCard();
       case 'calendar':
-        return Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: GestureDetector(
-            onHorizontalDragEnd: _handleHorizontalSwipe,
-            child: HeatCalendar(
-              year: _year,
-              month: _month,
-              levels: heatLevels(_dailyTotals),
-              todayLocal: _getNow(),
-              weekStart: weekStart,
-              onDayTap: (day) {
-                showDayDetail(context, DateTime(_year, _month, day));
-              },
-            ),
-          ),
+        return HomeCalendarCard(
+          year: year,
+          month: month,
+          todayLocal: nowLocal,
+          weekStart: weekStart,
+          onHorizontalSwipe: onHorizontalSwipe,
         );
       case 'recent':
-        return Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: _buildRecentTransactions(context),
-        );
+        return HomeRecentTransactionsCard(nowLocal: nowLocal);
       default:
         return null;
     }
-  }
-
-  Widget? _buildLoansCard(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-    final loansAsync = ref.watch(activeLoansWithProgressProvider);
-
-    return loansAsync.maybeWhen(
-      data: (loansWithProgress) {
-        if (loansWithProgress.isEmpty) return null;
-
-        int totalOwe = 0;
-        int totalLent = 0;
-        for (final item in loansWithProgress) {
-          if (item.loan.direction == LoanDirection.owe) {
-            totalOwe += item.progress.balance;
-          } else {
-            totalLent += item.progress.balance;
-          }
-        }
-
-        final dues =
-            loansWithProgress.where((item) => item.loan.dueDay != null).toList()
-              ..sort(
-                (a, b) => (a.progress.daysUntilNextDue ?? 99999).compareTo(
-                  b.progress.daysUntilNextDue ?? 99999,
-                ),
-              );
-        final topDues = dues.take(3).toList();
-
-        return Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: Pressable(
-            key: const ValueKey('home-loans-card'),
-            onTap: () {
-              Haptics.tick();
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const LoansScreen()));
-            },
-            child: GlassCard(
-              borderRadius: BorderRadius.circular(PocktRadii.xl),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: colors
-                              .brandAt(0)
-                              .withValues(alpha: isDark ? 0.2 : 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            uiIcon('hand-coins'),
-                            size: 15,
-                            color: colors.brandAt(0),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Préstamos y cuotas',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        uiIcon('caret-right'),
-                        size: 14,
-                        color: colors.textSecondary.withValues(alpha: 0.6),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      if (totalOwe > 0 || totalLent == 0)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Debés',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                obscure ? '••••' : formatGs(totalOwe),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.4,
-                                  color: colors.danger,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (totalLent > 0)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Te deben',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                obscure ? '••••' : formatGs(totalLent),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.4,
-                                  color: colors.positive,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (topDues.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Divider(height: 1, color: colors.glassBorder),
-                    const SizedBox(height: 10),
-                    ...topDues.map((item) {
-                      final dueDays = item.progress.daysUntilNextDue;
-                      String dueBadge;
-                      Color badgeColor = colors.textSecondary;
-                      if (dueDays != null) {
-                        if (dueDays < 0) {
-                          dueBadge = 'Vencido';
-                          badgeColor = colors.danger;
-                        } else if (dueDays == 0) {
-                          dueBadge = 'Vence hoy';
-                          badgeColor = colors.warning;
-                        } else if (dueDays == 1) {
-                          dueBadge = 'Vence mañana';
-                          badgeColor = colors.warning;
-                        } else if (dueDays <= 5) {
-                          dueBadge = 'Vence en $dueDays días';
-                          badgeColor = colors.warning;
-                        } else {
-                          dueBadge = 'Día ${item.loan.dueDay}';
-                        }
-                      } else {
-                        dueBadge = 'Día ${item.loan.dueDay}';
-                      }
-
-                      final installment =
-                          item.loan.installmentAmount ?? item.progress.balance;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.loan.name,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: colors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(
-                                  alpha: isDark ? 0.15 : 0.08,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  PocktRadii.s,
-                                ),
-                              ),
-                              child: Text(
-                                dueBadge,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: badgeColor,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              obscure ? '••••' : formatGs(installment),
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-      orElse: () => null,
-    );
-  }
-
-  Widget? _buildGoalsCard(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-    final goalsAsync = ref.watch(activeGoalsWithProgressProvider);
-
-    return goalsAsync.maybeWhen(
-      data: (goalsWithProgress) {
-        if (goalsWithProgress.isEmpty) return null;
-
-        final displayGoals = goalsWithProgress.take(2).toList();
-        final totalSaved = goalsWithProgress.fold<int>(
-          0,
-          (sum, item) => sum + item.progress.saved,
-        );
-
-        return Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: Pressable(
-            key: const ValueKey('home-goals-card'),
-            semanticLabel: 'Ver metas',
-            onTap: () {
-              Haptics.tick();
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const GoalsScreen()));
-            },
-            child: GlassCard(
-              borderRadius: BorderRadius.circular(PocktRadii.xl),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: colors
-                              .brandAt(0)
-                              .withValues(alpha: isDark ? 0.2 : 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            uiIcon('target'),
-                            size: 15,
-                            color: colors.brandAt(0),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Metas',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: PocktType.body,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        obscure ? '••••' : formatGs(totalSaved),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: colors.brandAt(0),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        uiIcon('caret-right'),
-                        size: 14,
-                        color: colors.textTertiary,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ...displayGoals.map((item) {
-                    final goal = item.goal;
-                    final progress = item.progress;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      uiIcon(goal.icon),
-                                      size: 14,
-                                      color: colors.brandAt(0),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        goal.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: PocktType.caption,
-                                          fontWeight: FontWeight.w600,
-                                          color: colors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                obscure
-                                    ? '••••'
-                                    : '${(progress.percent * 100).toInt()} %',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(PocktRadii.s),
-                            child: SizedBox(
-                              height: 5,
-                              child: Stack(
-                                children: [
-                                  Container(color: colors.glassBorder),
-                                  FractionallySizedBox(
-                                    widthFactor: progress.percent.clamp(
-                                      0.0,
-                                      1.0,
-                                    ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            colors.brandStart,
-                                            colors.brandEnd,
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-      orElse: () => null,
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    final colors = context.pockt;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        PopupMenuButton<int>(
-          initialValue: _month,
-          tooltip: 'Elegir mes',
-          onSelected: (m) {
-            if (m != _month) {
-              Haptics.tick();
-              setState(() {
-                _month = m;
-                _initMonthDataSubscriptions();
-              });
-            }
-          },
-          itemBuilder: (context) => [
-            for (int m = 1; m <= 12; m++)
-              PopupMenuItem(
-                value: m,
-                child: Text(
-                  _kMonthNames[m - 1],
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: m == _month ? FontWeight.w700 : FontWeight.w400,
-                  ),
-                ),
-              ),
-          ],
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(PocktRadii.l),
-              color: colors.glassFill,
-              border: Border.all(color: colors.glassBorder),
-            ),
-            child: Text(
-              '${_kMonthNames[_month - 1]} ▾',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-        ),
-        Pressable(
-          semanticLabel: 'Ajustes',
-          key: const ValueKey('home-settings-button'),
-          onTap: () {
-            Haptics.tick();
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          },
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.glassFill,
-              border: Border.all(color: colors.glassBorder),
-            ),
-            child: Center(
-              child: Icon(uiIcon('gear'), size: 16, color: colors.textPrimary),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSpendingTotal(BuildContext context) {
-    final colors = context.pockt;
-    final monthNameLower = _kMonthNames[_month - 1].toLowerCase();
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-    final headline =
-        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend;
-
-    if (headline == HomeHeadline.monthSpent) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            ref.read(amountsRevealedProvider.notifier).toggle();
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Gastado en $monthNameLower',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              RepaintBoundary(
-                child: obscure
-                    ? Text(
-                        '••••',
-                        key: const ValueKey('spending-total-obscured'),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 42,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -1.5,
-                          color: colors.textPrimary,
-                        ),
-                      )
-                    : TweenAnimationBuilder<int>(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeOutCubic,
-                        tween: IntTween(
-                          begin: _previousTotal,
-                          end: _monthTotal,
-                        ),
-                        builder: (context, animatedValue, _) {
-                          return Text(
-                            formatGs(animatedValue),
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 42,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -1.5,
-                              color: colors.textPrimary,
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Default: HomeHeadline.safeToSpend → Arco de hoy (spec §7d-bis).
-    final safe = ref.watch(safeToSpendProvider).value;
-    return Pressable(
-      semanticLabel: 'Alternar ocultar montos',
-      onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
-      child: TodayArc(
-        allowance: safe?.todayAllowance ?? 0,
-        spent: safe?.spentToday ?? 0,
-        obscure: obscure,
-        reduceMotion: ref.watch(motionReduceProvider).value ?? false,
-        untilPayday: safe?.hasIncomeSchedule ?? true,
-      ),
-    );
-  }
-
-  bool get _arcHome =>
-      (ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend) ==
-      HomeHeadline.safeToSpend;
-
-  /// Tarjeta "Gastado en {mes}" debajo del Arco de hoy: monto del mes, barra
-  /// por categoría y la línea del período (quedan · cobrás).
-  Widget _buildMonthCard(BuildContext context, PeriodLine? pLine) {
-    final colors = context.pockt;
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-    final monthNameLower = _kMonthNames[_month - 1].toLowerCase();
-    return GlassCard(
-      key: const ValueKey('home-month-card'),
-      padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
-      borderRadius: BorderRadius.circular(PocktRadii.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              'Gastado en $monthNameLower',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: PocktType.caption,
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                obscure ? '••••' : formatGs(_monthTotal),
-                key: const ValueKey('home-month-total'),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.8,
-                  color: colors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildSegmentedBar(context),
-          const SizedBox(height: 12),
-          if (pLine != null)
-            _buildPeriodLine(context, pLine)
-          else
-            // Sin esquema de cobro no hay "quedan · cobrás en": se invita a
-            // configurarlo en vez de esconder la línea.
-            Pressable(
-              key: const ValueKey('home-setup-payday'),
-              semanticLabel: 'Configurá cuándo cobrás',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const IncomeScheduleScreen()),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Configurá cuándo cobrás para ver cuánto te queda',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: PocktType.caption,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      uiIcon('caret-right'),
-                      size: 16,
-                      color: colors.textTertiary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSegmentedBar(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (_categoryTotals.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Container(
-          height: 6,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            color: colors.glassFill,
-          ),
-        ),
-      );
-    }
-
-    final sum = _categoryTotals.fold<int>(0, (acc, c) => acc + c.total);
-    if (sum <= 0) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Container(
-          height: 6,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            color: colors.glassFill,
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Row(
-        children: [
-          for (int i = 0; i < _categoryTotals.length; i++) ...[
-            if (i > 0) const SizedBox(width: 3),
-            Expanded(
-              flex: (_categoryTotals[i].total * 1000 ~/ sum).clamp(1, 1000),
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: Color(
-                    isDark
-                        ? _categoryTotals[i].category.colorDark
-                        : _categoryTotals[i].category.colorLight,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentTransactions(BuildContext context) {
-    final colors = context.pockt;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Text(
-            'Últimos movimientos',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        TxGroupCard(
-          entries: _recentMovements,
-          cardRadius: 24,
-          subtitleBuilder: (item) =>
-              formatTxWhen(toLocal(item.tx.occurredAt), _getNow()),
-          contribSubtitleBuilder: (item) =>
-              formatTxWhen(toLocal(item.contribution.date), _getNow()),
-          emptyPlaceholder: Text(
-            'Sin movimientos aún',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              color: colors.textTertiary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPendingCard(BuildContext context) {
-    final colors = context.pockt;
-    final count = _pendingSuggestions.length;
-    final names = _pendingSuggestions
-        .map(
-          (s) => (s.suggestion.merchant?.isNotEmpty == true)
-              ? s.suggestion.merchant!
-              : (s.category?.name ?? ''),
-        )
-        .where((name) => name.isNotEmpty)
-        .take(2)
-        .join(', ');
-
-    final countText = count == 1 ? '1 por confirmar' : '$count por confirmar';
-
-    return Pressable(
-      key: const ValueKey('pending-suggestions-card'),
-      onTap: () {
-        Haptics.tick();
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const InboxScreen()));
-      },
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderRadius: BorderRadius.circular(PocktRadii.l),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: colors.brandStart,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.brandStart.withValues(alpha: 0.8),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  text: countText,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: colors.textPrimary,
-                  ),
-                  children: [
-                    if (names.isNotEmpty)
-                      TextSpan(
-                        text: ' · $names',
-                        style: TextStyle(
-                          color: colors.textSecondary.withValues(alpha: 0.6),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                  ],
-                ),
-                key: const ValueKey('pending-suggestions-text'),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(uiIcon('chevron-right'), size: 16, color: colors.textTertiary),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverdueBackupBanner(BuildContext context, {bool never = false}) {
-    final colors = context.pockt;
-
-    return Pressable(
-      key: const ValueKey('backup-overdue-banner'),
-      onTap: () {
-        Haptics.tick();
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const BackupScreen()));
-      },
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderRadius: BorderRadius.circular(PocktRadii.l),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: colors.warning,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.warning.withValues(alpha: 0.8),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                never
-                    ? 'Activá la copia de seguridad'
-                    : 'Copia de seguridad pendiente (hace más de 5 días)',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: colors.warning,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(uiIcon('caret-right'), size: 16, color: colors.warning),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodLine(BuildContext context, PeriodLine line) {
-    final colors = context.pockt;
-    final carry = line.carryOver;
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-    final previous = _schedule?.mode.toLowerCase() == 'monthly'
-        ? 'del mes anterior'
-        : 'de la quincena anterior';
-    final carryText = obscure
-        ? 'incluye •••• $previous'
-        : 'incluye ${carry > 0 ? '+' : '−'}${formatGs(carry.abs())} $previous';
-
-    return Pressable(
-      semanticLabel: 'Línea del período',
-      onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPeriodRow(context, line),
-            if (carry != 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  carryText,
-                  key: const ValueKey('period-line-carry'),
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: PocktType.caption,
-                    color: colors.textSecondary.withValues(alpha: 0.55),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodRow(BuildContext context, PeriodLine line) {
-    final colors = context.pockt;
-    final obscure = ref.watch(shouldObscureAmountsProvider);
-
-    return Row(
-      key: const ValueKey('period-line'),
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          // Con letra grande, la línea se achica en vez de partir "Gs." del monto.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text.rich(
-              TextSpan(
-                text: '${line.label} · quedan ',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: colors.textSecondary.withValues(alpha: 0.75),
-                ),
-                children: [
-                  TextSpan(
-                    text: obscure
-                        ? '••••'
-                        : (line.isEstimate
-                              ? '~${formatGs(line.remaining)} '
-                              : formatGs(line.remaining)),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: line.remaining < 0
-                          ? colors.danger
-                          : colors.textPrimary,
-                    ),
-                  ),
-                  if (line.isEstimate && !obscure)
-                    TextSpan(
-                      text: '(estimado)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                ],
-              ),
-              key: const ValueKey('period-line-remaining'),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          line.payDayText,
-          key: const ValueKey('period-line-payday'),
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12,
-            color: colors.textSecondary.withValues(alpha: 0.55),
-          ),
-        ),
-      ],
-    );
   }
 }
