@@ -518,9 +518,10 @@ class GoalDetailScreen extends ConsumerWidget {
                           ),
                           child: GlassCard(
                             borderRadius: BorderRadius.circular(PocktRadii.l),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: EdgeInsets.zero,
+                            // Misma altura que "Aportar" (48 con el borde).
                             child: Container(
-                              constraints: const BoxConstraints(minHeight: 44),
+                              height: 46,
                               alignment: Alignment.center,
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
@@ -813,10 +814,12 @@ class _GoalProgressRingPainter extends CustomPainter {
 
     final sweepAngle = clamped * 2 * pi;
     final arcPaint = Paint()
+      // El degradé recorre solo el tramo pintado, empezando arriba (-π/2).
       ..shader = SweepGradient(
         colors: [startColor, endColor],
-        startAngle: -pi / 2,
-        endAngle: -pi / 2 + (sweepAngle > 0 ? sweepAngle : 2 * pi),
+        startAngle: 0,
+        endAngle: sweepAngle,
+        transform: const GradientRotation(-pi / 2),
       ).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round

@@ -74,6 +74,11 @@ void main() {
         find.byKey(const ValueKey('goal-withdraw-button')),
         findsOneWidget,
       );
+      // Aportar y Retirar tienen la misma altura.
+      expect(
+        tester.getSize(find.byKey(const ValueKey('goal-withdraw-button'))).height,
+        tester.getSize(find.byKey(const ValueKey('goal-contribute-button'))).height,
+      );
 
       // Historial (puede estar abajo del scroll en pantalla de test 800x600)
       expect(
