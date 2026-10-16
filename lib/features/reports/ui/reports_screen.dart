@@ -291,14 +291,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     // desvanecen para que el corte se lea como "hay más" y no como un error.
     return ShaderMask(
       blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) => const LinearGradient(
+      // Máscara: solo importa la opacidad, el tono se ignora.
+      shaderCallback: (rect) => LinearGradient(
         colors: [
-          Color(0x00000000),
-          Color(0xFF000000),
-          Color(0xFF000000),
-          Color(0x00000000),
+          colors.textPrimary.withValues(alpha: 0),
+          colors.textPrimary,
+          colors.textPrimary,
+          colors.textPrimary.withValues(alpha: 0),
         ],
-        stops: [0, 0.05, 0.9, 1],
+        stops: const [0, 0.05, 0.9, 1],
       ).createShader(rect),
       child: _buildTabScroller(colors),
     );
