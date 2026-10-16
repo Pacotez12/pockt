@@ -202,15 +202,17 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
               right: -40,
               height: 340,
               child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        categoryColor.withValues(alpha: isDark ? 0.35 : 0.22),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.7],
+                child: RepaintBoundary(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          categoryColor.withValues(alpha: isDark ? 0.35 : 0.22),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.7],
+                      ),
                     ),
                   ),
                 ),
@@ -219,29 +221,31 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
             Column(
               children: [
                 // Top bar: Close/back and Date Selector
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: Icon(uiIcon('x'), size: 22),
-                        color: colors.textSecondary,
-                        onPressed: () => Navigator.of(context).pop(false),
-                      ),
-                      _DateSelector(
-                        date: _occurredAt,
-                        onDateSelected: (d) => setState(
-                          () => _occurredAt = combineDayWithNow(
-                            d,
-                            DateTime.now(),
+                RepaintBoundary(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: Icon(uiIcon('x'), size: 22),
+                          color: colors.textSecondary,
+                          onPressed: () => Navigator.of(context).pop(false),
+                        ),
+                        _DateSelector(
+                          date: _occurredAt,
+                          onDateSelected: (d) => setState(
+                            () => _occurredAt = combineDayWithNow(
+                              d,
+                              DateTime.now(),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const Spacer(flex: 1),
@@ -279,7 +283,6 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                               );
                               final borderAlpha = targetBorderAlpha * t;
                               final shadowAlpha = targetShadowAlpha * (1.0 - t);
-                              final shadowBlur = 14.0 * (1.0 - t);
                               final shadowOffset = Offset(0, 4.0 * (1.0 - t));
 
                               // Cross-fade: Version A (icono centrado oscuro) se desvanece de 0 a 0.45;
@@ -293,55 +296,51 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                                 1.0,
                               );
 
-                              return Material(
-                                type: MaterialType.transparency,
-                                child: Container(
-                                  key: ValueKey(
-                                    'hero-flight-cat-${_category.id}',
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: bg,
-                                    borderRadius: radius,
-                                    border: borderAlpha > 0.01
-                                        ? Border.all(
-                                            color: categoryColor.withValues(
-                                              alpha: borderAlpha,
-                                            ),
-                                            width: 1,
-                                          )
-                                        : null,
-                                    boxShadow: shadowAlpha > 0.01
-                                        ? [
-                                            BoxShadow(
-                                              color: catColor.withValues(
-                                                alpha: shadowAlpha,
+                              return RepaintBoundary(
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: Container(
+                                    key: ValueKey(
+                                      'hero-flight-cat-${_category.id}',
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: bg,
+                                      borderRadius: radius,
+                                      border: borderAlpha > 0.01
+                                          ? Border.all(
+                                              color: categoryColor.withValues(
+                                                alpha: borderAlpha,
                                               ),
-                                              blurRadius: shadowBlur,
-                                              offset: shadowOffset,
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    alignment: Alignment.center,
-                                    children: [
-                                      if (alphaA > 0.01)
-                                        Opacity(
-                                          opacity: alphaA,
-                                          child: Center(
+                                              width: 1,
+                                            )
+                                          : null,
+                                      boxShadow: shadowAlpha > 0.01
+                                          ? [
+                                              BoxShadow(
+                                                color: catColor.withValues(
+                                                  alpha: shadowAlpha,
+                                                ),
+                                                blurRadius: 14.0,
+                                                offset: shadowOffset,
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      alignment: Alignment.center,
+                                      children: [
+                                        if (alphaA > 0.01)
+                                          Center(
                                             child: categoryIcon(
                                               _category.icon,
                                               size: 28,
-                                              color: colors.keypadKey,
+                                              color: colors.keypadKey
+                                                  .withValues(alpha: alphaA),
                                             ),
                                           ),
-                                        ),
-                                      if (alphaB > 0.01)
-                                        Opacity(
-                                          opacity: alphaB,
-                                          child: Center(
+                                        if (alphaB > 0.01)
+                                          Center(
                                             child: OverflowBox(
                                               maxWidth: double.infinity,
                                               child: Row(
@@ -350,7 +349,10 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                                                   categoryIcon(
                                                     _category.icon,
                                                     size: 20,
-                                                    color: colors.textPrimary,
+                                                    color: colors.textPrimary
+                                                        .withValues(
+                                                          alpha: alphaB,
+                                                        ),
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
@@ -360,15 +362,18 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.w600,
-                                                      color: colors.textPrimary,
+                                                      color: colors.textPrimary
+                                                          .withValues(
+                                                            alpha: alphaB,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -453,9 +458,11 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 // 3x4 Keypad Grid
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _AmountKeypadGrid(
-                    onKey: _onKey,
-                    quickKey: ref.watch(quickKeyProvider).value ?? '000',
+                  child: RepaintBoundary(
+                    child: _AmountKeypadGrid(
+                      onKey: _onKey,
+                      quickKey: ref.watch(quickKeyProvider).value ?? '000',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -39,7 +39,7 @@ Future<void> showDayDetail(BuildContext context, DateTime localDay) {
             begin: const Offset(0, 0.05),
             end: Offset.zero,
           ).animate(curved),
-          child: child,
+          child: RepaintBoundary(child: child),
         );
       },
     ),
@@ -109,38 +109,62 @@ Widget buildDayDetailFlightShuttle(
         ((0.15 - t) / 0.15).clamp(0.0, 1.0),
       );
 
-      return Material(
-        color: Colors.transparent,
-        child: Container(
-          key: const ValueKey('day-detail-flight-shuttle'),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: resolvedColors.sheetSurface.withValues(
-              alpha: resolvedIsDark ? 0.96 : 0.98,
-            ),
-            borderRadius: borderRadius,
-            border: Border(
-              top: BorderSide(
-                color: resolvedIsDark
-                    ? Colors.white.withValues(alpha: 0.12 * t)
-                    : Colors.black.withValues(alpha: 0.08 * t),
-                width: 1.0,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35 * t),
-                blurRadius: 30 * t,
-                offset: Offset(0, -6 * t),
-              ),
-            ],
+      BoxDecoration? adjustedCellDecoration;
+      if (cellOpacity > 0 && cellDecoration != null) {
+        Gradient? adjustedGradient;
+        if (cellDecoration.gradient is LinearGradient) {
+          final g = cellDecoration.gradient as LinearGradient;
+          adjustedGradient = LinearGradient(
+            colors: g.colors
+                .map((c) => c.withValues(alpha: c.a * cellOpacity))
+                .toList(),
+            stops: g.stops,
+            begin: g.begin,
+            end: g.end,
+          );
+        }
+        adjustedCellDecoration = cellDecoration.copyWith(
+          color: cellDecoration.color?.withValues(
+            alpha: (cellDecoration.color?.a ?? 1.0) * cellOpacity,
           ),
-          child: cellOpacity > 0 && cellDecoration != null
-              ? Opacity(
-                  opacity: cellOpacity,
-                  child: DecoratedBox(decoration: cellDecoration),
-                )
-              : null,
+          gradient:
+              adjustedGradient ??
+              (cellDecoration.gradient != null && cellDecoration.color == null
+                  ? cellDecoration.gradient
+                  : null),
+        );
+      }
+
+      return RepaintBoundary(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            key: const ValueKey('day-detail-flight-shuttle'),
+            decoration: BoxDecoration(
+              color: resolvedColors.sheetSurface.withValues(
+                alpha: resolvedIsDark ? 0.96 : 0.98,
+              ),
+              borderRadius: borderRadius,
+              border: Border(
+                top: BorderSide(
+                  color: resolvedIsDark
+                      ? Colors.white.withValues(alpha: 0.12 * t)
+                      : Colors.black.withValues(alpha: 0.08 * t),
+                  width: 1.0,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35 * t),
+                  blurRadius: 30,
+                  offset: Offset(0, -6 * t),
+                ),
+              ],
+            ),
+            child: adjustedCellDecoration != null
+                ? DecoratedBox(decoration: adjustedCellDecoration)
+                : null,
+          ),
         ),
       );
     },
@@ -150,7 +174,7 @@ Widget buildDayDetailFlightShuttle(
 /// Hoja de detalle de un día (spec §5.2.6 y mockup inicio-v1.html):
 /// Título con fecha larga en español, total gastado, comparación con el día
 /// promedio del mes, barras "En qué se fue" por categoría y lista de movimientos.
-class DayDetailSheet extends ConsumerWidget {
+class DayDetailSheet extends ConsumerStatefulWidget {
   final DateTime localDay;
   final Animation<double>? routeAnimation;
 
@@ -161,28 +185,80 @@ class DayDetailSheet extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DayDetailSheet> createState() => _DayDetailSheetState();
+}
+
+class _DayDetailSheetState extends ConsumerState<DayDetailSheet> {
+  late Stream<List<TxView>> _dayStream;
+  late Stream<Map<int, int>> _monthDailyStream;
+  Animation<double>? _anim;
+  Animation<double>? _contentFadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    final repo = ref.read(transactionsRepositoryProvider);
+    _dayStream = repo.watchDay(widget.localDay);
+    _monthDailyStream = repo.watchDailyExpenseTotals(
+      widget.localDay.year,
+      widget.localDay.month,
+    );
+  }
+
+  @override
+  void didUpdateWidget(DayDetailSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.localDay != widget.localDay) {
+      _initStreams();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final anim = widget.routeAnimation ?? ModalRoute.of(context)?.animation;
+    if (anim != null && anim != _anim) {
+      _anim?.removeStatusListener(_handleAnimStatus);
+      _anim = anim;
+      _contentFadeAnim = CurvedAnimation(
+        parent: anim,
+        curve: const Interval(0.7, 1.0, curve: Curves.easeOut),
+        reverseCurve: const Interval(0.85, 1.0, curve: Curves.easeIn),
+      );
+      anim.addStatusListener(_handleAnimStatus);
+    }
+  }
+
+  void _handleAnimStatus(AnimationStatus status) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _anim?.removeStatusListener(_handleAnimStatus);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final repo = ref.watch(transactionsRepositoryProvider);
-
-    final dayStream = repo.watchDay(localDay);
-    final monthDailyStream = repo.watchDailyExpenseTotals(
-      localDay.year,
-      localDay.month,
-    );
 
     final sheetHeight = min(MediaQuery.of(context).size.height * 0.85, 580.0);
-    final anim = routeAnimation ?? ModalRoute.of(context)?.animation;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final isAnimating = _anim != null && !_anim!.isCompleted;
 
     Widget sheetBody = StreamBuilder<List<TxView>>(
-      stream: dayStream,
+      stream: _dayStream,
       builder: (context, daySnapshot) {
         final dayTxs = daySnapshot.data ?? const [];
 
         return StreamBuilder<Map<int, int>>(
-          stream: monthDailyStream,
+          stream: _monthDailyStream,
           builder: (context, monthSnapshot) {
             final dailyTotals = monthSnapshot.data ?? const {};
             return _buildContent(
@@ -197,31 +273,13 @@ class DayDetailSheet extends ConsumerWidget {
       },
     );
 
-    if (anim != null && !reduceMotion) {
-      sheetBody = AnimatedBuilder(
-        animation: anim,
-        child: sheetBody,
-        builder: (context, child) {
-          final t = anim.value.clamp(0.0, 1.0);
-          final double opacity;
-          if (anim.status == AnimationStatus.reverse) {
-            opacity = const Interval(
-              0.85,
-              1.0,
-              curve: Curves.easeIn,
-            ).transform(t);
-          } else {
-            opacity = const Interval(
-              0.7,
-              1.0,
-              curve: Curves.easeOut,
-            ).transform(t);
-          }
-          return IgnorePointer(
-            ignoring: opacity < 1.0,
-            child: Opacity(opacity: opacity, child: child),
-          );
-        },
+    if (_contentFadeAnim != null && !reduceMotion) {
+      sheetBody = IgnorePointer(
+        ignoring: isAnimating,
+        child: FadeTransition(
+          opacity: _contentFadeAnim!,
+          child: RepaintBoundary(child: sheetBody),
+        ),
       );
     }
 
@@ -243,7 +301,7 @@ class DayDetailSheet extends ConsumerWidget {
               enabled: !MediaQuery.disableAnimationsOf(context),
               child: Hero(
                 tag:
-                    'day-sheet-${localDay.year}-${localDay.month}-${localDay.day}',
+                    'day-sheet-${widget.localDay.year}-${widget.localDay.month}-${widget.localDay.day}',
                 createRectTween: (begin, end) =>
                     SpringRectTween(begin: begin, end: end),
                 flightShuttleBuilder:
@@ -264,33 +322,35 @@ class DayDetailSheet extends ConsumerWidget {
                     ),
                 child: Material(
                   color: Colors.transparent,
-                  child: Container(
-                    height: sheetHeight,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: colors.sheetSurface.withValues(
-                        alpha: isDark ? 0.96 : 0.98,
-                      ),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(32),
-                      ),
-                      border: Border(
-                        top: BorderSide(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.12)
-                              : Colors.black.withValues(alpha: 0.08),
-                          width: 1.0,
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: sheetHeight,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: colors.sheetSurface.withValues(
+                          alpha: isDark ? 0.96 : 0.98,
                         ),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 30,
-                          offset: const Offset(0, -6),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(32),
                         ),
-                      ],
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.black.withValues(alpha: 0.08),
+                            width: 1.0,
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 30,
+                            offset: const Offset(0, -6),
+                          ),
+                        ],
+                      ),
+                      child: sheetBody,
                     ),
-                    child: sheetBody,
                   ),
                 ),
               ),
@@ -402,7 +462,7 @@ class DayDetailSheet extends ConsumerWidget {
               children: [
                 // Fecha larga: "Sábado 17 de octubre"
                 Text(
-                  formatLongDay(localDay),
+                  formatLongDay(widget.localDay),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,

@@ -213,15 +213,18 @@ void main() {
 
       final opacityFinder = find.descendant(
         of: find.byType(DayDetailSheet),
-        matching: find.byType(Opacity),
+        matching: find.byType(FadeTransition),
       );
       expect(opacityFinder, findsOneWidget);
-      final openOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      final openOpacity = t.widget<FadeTransition>(opacityFinder).opacity.value;
       expect(openOpacity, 0.0);
 
       // Completar la apertura: opacidad 1.0
       await t.pumpAndSettle();
-      final settledOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      final settledOpacity = t
+          .widget<FadeTransition>(opacityFinder)
+          .opacity
+          .value;
       expect(settledOpacity, 1.0);
       expect(find.text('Gs. 50.000'), findsOneWidget);
 
@@ -230,7 +233,10 @@ void main() {
       await t.pump();
       await t.pump(const Duration(milliseconds: 60));
 
-      final closeOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      final closeOpacity = t
+          .widget<FadeTransition>(opacityFinder)
+          .opacity
+          .value;
       expect(closeOpacity, 0.0);
 
       await t.pumpAndSettle();

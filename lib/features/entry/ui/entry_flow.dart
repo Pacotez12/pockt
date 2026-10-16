@@ -532,7 +532,10 @@ class _EntryCategoryPickerScreenState
             curve: SpringCurve(spring: PocktSprings.soft),
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(opacity: curved, child: child);
+          return FadeTransition(
+            opacity: curved,
+            child: RepaintBoundary(child: child),
+          );
         },
       ),
     );
@@ -584,7 +587,10 @@ class _EntryCategoryPickerScreenState
             curve: SpringCurve(spring: PocktSprings.soft),
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(opacity: curved, child: child);
+          return FadeTransition(
+            opacity: curved,
+            child: RepaintBoundary(child: child),
+          );
         },
       ),
     );
@@ -647,15 +653,19 @@ class _EntryCategoryPickerScreenState
               right: -40,
               height: 380,
               child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        colors.brandEnd.withValues(alpha: isDark ? 0.30 : 0.15),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.65],
+                child: RepaintBoundary(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          colors.brandEnd.withValues(
+                            alpha: isDark ? 0.30 : 0.15,
+                          ),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.65],
+                      ),
                     ),
                   ),
                 ),
@@ -883,6 +893,7 @@ class _EntryCategoryPickerScreenState
                 Expanded(
                   child: CategoryGrid(
                     currentType: _currentType,
+                    categories: _activeCategories,
                     onCategorySelected: _onCategorySelected,
                   ),
                 ),
@@ -959,105 +970,107 @@ class _EntryShortcutsBar extends ConsumerWidget {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          physics: const BouncingScrollPhysics(),
-          itemCount: shortcuts.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final item = shortcuts[index];
-            final catColor = isDark ? item.colorDark : item.colorLight;
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            physics: const BouncingScrollPhysics(),
+            itemCount: shortcuts.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final item = shortcuts[index];
+              final catColor = isDark ? item.colorDark : item.colorLight;
 
-            return Pressable(
-              semanticLabel: 'Atajo ${item.label}, ${formatGs(item.amount)}',
-              onTap: () {
-                Haptics.tick();
-                onShortcutTapped(item);
-              },
-              onLongPress: () {
-                Haptics.save();
-                _showShortcutOptions(context, ref, item);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.glassFill,
-                  borderRadius: BorderRadius.circular(PocktRadii.xl),
-                  border: Border.all(
-                    color: item.isPinned
-                        ? colors.brandAt(0).withValues(alpha: 0.5)
-                        : colors.glassBorder,
+              return Pressable(
+                semanticLabel: 'Atajo ${item.label}, ${formatGs(item.amount)}',
+                onTap: () {
+                  Haptics.tick();
+                  onShortcutTapped(item);
+                },
+                onLongPress: () {
+                  Haptics.save();
+                  _showShortcutOptions(context, ref, item);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(catColor).withValues(alpha: 0.2),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          uiIcon(item.categoryIcon),
-                          size: 11,
-                          color: Color(catColor),
+                  decoration: BoxDecoration(
+                    color: colors.glassFill,
+                    borderRadius: BorderRadius.circular(PocktRadii.xl),
+                    border: Border.all(
+                      color: item.isPinned
+                          ? colors.brandAt(0).withValues(alpha: 0.5)
+                          : colors.glassBorder,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(catColor).withValues(alpha: 0.2),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            uiIcon(item.categoryIcon),
+                            size: 11,
+                            color: Color(catColor),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
+                      const SizedBox(width: 7),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '·',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      formatGs(item.amount),
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    if (item.isPinned) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        uiIcon('push-pin'),
-                        size: 12,
-                        color: colors.brandAt(0),
+                      Text(
+                        '·',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textTertiary,
+                        ),
                       ),
+                      const SizedBox(width: 4),
+                      Text(
+                        formatGs(item.amount),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                      if (item.isPinned) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          uiIcon('push-pin'),
+                          size: 12,
+                          color: colors.brandAt(0),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1143,11 +1156,13 @@ class _EntryShortcutsBar extends ConsumerWidget {
 
 class CategoryGrid extends ConsumerStatefulWidget {
   final TxType currentType;
+  final List<Category>? categories;
   final ValueChanged<Category> onCategorySelected;
 
   const CategoryGrid({
     super.key,
     required this.currentType,
+    this.categories,
     required this.onCategorySelected,
   });
 
@@ -1163,18 +1178,28 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
   @override
   void initState() {
     super.initState();
-    _subscribe();
+    if (widget.categories == null) {
+      final initialOrder =
+          ref.read(categoryOrderProvider).value ?? CategoryOrder.manual;
+      _subscribe(order: initialOrder);
+    }
   }
 
   @override
   void didUpdateWidget(CategoryGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentType != widget.currentType) {
+    if (widget.categories == null &&
+        (oldWidget.currentType != widget.currentType ||
+            oldWidget.categories != null)) {
       _subscribe();
+    } else if (widget.categories != null && _subscription != null) {
+      _subscription?.cancel();
+      _subscription = null;
     }
   }
 
   void _subscribe({CategoryOrder? order}) {
+    if (widget.categories != null) return;
     final effectiveOrder = order ?? _currentOrder;
     _currentOrder = effectiveOrder;
     _subscription?.cancel();
@@ -1201,82 +1226,92 @@ class _CategoryGridState extends ConsumerState<CategoryGrid> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final order =
-        ref.watch(categoryOrderProvider).value ?? CategoryOrder.manual;
-    if (order != _currentOrder) {
-      _subscribe(order: order);
+
+    if (widget.categories == null) {
+      ref.listen<AsyncValue<CategoryOrder>>(categoryOrderProvider, (
+        previous,
+        next,
+      ) {
+        final order = next.value ?? CategoryOrder.manual;
+        if (order != _currentOrder) {
+          _subscribe(order: order);
+        }
+      });
     }
-    final categories = _categories;
 
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 20,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.88,
-      ),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final cat = categories[index];
-        final catColor = Color(isDark ? cat.colorDark : cat.colorLight);
+    final categories = widget.categories ?? _categories;
 
-        return Pressable(
-          onTap: () => widget.onCategorySelected(cat),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HeroMode(
-                enabled: !MediaQuery.disableAnimationsOf(context),
-                child: Hero(
-                  tag: 'cat-${cat.id}',
-                  createRectTween: (begin, end) =>
-                      SpringRectTween(begin: begin, end: end),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(29),
-                        color: catColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: catColor.withValues(
-                              alpha: isDark ? 0.35 : 0.20,
+    return RepaintBoundary(
+      child: GridView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.88,
+        ),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final catColor = Color(isDark ? cat.colorDark : cat.colorLight);
+
+          return Pressable(
+            onTap: () => widget.onCategorySelected(cat),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HeroMode(
+                  enabled: !MediaQuery.disableAnimationsOf(context),
+                  child: Hero(
+                    tag: 'cat-${cat.id}',
+                    createRectTween: (begin, end) =>
+                        SpringRectTween(begin: begin, end: end),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(29),
+                          color: catColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: catColor.withValues(
+                                alpha: isDark ? 0.35 : 0.20,
+                              ),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
                             ),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: categoryIcon(
-                        cat.icon,
-                        size: 28,
-                        color: colors.keypadKey,
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: categoryIcon(
+                          cat.icon,
+                          size: 28,
+                          color: colors.keypadKey,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                cat.name,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: colors.textPrimary,
+                const SizedBox(height: 8),
+                Text(
+                  cat.name,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
