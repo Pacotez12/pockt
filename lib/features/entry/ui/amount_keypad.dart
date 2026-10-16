@@ -5,13 +5,18 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
-import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/entry/domain/entry_form_logic.dart';
+import 'package:pockt/features/entry/ui/category_hero_pill.dart';
+import 'package:pockt/features/entry/ui/keypad_widgets.dart';
 import 'package:pockt/features/home/ui/month_glow.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+
+export 'package:pockt/features/entry/ui/category_hero_pill.dart';
+export 'package:pockt/features/entry/ui/keypad_widgets.dart';
 
 class AmountKeypadScreen extends ConsumerStatefulWidget {
   final Category category;
@@ -62,21 +67,20 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
   @override
   void initState() {
     super.initState();
-    _category = widget.category;
-    _loanId = widget.initialLoanId ?? widget.editing?.tx.loanId;
-    if (widget.editing != null) {
-      _digits = widget.editing!.tx.amount.toString();
-      _occurredAt = toLocal(widget.editing!.tx.occurredAt);
-      _merchant = widget.editing!.tx.merchant;
-      _note = widget.editing!.tx.note;
-    } else {
-      _digits = widget.initialAmount != null && widget.initialAmount! > 0
-          ? widget.initialAmount.toString()
-          : '';
-      _occurredAt = widget.initialDate ?? DateTime.now();
-      _merchant = widget.initialMerchant;
-      _note = null;
-    }
+    final seed = EntryKeypadSeed.fromArgs(
+      category: widget.category,
+      editing: widget.editing,
+      initialAmount: widget.initialAmount,
+      initialDate: widget.initialDate,
+      initialMerchant: widget.initialMerchant,
+      initialLoanId: widget.initialLoanId,
+    );
+    _category = seed.category;
+    _loanId = seed.loanId;
+    _digits = seed.digits;
+    _occurredAt = seed.occurredAt;
+    _merchant = seed.merchant;
+    _note = seed.note;
   }
 
   void _onKey(String key) {
@@ -91,7 +95,11 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
     if (amount <= 0 || _isSaving) return;
 
     final askNote = ref.read(askNoteProvider).value ?? false;
-    if (askNote && !_notePrompted && (_note == null || _note!.isEmpty)) {
+    if (shouldPromptForNote(
+      askNoteEnabled: askNote,
+      alreadyPrompted: _notePrompted,
+      currentNote: _note,
+    )) {
       _notePrompted = true;
       final noteController = TextEditingController(text: _note ?? '');
       final confirmed = await showDialog<bool>(
@@ -235,7 +243,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                           color: colors.textSecondary,
                           onPressed: () => Navigator.of(context).pop(false),
                         ),
-                        _DateSelector(
+                        EntryDateSelector(
                           date: _occurredAt,
                           onDateSelected: (d) => setState(
                             () => _occurredAt = combineDayWithNow(
@@ -249,183 +257,8 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                   ),
                 ),
                 const Spacer(flex: 1),
-                // Category Pill with shared Hero
-                HeroMode(
-                  enabled: !MediaQuery.disableAnimationsOf(context),
-                  child: Hero(
-                    tag: 'cat-${_category.id}',
-                    createRectTween: (begin, end) =>
-                        SpringRectTween(begin: begin, end: end),
-                    flightShuttleBuilder:
-                        (
-                          flightContext,
-                          animation,
-                          flightDirection,
-                          fromHeroContext,
-                          toHeroContext,
-                        ) {
-                          final catColor = Color(
-                            isDark ? _category.colorDark : _category.colorLight,
-                          );
-                          final pillBg = categoryColor.withValues(
-                            alpha: isDark ? 0.22 : 0.14,
-                          );
-                          final targetBorderAlpha = isDark ? 0.6 : 0.4;
-                          final targetShadowAlpha = isDark ? 0.35 : 0.20;
-
-                          return AnimatedBuilder(
-                            animation: animation,
-                            builder: (context, _) {
-                              final t = animation.value.clamp(0.0, 1.0);
-                              final bg = Color.lerp(catColor, pillBg, t)!;
-                              final radius = BorderRadius.circular(
-                                29.0 - 9.0 * t,
-                              );
-                              final borderAlpha = targetBorderAlpha * t;
-                              final shadowAlpha = targetShadowAlpha * (1.0 - t);
-                              final shadowOffset = Offset(0, 4.0 * (1.0 - t));
-
-                              // Cross-fade: Version A (icono centrado oscuro) se desvanece de 0 a 0.45;
-                              // Version B (fila con icono y texto nítido) entra de 0.35 a 0.8.
-                              final alphaA = ((0.45 - t) / 0.45).clamp(
-                                0.0,
-                                1.0,
-                              );
-                              final alphaB = ((t - 0.35) / 0.45).clamp(
-                                0.0,
-                                1.0,
-                              );
-
-                              return RepaintBoundary(
-                                child: Material(
-                                  type: MaterialType.transparency,
-                                  child: Container(
-                                    key: ValueKey(
-                                      'hero-flight-cat-${_category.id}',
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: bg,
-                                      borderRadius: radius,
-                                      border: borderAlpha > 0.01
-                                          ? Border.all(
-                                              color: categoryColor.withValues(
-                                                alpha: borderAlpha,
-                                              ),
-                                              width: 1,
-                                            )
-                                          : null,
-                                      boxShadow: shadowAlpha > 0.01
-                                          ? [
-                                              BoxShadow(
-                                                color: catColor.withValues(
-                                                  alpha: shadowAlpha,
-                                                ),
-                                                blurRadius: 14.0,
-                                                offset: shadowOffset,
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      alignment: Alignment.center,
-                                      children: [
-                                        if (alphaA > 0.01)
-                                          Center(
-                                            child: categoryIcon(
-                                              _category.icon,
-                                              size: 28,
-                                              color: colors.keypadKey
-                                                  .withValues(alpha: alphaA),
-                                            ),
-                                          ),
-                                        if (alphaB > 0.01)
-                                          Center(
-                                            child: OverflowBox(
-                                              maxWidth: double.infinity,
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  categoryIcon(
-                                                    _category.icon,
-                                                    size: 20,
-                                                    color: colors.textPrimary
-                                                        .withValues(
-                                                          alpha: alphaB,
-                                                        ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    _category.name,
-                                                    style: TextStyle(
-                                                      fontFamily: 'Inter',
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: colors.textPrimary
-                                                          .withValues(
-                                                            alpha: alphaB,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: categoryColor.withValues(
-                            alpha: isDark ? 0.22 : 0.14,
-                          ),
-                          borderRadius: BorderRadius.circular(PocktRadii.xl),
-                          border: Border.all(
-                            color: categoryColor.withValues(
-                              alpha: isDark ? 0.6 : 0.4,
-                            ),
-                            width: 1,
-                          ),
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              categoryIcon(
-                                _category.icon,
-                                size: 20,
-                                color: colors.textPrimary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _category.name,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // Category Pill with shared Hero                // Category Pill with shared Hero
+                CategoryHeroPill(category: _category),
                 const SizedBox(height: 16),
                 // Formatted Amount Display
                 Padding(
@@ -447,7 +280,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 ),
                 const SizedBox(height: 14),
                 // Optional chips: Merchant & Note
-                _OptionalChips(
+                EntryOptionalChips(
                   merchant: _merchant,
                   note: _note,
                   showMerchant: widget.showMerchant,
@@ -459,7 +292,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: RepaintBoundary(
-                    child: _AmountKeypadGrid(
+                    child: AmountKeypadGrid(
                       onKey: _onKey,
                       quickKey: ref.watch(quickKeyProvider).value ?? '000',
                     ),
@@ -499,302 +332,6 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 ),
                 const SizedBox(height: 8),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AmountKeypadGrid extends StatelessWidget {
-  final ValueChanged<String> onKey;
-  final String quickKey;
-
-  const _AmountKeypadGrid({required this.onKey, this.quickKey = '000'});
-
-  @override
-  Widget build(BuildContext context) {
-    final keys = [
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      '9',
-      quickKey,
-      '0',
-      '⌫',
-    ];
-
-    return Column(
-      children: [
-        for (var row = 0; row < 4; row++) ...[
-          if (row > 0) const SizedBox(height: 8),
-          Row(
-            children: [
-              for (var col = 0; col < 3; col++) ...[
-                if (col > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: _KeypadButton(
-                    label: keys[row * 3 + col],
-                    onTap: () => onKey(keys[row * 3 + col]),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _KeypadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _KeypadButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(PocktRadii.l),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: (label == '000' || label == '00') ? 18 : 22,
-            fontWeight: FontWeight.w500,
-            color: colors.textPrimary,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DateSelector extends StatelessWidget {
-  final DateTime date;
-  final ValueChanged<DateTime> onDateSelected;
-
-  const _DateSelector({required this.date, required this.onDateSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-    final now = DateTime.now();
-    final isToday =
-        date.year == now.year && date.month == now.month && date.day == now.day;
-    final isYesterday =
-        date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day - 1;
-
-    final String label;
-    if (isToday) {
-      final hour = date.hour.toString().padLeft(2, '0');
-      final min = date.minute.toString().padLeft(2, '0');
-      label = 'Hoy, $hour:$min';
-    } else if (isYesterday) {
-      label = 'Ayer';
-    } else {
-      label = '${date.day}/${date.month}/${date.year}';
-    }
-
-    return Pressable(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date,
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2100),
-        );
-        if (picked != null) {
-          onDateSelected(
-            DateTime(
-              picked.year,
-              picked.month,
-              picked.day,
-              date.hour,
-              date.minute,
-            ),
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: colors.glassFill,
-          borderRadius: BorderRadius.circular(PocktRadii.l),
-          border: Border.all(color: colors.glassBorder, width: 1),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: colors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OptionalChips extends StatelessWidget {
-  final String? merchant;
-  final String? note;
-  final ValueChanged<String?> onMerchantChanged;
-  final ValueChanged<String?> onNoteChanged;
-  final bool showMerchant;
-
-  const _OptionalChips({
-    required this.merchant,
-    required this.note,
-    required this.onMerchantChanged,
-    required this.onNoteChanged,
-    this.showMerchant = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (showMerchant) ...[
-          _ChipButton(
-            icon: uiIcon('storefront'),
-            label: merchant?.isNotEmpty == true ? merchant! : 'Comercio',
-            isActive: merchant?.isNotEmpty == true,
-            onTap: () => _showEditDialog(
-              context,
-              title: 'Comercio',
-              initialValue: merchant,
-              hint: 'Ej. Superseis',
-              onChanged: onMerchantChanged,
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        _ChipButton(
-          icon: uiIcon('note'),
-          label: note?.isNotEmpty == true ? note! : 'Nota',
-          isActive: note?.isNotEmpty == true,
-          onTap: () => _showEditDialog(
-            context,
-            title: 'Nota',
-            initialValue: note,
-            hint: 'Ej. Almuerzo con café',
-            onChanged: onNoteChanged,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _showEditDialog(
-    BuildContext context, {
-    required String title,
-    required String? initialValue,
-    required String hint,
-    required ValueChanged<String?> onChanged,
-  }) async {
-    final controller = TextEditingController(text: initialValue ?? '');
-    final res = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: hint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Listo'),
-          ),
-        ],
-      ),
-    );
-    if (res != null) {
-      onChanged(res.isEmpty ? null : res);
-    }
-  }
-}
-
-class _ChipButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _ChipButton({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? colors.textPrimary.withValues(alpha: 0.12)
-              : colors.glassFill,
-          borderRadius: BorderRadius.circular(PocktRadii.l),
-          border: Border.all(
-            color: isActive ? colors.textSecondary : colors.glassBorder,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: isActive ? colors.textPrimary : colors.textTertiary,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? colors.textPrimary : colors.textSecondary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

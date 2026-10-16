@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
-import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
@@ -13,13 +12,21 @@ import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
-import 'package:pockt/features/entry/data/entry_shortcuts_repository.dart';
+import 'package:pockt/features/entry/domain/entry_form_logic.dart';
 import 'package:pockt/features/entry/domain/entry_shortcut.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:pockt/features/entry/ui/amount_keypad.dart';
-import 'package:pockt/features/events/data/events_repository.dart';
+import 'package:pockt/features/entry/ui/category_grid.dart';
+import 'package:pockt/features/entry/ui/entry_natural_input_bar.dart';
+import 'package:pockt/features/entry/ui/entry_picker_sheets.dart';
+import 'package:pockt/features/entry/ui/entry_shortcuts_bar.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+
+export 'package:pockt/features/entry/ui/category_grid.dart';
+export 'package:pockt/features/entry/ui/entry_natural_input_bar.dart';
+export 'package:pockt/features/entry/ui/entry_picker_sheets.dart';
+export 'package:pockt/features/entry/ui/entry_shortcuts_bar.dart';
 
 Widget entrySpringTransitionsBuilder(
   BuildContext context,
@@ -163,248 +170,6 @@ Future<void> showEntryFlow(
   );
 }
 
-enum LoanPickerChoiceType { loan, general, cancel }
-
-class LoanPickerChoice {
-  final LoanPickerChoiceType type;
-  final Loan? loan;
-
-  const LoanPickerChoice._(this.type, this.loan);
-  factory LoanPickerChoice.loan(Loan loan) =>
-      LoanPickerChoice._(LoanPickerChoiceType.loan, loan);
-  factory LoanPickerChoice.general() =>
-      const LoanPickerChoice._(LoanPickerChoiceType.general, null);
-  factory LoanPickerChoice.cancel() =>
-      const LoanPickerChoice._(LoanPickerChoiceType.cancel, null);
-}
-
-Future<LoanPickerChoice> showLoanPickerSheet(
-  BuildContext context, {
-  required List<Loan> loans,
-}) async {
-  final result = await showModalBottomSheet<LoanPickerChoice>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      final colors = sheetContext.pockt;
-      final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
-
-      return Container(
-        decoration: BoxDecoration(
-          color: colors.sheetSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colors.textTertiary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                '¿A qué préstamo corresponde?',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Vinculá este movimiento a una deuda o cuota activa',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(sheetContext).size.height * 0.45,
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: loans.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final loan = loans[index];
-                    final subtitle = loan.installmentAmount != null
-                        ? 'Cuota: ${formatGs(loan.installmentAmount!)}'
-                        : 'Total: ${formatGs(loan.totalAmount)}';
-
-                    return Pressable(
-                      onTap: () {
-                        Haptics.tick();
-                        Navigator.of(sheetContext)
-                            .pop(LoanPickerChoice.loan(loan));
-                      },
-                      child: GlassCard(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        borderRadius: BorderRadius.circular(PocktRadii.l),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: colors
-                                    .brandAt(0)
-                                    .withValues(alpha: isDark ? 0.2 : 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  uiIcon('hand-coins'),
-                                  size: 18,
-                                  color: colors.brandAt(0),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    loan.name,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    subtitle,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12,
-                                      color: colors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              uiIcon('caret-right'),
-                              size: 14,
-                              color: colors.textTertiary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              Pressable(
-                onTap: () {
-                  Haptics.tick();
-                  Navigator.of(sheetContext).pop(LoanPickerChoice.general());
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(PocktRadii.l),
-                    border: Border.all(color: colors.glassBorder),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Ninguno / Gasto general',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-
-  return result ?? LoanPickerChoice.cancel();
-}
-
-Future<Category?> showCategoryPickerSheet(
-  BuildContext context, {
-  required TxType type,
-}) {
-  return showModalBottomSheet<Category>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      final colors = sheetContext.pockt;
-      return Container(
-        height: MediaQuery.of(sheetContext).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: colors.sheetSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.textTertiary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              type == TxType.expense
-                  ? 'Categoría de gasto'
-                  : 'Categoría de ingreso',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: CategoryGrid(
-                currentType: type,
-                onCategorySelected: (cat) {
-                  Haptics.tick();
-                  Navigator.of(sheetContext).pop(cat);
-                },
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
 class EntryCategoryPickerScreen extends ConsumerStatefulWidget {
   final TxType initialType;
 
@@ -465,22 +230,14 @@ class _EntryCategoryPickerScreenState
   }
 
   void _onNaturalInputChanged(String text) {
-    if (text.trim().isEmpty) {
-      if (_proposal != null) {
-        setState(() => _proposal = null);
-      }
-      return;
-    }
-    final now = toLocal(DateTime.now());
-    final keywords = _keywordMap.isNotEmpty
-        ? _keywordMap
-        : buildKeywordToCategoryIdMap(_activeCategories);
-    final parsed = parseNaturalEntry(
+    final resolved = resolveEntryNaturalProposal(
       text,
-      nowLocal: now,
-      keywordToCategoryId: keywords,
+      nowLocal: toLocal(DateTime.now()),
+      activeCategories: _activeCategories,
+      keywordMap: _keywordMap,
     );
-    setState(() => _proposal = parsed);
+    if (text.trim().isEmpty && _proposal == null) return;
+    setState(() => _proposal = resolved?.entry);
   }
 
   Future<void> _openFromProposal(
@@ -523,20 +280,7 @@ class _EntryCategoryPickerScreenState
           initialMerchant: proposal.merchant,
           initialLoanId: loanId,
         ),
-        transitionsBuilder: (context, animation, _, child) {
-          if (MediaQuery.disableAnimationsOf(context)) {
-            return child;
-          }
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: SpringCurve(spring: PocktSprings.soft),
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: RepaintBoundary(child: child),
-          );
-        },
+        transitionsBuilder: _entryFadeTransitionsBuilder,
       ),
     );
     if (saved == true && mounted) {
@@ -578,20 +322,7 @@ class _EntryCategoryPickerScreenState
           initialLoanId: loanId,
           initialAmount: prefilledAmount,
         ),
-        transitionsBuilder: (context, animation, _, child) {
-          if (MediaQuery.disableAnimationsOf(context)) {
-            return child;
-          }
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: SpringCurve(spring: PocktSprings.soft),
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: RepaintBoundary(child: child),
-          );
-        },
+        transitionsBuilder: _entryFadeTransitionsBuilder,
       ),
     );
     if (saved == true && mounted) {
@@ -722,172 +453,23 @@ class _EntryCategoryPickerScreenState
                   ),
                 ),
                 const SizedBox(height: 14),
-                // Natural text input field in GlassCard
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GlassCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(PocktRadii.l),
-                    child: Row(
-                      children: [
-                        Icon(
-                          uiIcon('sparkle'),
-                          size: 18,
-                          color: colors.textSecondary.withValues(alpha: 0.7),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _naturalController,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              color: colors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: _currentType == TxType.expense
-                                  ? 'Ej. bolt 28.500, super 230 mil ayer'
-                                  : 'Ej. sueldo 8.500.000, extra 300 mil',
-                              hintStyle: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: colors.textSecondary.withValues(
-                                  alpha: 0.5,
-                                ),
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                              ),
-                            ),
-                            onChanged: _onNaturalInputChanged,
-                          ),
-                        ),
-                        if (_naturalController.text.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              _naturalController.clear();
-                              _onNaturalInputChanged('');
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                uiIcon('x'),
-                                size: 16,
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Smooth animated proposal card
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  child: _proposal != null && proposedCategory != null
-                      ? Padding(
-                          padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            top: 8,
-                          ),
-                          child: Pressable(
-                            key: const ValueKey('natural-proposal-card'),
-                            onTap: () => _openFromProposal(
-                              _proposal!,
-                              proposedCategory!,
-                            ),
-                            child: GlassCard(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              borderRadius: BorderRadius.circular(PocktRadii.l),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Color(
-                                        isDark
-                                            ? proposedCategory.colorDark
-                                            : proposedCategory.colorLight,
-                                      ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: categoryIcon(
-                                      proposedCategory.icon,
-                                      size: 22,
-                                      color: colors.keypadKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          proposedCategory.name,
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: colors.textPrimary,
-                                          ),
-                                        ),
-                                        if (_proposal!.merchant != null &&
-                                            _proposal!.merchant!
-                                                    .toLowerCase() !=
-                                                proposedCategory.name
-                                                    .toLowerCase())
-                                          Text(
-                                            _proposal!.merchant!,
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 12,
-                                              color: colors.textSecondary,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    formatGs(_proposal!.amount),
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.textPrimary,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    uiIcon('caret-right'),
-                                    size: 16,
-                                    color: colors.textSecondary,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                // Natural text input + animated proposal card
+                EntryNaturalInputSection(
+                  controller: _naturalController,
+                  currentType: _currentType,
+                  proposal: _proposal,
+                  proposedCategory: proposedCategory,
+                  onChanged: _onNaturalInputChanged,
+                  onClear: () {
+                    _naturalController.clear();
+                    _onNaturalInputChanged('');
+                  },
+                  onProposalTapped: _openFromProposal,
                 ),
                 const SizedBox(height: 12),
                 if (_currentType == TxType.expense) ...[
-                  const _ActiveEventChip(),
-                  _EntryShortcutsBar(onShortcutTapped: _saveFromShortcut),
+                  const ActiveEventChip(),
+                  EntryShortcutsBar(onShortcutTapped: _saveFromShortcut),
                 ],
                 // Category Grid
                 Expanded(
@@ -906,491 +488,22 @@ class _EntryCategoryPickerScreenState
   }
 }
 
-class _ActiveEventChip extends ConsumerWidget {
-  const _ActiveEventChip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeEventAsync = ref.watch(activeEventProvider);
-    final activeEvent = activeEventAsync.value;
-    if (activeEvent == null) return const SizedBox.shrink();
-
-    final colors = context.pockt;
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
-      child: Container(
-        key: const ValueKey('active-event-chip'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: colors.brandAt(0).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(PocktRadii.m),
-          border: Border.all(color: colors.brandAt(0).withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              uiIcon(activeEvent.icon, filled: true),
-              size: 14,
-              color: colors.brandAt(0),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Evento activo: ${activeEvent.name}',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: colors.brandAt(0),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+Widget _entryFadeTransitionsBuilder(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) {
+  if (MediaQuery.disableAnimationsOf(context)) {
+    return child;
   }
-}
-
-class _EntryShortcutsBar extends ConsumerWidget {
-  final ValueChanged<EntryShortcutItem> onShortcutTapped;
-
-  const _EntryShortcutsBar({required this.onShortcutTapped});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shortcutsAsync = ref.watch(entryShortcutsProvider);
-    final shortcuts = shortcutsAsync.value ?? const [];
-    if (shortcuts.isEmpty) return const SizedBox.shrink();
-
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return RepaintBoundary(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            physics: const BouncingScrollPhysics(),
-            itemCount: shortcuts.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final item = shortcuts[index];
-              final catColor = isDark ? item.colorDark : item.colorLight;
-
-              return Pressable(
-                semanticLabel: 'Atajo ${item.label}, ${formatGs(item.amount)}',
-                onTap: () {
-                  Haptics.tick();
-                  onShortcutTapped(item);
-                },
-                onLongPress: () {
-                  Haptics.save();
-                  _showShortcutOptions(context, ref, item);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.glassFill,
-                    borderRadius: BorderRadius.circular(PocktRadii.xl),
-                    border: Border.all(
-                      color: item.isPinned
-                          ? colors.brandAt(0).withValues(alpha: 0.5)
-                          : colors.glassBorder,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(catColor).withValues(alpha: 0.2),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            uiIcon(item.categoryIcon),
-                            size: 11,
-                            color: Color(catColor),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        item.label,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '·',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        formatGs(item.amount),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      if (item.isPinned) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          uiIcon('push-pin'),
-                          size: 12,
-                          color: colors.brandAt(0),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showShortcutOptions(
-    BuildContext context,
-    WidgetRef ref,
-    EntryShortcutItem item,
-  ) {
-    final colors = context.pockt;
-    final repo = ref.read(entryShortcutsRepositoryProvider);
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: colors.sheetSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(PocktRadii.xl),
-        ),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                item.label,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${formatGs(item.amount)} · ${item.categoryName}',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: Icon(
-                  item.isPinned ? uiIcon('push-pin-slash') : uiIcon('push-pin'),
-                  color: colors.textPrimary,
-                ),
-                title: Text(
-                  item.isPinned ? 'Desfijar atajo' : 'Fijar atajo arriba',
-                  style: TextStyle(color: colors.textPrimary),
-                ),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  if (item.isPinned) {
-                    await repo.unpinShortcut(item.id);
-                  } else {
-                    await repo.pinShortcut(item);
-                  }
-                },
-              ),
-              ListTile(
-                leading: Icon(uiIcon('x'), color: colors.danger),
-                title: Text(
-                  'Quitar de sugerencias',
-                  style: TextStyle(color: colors.danger),
-                ),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await repo.dismissShortcut(item);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class CategoryGrid extends ConsumerStatefulWidget {
-  final TxType currentType;
-  final List<Category>? categories;
-  final ValueChanged<Category> onCategorySelected;
-
-  const CategoryGrid({
-    super.key,
-    required this.currentType,
-    this.categories,
-    required this.onCategorySelected,
-  });
-
-  @override
-  ConsumerState<CategoryGrid> createState() => _CategoryGridState();
-}
-
-class _CategoryGridState extends ConsumerState<CategoryGrid> {
-  StreamSubscription<List<Category>>? _subscription;
-  List<Category> _categories = const [];
-  CategoryOrder _currentOrder = CategoryOrder.manual;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.categories == null) {
-      final initialOrder =
-          ref.read(categoryOrderProvider).value ?? CategoryOrder.manual;
-      _subscribe(order: initialOrder);
-    }
-  }
-
-  @override
-  void didUpdateWidget(CategoryGrid oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.categories == null &&
-        (oldWidget.currentType != widget.currentType ||
-            oldWidget.categories != null)) {
-      _subscribe();
-    } else if (widget.categories != null && _subscription != null) {
-      _subscription?.cancel();
-      _subscription = null;
-    }
-  }
-
-  void _subscribe({CategoryOrder? order}) {
-    if (widget.categories != null) return;
-    final effectiveOrder = order ?? _currentOrder;
-    _currentOrder = effectiveOrder;
-    _subscription?.cancel();
-    final repo = ref.read(categoriesRepositoryProvider);
-    final kind = widget.currentType == TxType.expense
-        ? CategoryKind.expense
-        : CategoryKind.income;
-    _subscription = repo.watchActive(kind, order: effectiveOrder).listen((
-      data,
-    ) {
-      if (mounted) {
-        setState(() => _categories = data);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (widget.categories == null) {
-      ref.listen<AsyncValue<CategoryOrder>>(categoryOrderProvider, (
-        previous,
-        next,
-      ) {
-        final order = next.value ?? CategoryOrder.manual;
-        if (order != _currentOrder) {
-          _subscribe(order: order);
-        }
-      });
-    }
-
-    final categories = widget.categories ?? _categories;
-
-    return RepaintBoundary(
-      child: GridView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.88,
-        ),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final cat = categories[index];
-          final catColor = Color(isDark ? cat.colorDark : cat.colorLight);
-
-          return Pressable(
-            onTap: () => widget.onCategorySelected(cat),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                HeroMode(
-                  enabled: !MediaQuery.disableAnimationsOf(context),
-                  child: Hero(
-                    tag: 'cat-${cat.id}',
-                    createRectTween: (begin, end) =>
-                        SpringRectTween(begin: begin, end: end),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(29),
-                          color: catColor,
-                          boxShadow: [
-                            BoxShadow(
-                              color: catColor.withValues(
-                                alpha: isDark ? 0.35 : 0.20,
-                              ),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: categoryIcon(
-                          cat.icon,
-                          size: 28,
-                          color: colors.keypadKey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  cat.name,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: colors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class TypeToggle extends StatelessWidget {
-  final TxType currentType;
-  final ValueChanged<TxType> onTypeChanged;
-
-  const TypeToggle({
-    super.key,
-    required this.currentType,
-    required this.onTypeChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.glassFill,
-        borderRadius: BorderRadius.circular(PocktRadii.xl),
-        border: Border.all(color: colors.glassBorder, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _TypePill(
-            title: 'Gasto',
-            isSelected: currentType == TxType.expense,
-            onTap: () => onTypeChanged(TxType.expense),
-          ),
-          _TypePill(
-            title: 'Ingreso',
-            isSelected: currentType == TxType.income,
-            onTap: () => onTypeChanged(TxType.income),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TypePill extends StatelessWidget {
-  final String title;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _TypePill({
-    required this.title,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.pockt;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? colors.textPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(PocktRadii.l),
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? colors.background : colors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
+  final curved = CurvedAnimation(
+    parent: animation,
+    curve: SpringCurve(spring: PocktSprings.soft),
+    reverseCurve: Curves.easeInCubic,
+  );
+  return FadeTransition(
+    opacity: curved,
+    child: RepaintBoundary(child: child),
+  );
 }
