@@ -121,6 +121,13 @@ void main() {
     );
   });
 
+  test('seedDemoData incluye metas con aportes y un préstamo con pagos', () async {
+    await seedDemoData(testDb, nowLocal: nowLocal);
+    expect(await testDb.select(testDb.goals).get(), hasLength(2));
+    expect(await testDb.select(testDb.goalContributions).get(), hasLength(4));
+    expect(await testDb.select(testDb.loans).get(), hasLength(1));
+  });
+
   test('seedDemoData dos veces no duplica', () async {
     await seedDemoData(testDb, nowLocal: nowLocal);
 

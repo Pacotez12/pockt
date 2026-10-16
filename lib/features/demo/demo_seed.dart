@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
+import 'package:pockt/features/goals/data/goals_repository.dart';
+import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/recurring/data/recurring_repository.dart';
@@ -298,5 +300,50 @@ Future<void> seedDemoData(
     }
 
     current = current.add(const Duration(days: 1));
+  }
+
+  // 6. Metas y un préstamo, para que la Demo muestre todas las pantallas.
+  final goalsRepo = GoalsRepository(db);
+  final viaje = await goalsRepo.createGoal(
+    name: 'Vacaciones',
+    icon: 'airplane-tilt',
+    targetAmount: 5000000,
+    targetDate: DateTime(nowLocal.year + 1, 3, 15),
+  );
+  for (var i = 0; i < 3; i++) {
+    await goalsRepo.addContribution(
+      goalId: viaje,
+      amount: 600000,
+      date: nowLocal.subtract(Duration(days: 75 - i * 30)),
+    );
+  }
+  final pc = await goalsRepo.createGoal(
+    name: 'PC Gamer',
+    icon: 'laptop',
+    targetAmount: 15000000,
+  );
+  await goalsRepo.addContribution(
+    goalId: pc,
+    amount: 2000000,
+    date: nowLocal.subtract(const Duration(days: 20)),
+  );
+
+  final loansRepo = LoansRepository(db);
+  final celular = await loansRepo.createLoan(
+    direction: LoanDirection.owe,
+    kind: LoanKind.installments,
+    name: 'Celular en cuotas',
+    totalAmount: 3600000,
+    installmentAmount: 300000,
+    installmentsTotal: 12,
+    dueDay: 10,
+    startDate: nowLocal.subtract(const Duration(days: 125)),
+  );
+  for (var i = 4; i >= 1; i--) {
+    await loansRepo.recordPayment(
+      loanId: celular,
+      amount: 300000,
+      date: DateTime(nowLocal.year, nowLocal.month - i, 10, 11),
+    );
   }
 }
