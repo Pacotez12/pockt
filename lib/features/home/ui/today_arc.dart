@@ -67,9 +67,10 @@ class TodayArc extends StatelessWidget {
                       painter: _TodayArcPainter(
                         progress: value,
                         stroke: stroke,
+                        // glassBorder: glassFill casi no se ve en modo claro.
                         track: alert && progress == 0
                             ? colors.danger.withValues(alpha: 0.35)
-                            : colors.glassFill,
+                            : colors.glassBorder,
                         start: over ? colors.danger : colors.brandStart,
                         end: over ? colors.danger : colors.brandEnd,
                       ),
@@ -163,7 +164,12 @@ class _TodayArcPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = stroke
-      ..shader = LinearGradient(colors: [start, end]).createShader(rect);
+      // El degradé recorre solo el tramo pintado, así se ve aunque sea corto.
+      ..shader = SweepGradient(
+        colors: [start, end],
+        startAngle: pi,
+        endAngle: pi + max(pi * progress, 0.01),
+      ).createShader(rect);
     canvas.drawArc(rect, pi, pi * progress, false, fill);
   }
 

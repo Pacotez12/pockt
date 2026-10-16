@@ -443,7 +443,7 @@ class _EvolutionPainter extends CustomPainter {
 
     // Líneas de referencia sutiles (fondo, 50%, 100%)
     final gridPaint = Paint()
-      ..color = gridColor.withValues(alpha: 0.5)
+      ..color = gridColor
       ..strokeWidth = 1.0;
 
     canvas.drawLine(

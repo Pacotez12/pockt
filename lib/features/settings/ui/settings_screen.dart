@@ -145,7 +145,7 @@ class SettingsScreen extends ConsumerWidget {
                         key: const ValueKey('settings-section-privacy'),
                         icon: 'lock',
                         title: 'Privacidad y datos',
-                        subtitle: 'Bloqueo, montos ocultos, backup, exportar y borrar',
+                        subtitle: 'Bloqueo, montos ocultos, copias, exportar y borrar',
                         color: colors.brandAt(3),
                         builder: _privacyItems,
                       ),

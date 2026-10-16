@@ -17,7 +17,17 @@ Future<void> bootstrap() async {
   AppDatabase? demoDb;
   if (const bool.fromEnvironment('POCKT_DEMO')) {
     demoDb = AppDatabase();
-    await seedDemoData(demoDb, nowLocal: DateTime.now());
+    // En la primera apertura la tarea de fondo puede bloquear la base un
+    // instante: si la carga de ejemplo falla, se reintenta una vez y, si no,
+    // la app arranca igual (antes quedaba la pantalla en negro).
+    try {
+      await seedDemoData(demoDb, nowLocal: DateTime.now());
+    } catch (_) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      try {
+        await seedDemoData(demoDb, nowLocal: DateTime.now());
+      } catch (_) {}
+    }
   }
 
   runApp(

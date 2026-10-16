@@ -287,6 +287,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   Widget _buildTabSelector(PocktColors colors) {
+    // Las 5 pestañas no entran en un teléfono: se desplazan, y los bordes se
+    // desvanecen para que el corte se lea como "hay más" y no como un error.
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (rect) => const LinearGradient(
+        colors: [
+          Color(0x00000000),
+          Color(0xFF000000),
+          Color(0xFF000000),
+          Color(0x00000000),
+        ],
+        stops: [0, 0.05, 0.9, 1],
+      ).createShader(rect),
+      child: _buildTabScroller(colors),
+    );
+  }
+
+  Widget _buildTabScroller(PocktColors colors) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
@@ -452,7 +470,7 @@ class _CategoriesView extends ConsumerWidget {
                     if (i < totals.length - 1)
                       Divider(
                         height: 1,
-                        color: colors.glassBorder.withValues(alpha: 0.5),
+                        color: colors.glassBorder,
                       ),
                   ],
                 ],
@@ -1286,7 +1304,7 @@ class _CategoryComparisonSection extends ConsumerWidget {
                     if (i < items.length - 1)
                       Divider(
                         height: 1,
-                        color: colors.glassBorder.withValues(alpha: 0.5),
+                        color: colors.glassBorder,
                       ),
                   ],
                 ],
@@ -1518,7 +1536,7 @@ class _MerchantsView extends ConsumerWidget {
                     if (i < list.length - 1)
                       Divider(
                         height: 1,
-                        color: colors.glassBorder.withValues(alpha: 0.5),
+                        color: colors.glassBorder,
                       ),
                   ],
                 ],
@@ -1751,7 +1769,7 @@ class _AntExpensesView extends ConsumerWidget {
                     if (i < list.length - 1)
                       Divider(
                         height: 1,
-                        color: colors.glassBorder.withValues(alpha: 0.5),
+                        color: colors.glassBorder,
                       ),
                   ],
                 ],
