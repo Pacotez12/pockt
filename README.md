@@ -28,10 +28,10 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme/gallery-light.png">
-  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con calendario de calor, detalle del día, presupuestos y bandeja de sugeridos" width="100%">
+  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con el arco de hoy, detalle de una meta, ¿Lo compro? y bandeja por confirmar" width="100%">
 </picture>
 
-<p align="center"><img src="docs/brand/readme/gallery-reports.png" alt="Reportes de Pockt: por categoría, evolución y por comercio" width="100%"></p>
+<p align="center"><img src="docs/brand/readme/gallery-reports.png" alt="Reportes de Pockt: por categoría, comparación con el mes anterior y gastos hormiga" width="100%"></p>
 
 ---
 
