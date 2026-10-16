@@ -337,6 +337,17 @@ Ideas tomadas de Kapé (app paraguaya en lista de espera) y de PocketGuard/Copil
 
 **Racha:** descartada (2026-10-15), igual que logros, medallas y misiones.
 
+## 7d-bis. Inicio con "Arco de hoy" (decidido 2026-10-15, opción D)
+
+Con `home.headline = safeToSpend` el encabezado del Inicio es:
+- **Arco de hoy:** semicírculo grande y fino (trazo ~10 px, extremos redondeados) con el degradé de marca sobre una pista `glassFill`. Representa el **límite de hoy**: arranca vacío cada mañana y se llena con lo gastado hoy (`gastadoHoy / límiteDeHoy`, tope 100 %).
+- **Adentro, centrado:** "Te quedan hoy" (caption), el monto grande `límiteDeHoy − gastadoHoy`, y debajo "gastaste X de Y". Si `gastadoHoy > límiteDeHoy`: el arco completo pasa a `danger`, el título a "Te pasaste hoy" y el monto al excedente en `danger`. Si el límite de hoy es ≤ 0 (ya no queda plata del período): arco vacío en `danger` y el texto "No queda margen hasta el cobro" con el monto negativo.
+- **El límite de hoy se fija con lo que había al empezar el día:** se calcula como "Podés gastar hoy" (§7d) pero **sin restar los gastos de hoy** (quedan + gastado hoy), así no se achica mientras gastás. Se recalcula si cambian ingresos, recurrentes, metas o el esquema.
+- **Debajo, la tarjeta "Gastado en {mes}"** (la de la opción A): monto grande, barra segmentada por categoría, "Quedan Gs. X" al pie (incluye saldo arrastrado §7e, con su aclaración chica) y "cobrás en N días" arriba a la derecha. Reemplaza a la línea del período y al subtítulo "Gastado X · Quedan Y": cada dato aparece una sola vez.
+- Con `home.headline = monthSpent` queda el Inicio clásico ("Gastado en {mes}" grande + barra + línea del período).
+- "Ocultar montos" tapa todos los montos del arco y de la tarjeta. Respeta `motion.reduce` (el arco anima su llenado solo si no está reducido).
+- Calendario de calor y el resto de las tarjetas del Inicio sin cambios.
+
 ## 7e. Saldo arrastrado entre períodos (decidido 2026-10-15, opción C)
 
 "Quedan" del período actual suma el **saldo arrastrado**: ingresos − gastos − aportes a metas desde el `effectiveFrom` del primer esquema de cobro hasta el día anterior al inicio del período. Aplica también al estimado (cobro aún no confirmado) y, por lo tanto, a "Podés gastar hoy".
