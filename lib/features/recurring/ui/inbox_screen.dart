@@ -419,18 +419,18 @@ class _SuggestionCard extends ConsumerWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: catColor,
+                        gradient: LinearGradient(
+                          colors: [colors.brandStart, colors.brandEnd],
+                        ),
                         borderRadius: BorderRadius.circular(PocktRadii.l),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Confirmar',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: catColor.computeLuminance() > 0.5
-                              ? Colors.black
-                              : Colors.white,
+                          color: Colors.white,
                         ),
                       ),
                     ),

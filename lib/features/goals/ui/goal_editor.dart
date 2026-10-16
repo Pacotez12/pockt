@@ -30,6 +30,8 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
     super.initState();
     _nameController = TextEditingController();
     _amountController = TextEditingController();
+    _nameController.addListener(_onTextChanged);
+    _amountController.addListener(_onTextChanged);
 
     if (widget.goalId != null) {
       _loadGoal();
@@ -50,8 +52,20 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
     }
   }
 
+  void _onTextChanged() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _canSave {
+    final rawAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final amount = int.tryParse(rawAmount) ?? 0;
+    return !_isLoading && _nameController.text.trim().isNotEmpty && amount > 0;
+  }
+
   @override
   void dispose() {
+    _nameController.removeListener(_onTextChanged);
+    _amountController.removeListener(_onTextChanged);
     _nameController.dispose();
     _amountController.dispose();
     super.dispose();
@@ -165,7 +179,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                 'Nombre',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 13,
+                  fontSize: PocktType.caption,
                   fontWeight: FontWeight.w600,
                   color: colors.textSecondary,
                 ),
@@ -200,7 +214,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                 'Monto objetivo',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 13,
+                  fontSize: PocktType.caption,
                   fontWeight: FontWeight.w600,
                   color: colors.textSecondary,
                 ),
@@ -215,7 +229,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                 child: Row(
                   children: [
                     Text(
-                      '₲',
+                      'Gs.',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 18,
@@ -252,7 +266,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                 'Ícono',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 13,
+                  fontSize: PocktType.caption,
                   fontWeight: FontWeight.w600,
                   color: colors.textSecondary,
                 ),
@@ -265,6 +279,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                   final isSelected = _selectedIcon == iconKey;
                   return Pressable(
                     key: ValueKey('goal-icon-$iconKey'),
+                    semanticLabel: 'Ícono $iconKey',
                     onTap: () {
                       Haptics.tick();
                       setState(() => _selectedIcon = iconKey);
@@ -345,8 +360,9 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                       ],
                     ),
                     if (_hasTargetDate) ...[
-                      const Divider(height: 20),
+                      Divider(height: 20, color: colors.glassBorder),
                       Pressable(
+                        semanticLabel: 'Elegir fecha',
                         onTap: _pickDate,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -379,22 +395,31 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
               // Botón Guardar
               Pressable(
                 key: const ValueKey('goal-save-button'),
-                onTap: _isLoading ? null : _save,
+                semanticLabel: isEditing ? 'Guardar cambios' : 'Crear meta',
+                onTap: _canSave ? _save : null,
                 child: Container(
                   width: double.infinity,
-                  height: 52,
+                  height: 48,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(PocktRadii.xl),
-                    gradient: LinearGradient(
-                      colors: [colors.brandStart, colors.brandEnd],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colors.brandStart.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    gradient: _canSave
+                        ? LinearGradient(
+                            colors: [colors.brandStart, colors.brandEnd],
+                          )
+                        : null,
+                    color: _canSave ? null : colors.glassFill,
+                    border: _canSave
+                        ? null
+                        : Border.all(color: colors.glassBorder),
+                    boxShadow: _canSave
+                        ? [
+                            BoxShadow(
+                              color: colors.brandStart.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Center(
                     child: _isLoading
@@ -408,11 +433,13 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                           )
                         : Text(
                             isEditing ? 'Guardar cambios' : 'Crear meta',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: _canSave
+                                  ? Colors.white
+                                  : colors.textTertiary,
                             ),
                           ),
                   ),

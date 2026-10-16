@@ -473,7 +473,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
     expect(find.textContaining('Gs. 3.400.000'), findsOneWidget);
-    expect(find.textContaining('cobrás hoy'), findsOneWidget);
+    expect(find.textContaining('2ª quincena'), findsOneWidget);
   });
 
   testWidgets(

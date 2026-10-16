@@ -68,7 +68,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Copia de seguridad'), findsOneWidget);
-      expect(find.text('Respaldar ahora'), findsOneWidget);
+      expect(find.text('Hacer copia ahora'), findsOneWidget);
       expect(find.text('Documentos/Pockt'), findsOneWidget);
     });
 
@@ -109,7 +109,7 @@ void main() {
       expect(find.textContaining('contraseña'), findsWidgets);
     });
 
-    testWidgets('tocar Respaldar ahora ejecuta el proceso y actualiza el estado', (tester) async {
+    testWidgets('tocar Hacer copia ahora ejecuta el proceso y actualiza el estado', (tester) async {
       final testService = _TestBackupService(
         db: db,
         store: store,
@@ -120,7 +120,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(customService: testService));
       await tester.pumpAndSettle();
 
-      final backupButton = find.text('Respaldar ahora');
+      final backupButton = find.text('Hacer copia ahora');
       expect(backupButton, findsOneWidget);
 
       await tester.tap(backupButton);

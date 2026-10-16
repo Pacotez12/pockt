@@ -71,6 +71,32 @@ void main() {
       },
     );
 
+    test('15/10 con cobro de hoy ya registrado -> 2ª quincena, próximo cobro 30/10, no cobrás hoy', () {
+      final schedule = IncomeSchedule(
+        id: 'sched-1',
+        mode: 'biweekly',
+        payDays: '[15, -1]',
+        payDayRules: '["either", "previous"]',
+        paySplitPercents: '[50, 50]',
+        categoryId: 'cat-1',
+        effectiveFrom: DateTime(2026, 10, 1),
+      );
+
+      final line = periodLine(
+        todayLocal: DateTime(2026, 10, 15),
+        schedule: schedule,
+        incomeSincePay: 5000000,
+        expenseSincePay: 500000,
+        lastConfirmedSalaryDate: DateTime(2026, 10, 15),
+      );
+
+      expect(line, isNotNull);
+      expect(line!.label, '2ª quincena');
+      expect(line.nextPayDate, DateTime(2026, 10, 30));
+      expect(line.daysToNextPay, 15);
+      expect(line.payDayText, isNot('cobrás hoy'));
+    });
+
     test('15/11/2026 (domingo) con either -> ventana 13/11 a 16/11: cobrás entre el vie 13 y el lun 16', () {
       final schedule = IncomeSchedule(
         id: 'sched-1',

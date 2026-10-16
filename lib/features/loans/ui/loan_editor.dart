@@ -309,7 +309,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                                 labelStyle: TextStyle(
                                   color: colors.textSecondary,
                                 ),
-                                prefixText: '₲ ',
+                                prefixText: 'Gs. ',
                                 prefixStyle: TextStyle(
                                   color: colors.textPrimary,
                                 ),
@@ -362,7 +362,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                         labelText:
                             'Monto total a ${_direction == LoanDirection.owe ? 'pagar' : 'cobrar'}',
                         labelStyle: TextStyle(color: colors.textSecondary),
-                        prefixText: '₲ ',
+                        prefixText: 'Gs. ',
                         prefixStyle: TextStyle(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w700,

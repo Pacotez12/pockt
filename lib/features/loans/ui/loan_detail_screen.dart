@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
@@ -20,10 +21,7 @@ class LoanDetailScreen extends ConsumerWidget {
 
   const LoanDetailScreen({super.key, required this.loanId});
 
-  String _formatGs(int amount) {
-    final formatter = NumberFormat('#,###', 'es_PY');
-    return '₲ ${formatter.format(amount)}';
-  }
+  String _formatGs(int amount) => formatGs(amount);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -813,7 +811,7 @@ class _PaymentModalSheetState extends ConsumerState<_PaymentModalSheet> {
               ),
               decoration: InputDecoration(
                 labelText: 'Monto a pagar',
-                prefixText: '₲ ',
+                prefixText: 'Gs. ',
                 prefixStyle: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,

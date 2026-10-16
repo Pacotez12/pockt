@@ -80,8 +80,7 @@ void main() {
 
       expect(find.text('Podés gastar hoy'), findsOneWidget);
       expect(find.text('Gs. 150.000'), findsOneWidget);
-      expect(find.textContaining('Gastado'), findsOneWidget);
-      expect(find.textContaining('Quedan Gs. 1.500.000'), findsOneWidget);
+      expect(find.text('Gastado en octubre Gs. 0'), findsOneWidget);
     },
   );
 
@@ -184,6 +183,6 @@ void main() {
       find.byKey(const ValueKey('spending-total-obscured')),
       findsOneWidget,
     );
-    expect(find.text('Gastado •••• · Quedan ••••'), findsOneWidget);
+    expect(find.text('Gastado en octubre ••••'), findsOneWidget);
   });
 }

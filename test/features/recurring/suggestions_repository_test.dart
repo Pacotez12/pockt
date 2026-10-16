@@ -12,7 +12,10 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     repo = SuggestionsRepository(
       db,
@@ -109,7 +112,9 @@ void main() {
     expect(tx.recurringRuleId, 'rule-netflix');
 
     // Sugerencia marcada como confirmed
-    final sug = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals(sugId))).getSingle();
+    final sug = await (db.select(
+      db.suggestedTransactions,
+    )..where((t) => t.id.equals(sugId))).getSingle();
     expect(sug.status, 'confirmed');
     expect(sug.transactionId, txId1);
 
@@ -143,5 +148,46 @@ void main() {
     final after = await repo.watchPending().first;
     expect(after, isEmpty);
     expect(await repo.watchPendingCount().first, 0);
+  });
+
+  test('confirmar sugerencia ajusta occurredAt: si es hoy usa hora actual; si es pasado usa 12:00', () async {
+    final customRepo = SuggestionsRepository(
+      db,
+      clock: () => DateTime(2026, 10, 15, 16, 45),
+    );
+
+    // 1. Sugerencia de hoy (a las 00:00)
+    await customRepo.createIfAbsent(
+      type: TxType.income,
+      amount: 2000000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 15),
+      source: TxSource.incomeSchedule,
+    );
+    final pendingToday = await customRepo.watchPending().first;
+    final txIdToday = await customRepo.confirm(
+      pendingToday.first.suggestion.id,
+    );
+    final txToday = await (db.select(
+      db.transactions,
+    )..where((t) => t.id.equals(txIdToday))).getSingle();
+    expect(txToday.occurredAt, equals(DateTime(2026, 10, 15, 16, 45)));
+
+    // 2. Sugerencia pasada (a las 00:00)
+    await customRepo.createIfAbsent(
+      type: TxType.expense,
+      amount: 100000,
+      categoryId: comidaId,
+      occurredAt: DateTime(2026, 10, 10),
+      source: TxSource.recurring,
+    );
+    final pendingPast = (await customRepo.watchPending().first).firstWhere(
+      (s) => s.suggestion.occurredAt.day == 10,
+    );
+    final txIdPast = await customRepo.confirm(pendingPast.suggestion.id);
+    final txPast = await (db.select(
+      db.transactions,
+    )..where((t) => t.id.equals(txIdPast))).getSingle();
+    expect(txPast.occurredAt, equals(DateTime(2026, 10, 10, 12, 0)));
   });
 }

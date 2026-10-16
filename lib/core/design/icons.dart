@@ -119,12 +119,14 @@ const Map<String, PhosphorDuotoneIconData> _kCategoryIcons = {
   'wrench': PhosphorIconsDuotone.wrench,
 };
 
-/// Devuelve el [PhosphorDuotoneIconData] asociado a la clave, o [PhosphorIconsDuotone.package] si es desconocida.
-PhosphorDuotoneIconData categoryIconData(String key) {
-  return _kCategoryIcons[key] ?? PhosphorIconsDuotone.package;
+/// Devuelve el [IconData] asociado a la clave, o [PhosphorIconsDuotone.package] si es desconocida.
+IconData categoryIconData(String key) {
+  return _kCategoryIcons[key] ??
+      _kUiIconsRegular[key] ??
+      PhosphorIconsDuotone.package;
 }
 
-/// Widget de ícono para categorías en estilo Duotone.
+/// Widget de ícono para categorías en estilo Duotone o Regular.
 /// Clave desconocida → ícono `package`.
 Widget categoryIcon(String key, {double size = 24, Color? color}) {
   return PhosphorIcon(categoryIconData(key), size: size, color: color);
@@ -175,6 +177,10 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'warning-circle': PhosphorIconsRegular.warningCircle,
   'fingerprint': PhosphorIconsRegular.fingerprint,
   'lock': PhosphorIconsRegular.lock,
+  'key': PhosphorIconsRegular.key,
+  'share': PhosphorIconsRegular.shareNetwork,
+  'share-network': PhosphorIconsRegular.shareNetwork,
+  'export': PhosphorIconsRegular.export,
   'clock': PhosphorIconsRegular.clock,
   'sort-ascending': PhosphorIconsRegular.sortAscending,
   'keyboard': PhosphorIconsRegular.keyboard,

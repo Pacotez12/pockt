@@ -54,7 +54,7 @@ class CategoryKeywordsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Palabras clave',
+                          'Categorías y palabras clave',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 20,

@@ -294,7 +294,7 @@ class _EvolutionChartState extends State<EvolutionChart>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _LegendItem(color: colors.brandStart, label: 'Gastos'),
+              _LegendItem(color: colors.textSecondary, label: 'Gastos'),
               const SizedBox(width: 16),
               _LegendItem(color: colors.positive, label: 'Ingresos'),
               const SizedBox(width: 16),
@@ -324,7 +324,7 @@ class _EvolutionChartState extends State<EvolutionChart>
                   painter: _EvolutionPainter(
                     totals: widget.totals,
                     progress: progress,
-                    expenseColor: colors.brandStart,
+                    expenseColor: colors.textSecondary,
                     positiveColor: colors.positive,
                     savingColor: colors.brandEnd,
                     gridColor: colors.glassBorder,

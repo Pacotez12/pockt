@@ -635,10 +635,10 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showAboutPocktDialog(BuildContext context) async {
-    String version = '1.0.0';
+    String version = '0.5.0';
     try {
       final info = await PackageInfo.fromPlatform();
-      version = '${info.version}+${info.buildNumber}';
+      version = info.version;
     } catch (_) {}
 
     if (!context.mounted) return;
@@ -653,7 +653,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         title: Row(
           children: [
-            Icon(uiIcon('info'), color: colors.brandAt(3), size: 22),
+            Icon(uiIcon('info'), color: colors.brandAt(0), size: 22),
             const SizedBox(width: 10),
             Text(
               'Acerca de Pockt',
@@ -710,12 +710,32 @@ class SettingsScreen extends ConsumerWidget {
             },
             child: Text(
               'Licencias',
-              style: TextStyle(color: colors.brandAt(3)),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: colors.textSecondary,
+              ),
             ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cerrar'),
+          Pressable(
+            onTap: () => Navigator.of(ctx).pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colors.brandStart, colors.brandEnd],
+                ),
+                borderRadius: BorderRadius.circular(PocktRadii.m),
+              ),
+              child: const Text(
+                'Cerrar',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
         ],
       ),

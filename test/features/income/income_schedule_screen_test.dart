@@ -12,6 +12,7 @@ import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/income/domain/pay_days.dart';
 import 'package:pockt/features/income/ui/income_schedule_screen.dart';
+import 'package:pockt/core/db/tables.dart';
 
 void main() {
   late AppDatabase testDb;
@@ -21,7 +22,10 @@ void main() {
   setUp(() async {
     setLocalZone('America/Asuncion');
     testDb = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     notifier = FakeNotifier();
     scheduleRepo = IncomeScheduleRepository(
@@ -63,24 +67,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('esquema de cobro: cambiar a mensual día 30 muestra el próximo cobro correcto', (tester) async {
-    await pumpIncomeScheduleScreen(tester);
+  testWidgets(
+    'esquema de cobro: cambiar a mensual día 30 muestra el próximo cobro correcto',
+    (tester) async {
+      await pumpIncomeScheduleScreen(tester);
 
-    expect(find.text('Sueldo y cobros'), findsOneWidget);
-    expect(find.text('Quincenal'), findsOneWidget);
-    expect(find.text('Mensual'), findsOneWidget);
+      expect(find.text('Sueldo y cobros'), findsOneWidget);
+      expect(find.text('Quincenal'), findsOneWidget);
+      expect(find.text('Mensual'), findsOneWidget);
 
-    // Cambiar a Mensual
-    await tester.tap(find.text('Mensual'));
-    await tester.pumpAndSettle();
+      // Cambiar a Mensual
+      await tester.tap(find.text('Mensual'));
+      await tester.pumpAndSettle();
 
-    // Seleccionar día 30
-    await tester.tap(find.text('30'));
-    await tester.pumpAndSettle();
+      // Seleccionar día 30
+      await tester.tap(find.text('30'));
+      await tester.pumpAndSettle();
 
-    // El 30 de octubre de 2026 es viernes
-    expect(find.textContaining('Próximo cobro: viernes 30 de octubre'), findsOneWidget);
-  });
+      // El 30 de octubre de 2026 es viernes
+      expect(
+        find.textContaining('Próximo cobro: viernes 30 de octubre'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('guardar esquema persiste en base de datos', (tester) async {
     await pumpIncomeScheduleScreen(tester);
@@ -98,155 +108,252 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
+    final current = await tester.runAsync(
+      () => scheduleRepo.watchCurrent().first,
+    );
     expect(current, isNotNull);
     expect(current!.mode, 'monthly');
     expect(current.payDays, contains('30'));
   });
 
-  testWidgets('selector de regla por día de cobro actualiza preview y persiste payDayRules', (tester) async {
-    // 10 de noviembre de 2026: el 15/11/2026 es domingo
-    await pumpIncomeScheduleScreen(tester, nowLocal: DateTime(2026, 11, 10, 10, 0));
+  testWidgets(
+    'selector de regla por día de cobro actualiza preview y persiste payDayRules',
+    (tester) async {
+      // 10 de noviembre de 2026: el 15/11/2026 es domingo
+      await pumpIncomeScheduleScreen(
+        tester,
+        nowLocal: DateTime(2026, 11, 10, 10, 0),
+      );
 
-    // Por defecto quincenal [15, -1] con día 1 en either -> rango viernes 13 a lunes 16
-    expect(find.textContaining('entre el viernes 13 y el lunes 16 de noviembre'), findsOneWidget);
+      // Por defecto quincenal [15, -1] con día 1 en either -> rango viernes 13 a lunes 16
+      expect(
+        find.textContaining('entre el viernes 13 y el lunes 16 de noviembre'),
+        findsOneWidget,
+      );
 
-    // En el selector del 1er cobro, cambiar a "El anterior"
-    final ruleSelector1 = find.byKey(const ValueKey('rule-selector-day1'));
-    expect(ruleSelector1, findsOneWidget);
-    await tester.tap(find.descendant(of: ruleSelector1, matching: find.text('El anterior')));
-    await tester.pumpAndSettle();
+      // En el selector del 1er cobro, cambiar a "El anterior"
+      final ruleSelector1 = find.byKey(const ValueKey('rule-selector-day1'));
+      expect(ruleSelector1, findsOneWidget);
+      await tester.tap(
+        find.descendant(of: ruleSelector1, matching: find.text('El anterior')),
+      );
+      await tester.pumpAndSettle();
 
-    // Ahora sólo viernes 13
-    expect(find.textContaining('viernes 13 de noviembre'), findsOneWidget);
+      // Ahora sólo viernes 13
+      expect(find.textContaining('viernes 13 de noviembre'), findsOneWidget);
 
-    // Guardar
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Guardar esquema'));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+      // Guardar
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Guardar esquema'));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
 
-    final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
-    expect(current, isNotNull);
-    expect(current!.payDayRules, equals('["previous","previous"]'));
-  });
+      final current = await tester.runAsync(
+        () => scheduleRepo.watchCurrent().first,
+      );
+      expect(current, isNotNull);
+      expect(current!.payDayRules, equals('["previous","previous"]'));
+    },
+  );
 
-  testWidgets('la pantalla muestra la vista previa con sueldo mensual y reparto, y en mensual se oculta el reparto', (tester) async {
-    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
-    await scheduleRepo.setSchedule(
-      mode: PayMode.biweekly,
-      payDays: [15, -1],
-      payDayRules: [PayDayRule.either, PayDayRule.previous],
-      monthlyAmount: 7000000,
-      paySplitPercents: [30, 70],
-      categoryId: sueldoCatId,
-    );
+  testWidgets(
+    'la pantalla muestra la vista previa con sueldo mensual y reparto, y en mensual se oculta el reparto',
+    (tester) async {
+      const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        payDayRules: [PayDayRule.either, PayDayRule.previous],
+        monthlyAmount: 7000000,
+        paySplitPercents: [30, 70],
+        categoryId: sueldoCatId,
+      );
 
-    await pumpIncomeScheduleScreen(tester);
+      await pumpIncomeScheduleScreen(tester);
 
-    // Sueldo mensual se muestra
-    expect(find.text('Sueldo mensual'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('schedule-monthly-amount-tile')),
-        matching: find.text('Gs. 7.000.000'),
-      ),
-      findsOneWidget,
-    );
+      // Sueldo mensual se muestra
+      expect(find.text('Sueldo mensual'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('schedule-monthly-amount-tile')),
+          matching: find.text('Gs. 7.000.000'),
+        ),
+        findsOneWidget,
+      );
 
-    // Reparto visible con vista previa de 30% / 70%
-    expect(find.byKey(const ValueKey('schedule-split-section')), findsOneWidget);
-    expect(find.byKey(const ValueKey('schedule-split-slider')), findsOneWidget);
-    expect(find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'), findsOneWidget);
+      // Reparto visible con vista previa de 30% / 70%
+      expect(
+        find.byKey(const ValueKey('schedule-split-section')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('schedule-split-slider')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'),
+        findsOneWidget,
+      );
 
-    // Mover control deslizante hacia la derecha
-    final slider = find.byKey(const ValueKey('schedule-split-slider'));
-    await tester.drag(slider, const Offset(60, 0));
-    await tester.pumpAndSettle();
+      // Mover control deslizante hacia la derecha
+      final slider = find.byKey(const ValueKey('schedule-split-slider'));
+      await tester.drag(slider, const Offset(60, 0));
+      await tester.pumpAndSettle();
 
-    // La vista previa cambió (ya no es 2.100.000)
-    expect(find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'), findsNothing);
+      // La vista previa cambió (ya no es 2.100.000)
+      expect(
+        find.text('El 15 cobrás ~Gs. 2.100.000 · a fin de mes ~Gs. 4.900.000'),
+        findsNothing,
+      );
 
-    // Cambiar a Mensual: el reparto ya no se muestra
-    await tester.tap(find.text('Mensual'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('schedule-split-section')), findsNothing);
-    expect(find.byKey(const ValueKey('schedule-split-slider')), findsNothing);
-  });
+      // Cambiar a Mensual: el reparto ya no se muestra
+      await tester.tap(find.text('Mensual'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('schedule-split-section')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('schedule-split-slider')), findsNothing);
+    },
+  );
 
-  testWidgets('sección Descuentos permite agregar, editar, borrar y muestra resumen Lo que cobrás', (tester) async {
-    const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
-    await scheduleRepo.setSchedule(
-      mode: PayMode.biweekly,
-      payDays: [15, -1],
-      payDayRules: [PayDayRule.either, PayDayRule.previous],
-      monthlyAmount: 4000000,
-      paySplitPercents: [30, 70],
-      categoryId: sueldoCatId,
-    );
+  testWidgets(
+    'sección Descuentos permite agregar, editar, borrar y muestra resumen Lo que cobrás',
+    (tester) async {
+      const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: [15, -1],
+        payDayRules: [PayDayRule.either, PayDayRule.previous],
+        monthlyAmount: 4000000,
+        paySplitPercents: [30, 70],
+        categoryId: sueldoCatId,
+      );
 
-    await pumpIncomeScheduleScreen(tester);
+      await pumpIncomeScheduleScreen(tester);
 
-    // Título de la pantalla
-    expect(find.text('Sueldo y cobros'), findsOneWidget);
+      // Título de la pantalla
+      expect(find.text('Sueldo y cobros'), findsOneWidget);
 
-    // Resumen "Lo que cobrás" presente
-    expect(find.text('LO QUE COBRÁS'), findsOneWidget);
+      // Resumen "Lo que cobrás" presente
+      expect(find.text('LO QUE COBRÁS'), findsOneWidget);
 
-    // Sección Descuentos presente
-    expect(find.text('DESCUENTOS'), findsOneWidget);
-    expect(find.byKey(const ValueKey('add-deduction-button')), findsOneWidget);
+      // Sección Descuentos presente
+      expect(find.text('DESCUENTOS'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('add-deduction-button')),
+        findsOneWidget,
+      );
 
-    // Tocar agregar descuento
-    await tester.tap(find.byKey(const ValueKey('add-deduction-button')));
-    await tester.pumpAndSettle();
+      // Tocar agregar descuento
+      await tester.tap(find.byKey(const ValueKey('add-deduction-button')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Agregar descuento'), findsOneWidget);
+      expect(find.text('Agregar descuento'), findsOneWidget);
 
-    // Ingresar nombre "IPS"
-    await tester.enterText(find.byKey(const ValueKey('deduction-name-input')), 'IPS');
-    // Ingresar 9 (%)
-    await tester.enterText(find.byKey(const ValueKey('deduction-value-input')), '9');
-    await tester.pumpAndSettle();
+      // Ingresar nombre "IPS"
+      await tester.enterText(
+        find.byKey(const ValueKey('deduction-name-input')),
+        'IPS',
+      );
+      // Ingresar 9 (%)
+      await tester.enterText(
+        find.byKey(const ValueKey('deduction-value-input')),
+        '9',
+      );
+      await tester.pumpAndSettle();
 
-    // Guardar descuento
-    await tester.tap(find.byKey(const ValueKey('save-deduction-dialog-button')));
-    await tester.pumpAndSettle();
+      // Guardar descuento
+      await tester.tap(
+        find.byKey(const ValueKey('save-deduction-dialog-button')),
+      );
+      await tester.pumpAndSettle();
 
-    // Descuento en la lista
-    expect(find.text('IPS'), findsOneWidget);
-    expect(find.textContaining('9 % del bruto'), findsOneWidget);
+      // Descuento en la lista
+      expect(find.text('IPS'), findsOneWidget);
+      expect(find.textContaining('9 % del bruto'), findsOneWidget);
 
-    // En "Lo que cobrás", el segundo cobro (fin de mes) ahora refleja el descuento (2.800.000 - 360.000 = 2.440.000)
-    expect(find.textContaining('2.440.000'), findsOneWidget);
+      // En "Lo que cobrás", el segundo cobro (fin de mes) ahora refleja el descuento (2.800.000 - 360.000 = 2.440.000)
+      expect(find.textContaining('2.440.000'), findsOneWidget);
 
-    // Guardar esquema completo
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Guardar esquema'));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+      // Guardar esquema completo
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Guardar esquema'));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
 
-    final current = await tester.runAsync(() => scheduleRepo.watchCurrent().first);
-    expect(current, isNotNull);
-    final savedDeds = await tester.runAsync(() => scheduleRepo.getDeductionsFor(current!.id));
-    expect(savedDeds, hasLength(1));
-    expect(savedDeds!.first.name, 'IPS');
-    expect(savedDeds.first.value, 900);
-  });
+      final current = await tester.runAsync(
+        () => scheduleRepo.watchCurrent().first,
+      );
+      expect(current, isNotNull);
+      final savedDeds = await tester.runAsync(
+        () => scheduleRepo.getDeductionsFor(current!.id),
+      );
+      expect(savedDeds, hasLength(1));
+      expect(savedDeds!.first.name, 'IPS');
+      expect(savedDeds.first.value, 900);
+    },
+  );
 
-  testWidgets('íconos informativos usan colores neutros y no colores de marca', (tester) async {
-    await pumpIncomeScheduleScreen(tester);
+  testWidgets(
+    'íconos informativos usan colores neutros y no colores de marca',
+    (tester) async {
+      await pumpIncomeScheduleScreen(tester);
 
-    final coinsIcon = tester.widget<Icon>(find.descendant(
-      of: find.ancestor(
-        of: find.byKey(const ValueKey('schedule-split-preview-text')),
-        matching: find.byType(Row),
-      ),
-      matching: find.byType(Icon),
-    ));
-    expect(coinsIcon.color, equals(PocktColors.dark.textSecondary));
-    expect(coinsIcon.color, isNot(equals(PocktColors.dark.brandStart)));
-  });
+      final coinsIcon = tester.widget<Icon>(
+        find.descendant(
+          of: find.ancestor(
+            of: find.byKey(const ValueKey('schedule-split-preview-text')),
+            matching: find.byType(Row),
+          ),
+          matching: find.byType(Icon),
+        ),
+      );
+      expect(coinsIcon.color, equals(PocktColors.dark.textSecondary));
+      expect(coinsIcon.color, isNot(equals(PocktColors.dark.brandStart)));
+    },
+  );
+
+  testWidgets(
+    'si hoy es día de cobro pero ya se confirmó el cobro de hoy, muestra el próximo cobro',
+    (tester) async {
+      final now = DateTime(2026, 10, 15, 10, 0); // 15 de octubre
+      const sueldoCatId = '018f0000-0000-7000-8000-000000000011';
+
+      // Insertamos esquema quincenal 15 y fin de mes
+      await scheduleRepo.setSchedule(
+        mode: PayMode.biweekly,
+        payDays: const [15, -1],
+        payDayRules: const [PayDayRule.either, PayDayRule.previous],
+        monthlyAmount: 4000000,
+        categoryId: sueldoCatId,
+      );
+
+      // Insertamos cobro confirmado de hoy 15/10
+      await testDb
+          .into(testDb.transactions)
+          .insert(
+            TransactionsCompanion.insert(
+              id: 'tx-salary-15',
+              type: TxType.income,
+              amount: 2000000,
+              categoryId: sueldoCatId,
+              occurredAt: DateTime(2026, 10, 15, 9, 0),
+              createdAt: DateTime(2026, 10, 15, 9, 0),
+              updatedAt: DateTime(2026, 10, 15, 9, 0),
+              source: TxSource.incomeSchedule,
+            ),
+          );
+
+      await pumpIncomeScheduleScreen(tester, nowLocal: now);
+
+      // Debe mostrar próximo cobro viernes 30 de octubre, no hoy 15 de octubre
+      expect(
+        find.textContaining('Próximo cobro: viernes 30 de octubre'),
+        findsOneWidget,
+      );
+    },
+  );
 }

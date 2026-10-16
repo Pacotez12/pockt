@@ -291,8 +291,6 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
           final payDays = parsePayDays(sched.payDays);
           final rules = parsePayDayRules(sched.payDayRules, payDays);
           final prevWindow = previousPayWindow(today, payDays, rules);
-          final nextWin = nextPayWindow(today, payDays, rules);
-
           DateTime periodStart =
               prevWindow?.earliest ?? DateTime(now.year, now.month, 1);
 
@@ -325,6 +323,13 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
               periodStart = cleanSalary;
             }
           }
+
+          final nextWin = nextPayWindow(
+            today,
+            payDays,
+            rules,
+            lastConfirmedSalaryDate: salaryDate,
+          );
 
           final startUtc = dayRangeUtc(periodStart).startUtc;
           final sumAmount = db.transactions.amount.sum();

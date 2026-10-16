@@ -20,6 +20,11 @@ final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
   return CategoriesRepository(ref.watch(databaseProvider));
 });
 
+final allCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.select(db.categories).watch();
+});
+
 final transactionsRepositoryProvider = Provider<TransactionsRepository>((ref) {
   return TransactionsRepository(
     ref.watch(databaseProvider),
@@ -32,8 +37,9 @@ final keywordsRepositoryProvider = Provider<KeywordsRepository>((ref) {
   return KeywordsRepository(ref.watch(databaseProvider));
 });
 
-final incomeScheduleRepositoryProvider =
-    Provider<IncomeScheduleRepository>((ref) {
+final incomeScheduleRepositoryProvider = Provider<IncomeScheduleRepository>((
+  ref,
+) {
   return IncomeScheduleRepository(ref.watch(databaseProvider));
 });
 
@@ -58,5 +64,3 @@ final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
     notifier: ref.watch(notifierProvider),
   );
 });
-
-

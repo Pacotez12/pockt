@@ -274,6 +274,14 @@ class _RecurringRuleCard extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final repo = ref.read(recurringRepositoryProvider);
 
+    final categories = ref.watch(allCategoriesStreamProvider).value ?? const [];
+    final category = categories
+        .where((c) => c.id == rule.categoryId)
+        .firstOrNull;
+    final catColor = category != null
+        ? (isDark ? category.colorDark : category.colorLight)
+        : colors.brandStart.toARGB32();
+
     return Dismissible(
       key: ValueKey('dismiss-${rule.id}'),
       direction: DismissDirection.endToStart,
@@ -317,16 +325,21 @@ class _RecurringRuleCard extends ConsumerWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: colors.brandStart.withValues(
-                    alpha: isDark ? 0.20 : 0.12,
-                  ),
+                  color: Color(catColor)
+                      .withValues(alpha: isDark ? 0.20 : 0.14),
                 ),
                 child: Center(
-                  child: Icon(
-                    uiIcon('sparkle'),
-                    size: 18,
-                    color: colors.brandStart,
-                  ),
+                  child: category != null
+                      ? categoryIcon(
+                          category.icon,
+                          size: 20,
+                          color: Color(catColor),
+                        )
+                      : Icon(
+                          uiIcon('arrows-clockwise'),
+                          size: 18,
+                          color: colors.brandStart,
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -384,18 +397,47 @@ class _RecurringRuleCard extends ConsumerWidget {
                           repo.setActive(rule.id, active);
                         },
                       ),
+                      const SizedBox(width: 6),
                       Pressable(
                         semanticLabel: 'Borrar recurrente',
                         key: ValueKey('delete-recurring-${rule.id}'),
-                        onTap: () {
+                        onTap: () async {
                           Haptics.tick();
-                          repo.delete(rule.id);
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('¿Eliminar recurrente?'),
+                              content: Text(
+                                '¿Seguro que querés eliminar "${rule.name}"?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  key: const ValueKey(
+                                    'confirm-delete-recurring-btn',
+                                  ),
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: Text(
+                                    'Eliminar',
+                                    style: TextStyle(color: colors.danger),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            Haptics.danger();
+                            repo.delete(rule.id);
+                          }
                         },
                         child: Padding(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(6),
                           child: Icon(
                             uiIcon('trash'),
-                            size: 16,
+                            size: 18,
                             color: colors.textTertiary,
                           ),
                         ),

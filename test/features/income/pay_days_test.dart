@@ -325,6 +325,17 @@ void main() {
       expect(window.latest, DateTime(2026, 11, 16));
     });
 
+    test('si el sueldo ya entró dentro de la ventana, salta a la siguiente', () {
+      // 15/08/2026 cae sábado: ventana viernes 14 a lunes 17. Cobró el 14.
+      final window = nextPayWindow(
+        DateTime(2026, 8, 15),
+        [15, -1],
+        [PayDayRule.either, PayDayRule.previous],
+        lastConfirmedSalaryDate: DateTime(2026, 8, 14, 9),
+      );
+      expect(window!.earliest, DateTime(2026, 8, 31));
+    });
+
     test('previousPayWindow encuentra la ventana anterior', () {
       final window = previousPayWindow(
         DateTime(2026, 11, 18),

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show DatabaseConnection;
+import 'package:drift/drift.dart' show DatabaseConnection, Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -402,5 +402,60 @@ void main() {
         expect(queue.last.pendingRecurring, equals(200000));
       },
     );
+
+    test('con esquema quincenal y cobro registrado hoy, reparte entre los días hasta la siguiente quincena', () async {
+      final cat = await (db.select(db.categories)..limit(1)).getSingle();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      // Creamos esquema quincenal con cobro el día de hoy
+      await db
+          .into(db.incomeSchedules)
+          .insert(
+            IncomeSchedulesCompanion.insert(
+              id: 'sched-1',
+              mode: 'biweekly',
+              payDays: '[${today.day}, -1]',
+              payDayRules: '["either", "previous"]',
+              paySplitPercents: '[50, 50]',
+              categoryId: cat.id,
+              monthlyAmount: Value(4000000),
+              effectiveFrom: DateTime(today.year, today.month, 1),
+            ),
+          );
+
+      // Cobro de hoy ya registrado
+      await db
+          .into(db.transactions)
+          .insert(
+            TransactionsCompanion.insert(
+              id: 'tx-salary-today',
+              type: TxType.income,
+              amount: 2000000,
+              categoryId: cat.id,
+              occurredAt: today,
+              createdAt: today,
+              updatedAt: today,
+              source: TxSource.incomeSchedule,
+            ),
+          );
+
+      final queue = <SafeToSpend>[];
+      final sub = container.listen(safeToSpendProvider, (prev, next) {
+        final val = next.value;
+        if (val != null) {
+          queue.add(val);
+        }
+      });
+      addTearDown(sub.close);
+
+      while (queue.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+
+      final val = queue.last;
+      expect(val.daysUntilPay, greaterThan(1));
+      expect(val.amount, lessThan(2000000));
+    });
   });
 }

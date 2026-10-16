@@ -30,6 +30,8 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
   })?
   onSaveOverride;
 
+  final bool showMerchant;
+
   const AmountKeypadScreen({
     super.key,
     required this.category,
@@ -40,6 +42,7 @@ class AmountKeypadScreen extends ConsumerStatefulWidget {
     this.initialMerchant,
     this.initialLoanId,
     this.onSaveOverride,
+    this.showMerchant = true,
   });
 
   @override
@@ -442,6 +445,7 @@ class _AmountKeypadScreenState extends ConsumerState<AmountKeypadScreen> {
                 _OptionalChips(
                   merchant: _merchant,
                   note: _note,
+                  showMerchant: widget.showMerchant,
                   onMerchantChanged: (m) => setState(() => _merchant = m),
                   onNoteChanged: (n) => setState(() => _note = n),
                 ),
@@ -653,12 +657,14 @@ class _OptionalChips extends StatelessWidget {
   final String? note;
   final ValueChanged<String?> onMerchantChanged;
   final ValueChanged<String?> onNoteChanged;
+  final bool showMerchant;
 
   const _OptionalChips({
     required this.merchant,
     required this.note,
     required this.onMerchantChanged,
     required this.onNoteChanged,
+    this.showMerchant = true,
   });
 
   @override
@@ -666,19 +672,21 @@ class _OptionalChips extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _ChipButton(
-          icon: uiIcon('storefront'),
-          label: merchant?.isNotEmpty == true ? merchant! : 'Comercio',
-          isActive: merchant?.isNotEmpty == true,
-          onTap: () => _showEditDialog(
-            context,
-            title: 'Comercio',
-            initialValue: merchant,
-            hint: 'Ej. Superseis',
-            onChanged: onMerchantChanged,
+        if (showMerchant) ...[
+          _ChipButton(
+            icon: uiIcon('storefront'),
+            label: merchant?.isNotEmpty == true ? merchant! : 'Comercio',
+            isActive: merchant?.isNotEmpty == true,
+            onTap: () => _showEditDialog(
+              context,
+              title: 'Comercio',
+              initialValue: merchant,
+              hint: 'Ej. Superseis',
+              onChanged: onMerchantChanged,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
+          const SizedBox(width: 8),
+        ],
         _ChipButton(
           icon: uiIcon('note'),
           label: note?.isNotEmpty == true ? note! : 'Nota',

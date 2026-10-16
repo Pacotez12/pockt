@@ -327,6 +327,7 @@ class DayDetailSheet extends ConsumerWidget {
 
     // Múltiplo y día más caro
     String? comparisonText;
+    Color? comparisonColor;
     if (daysWithExpenseCount > 1 && dayExpenseTotal > 0) {
       final promedio = monthExpenseTotal / daysWithExpenseCount;
       if (promedio > 0) {
@@ -336,9 +337,12 @@ class DayDetailSheet extends ConsumerWidget {
             .map((e) => e.value)
             .fold<int>(0, max);
         final isMostExpensive = dayExpenseTotal >= maxDayExpense;
+        final isAbove = ratio >= 1.0;
+        final arrow = isAbove ? '↑' : '↓';
 
         final caroSuffix = isMostExpensive ? ' · tu día más caro del mes' : '';
-        comparisonText = '↑ $ratioFormatted× tu día promedio$caroSuffix';
+        comparisonText = '$arrow $ratioFormatted× tu día promedio$caroSuffix';
+        comparisonColor = isAbove ? colors.brandStart : colors.textSecondary;
       }
     }
 
@@ -426,7 +430,7 @@ class DayDetailSheet extends ConsumerWidget {
                       fontFamily: 'Inter',
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: colors.brandStart,
+                      color: comparisonColor ?? colors.textSecondary,
                     ),
                   ),
                 ],

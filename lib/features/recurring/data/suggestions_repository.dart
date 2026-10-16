@@ -1,16 +1,14 @@
 import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/time/local_time.dart';
 import 'package:uuid/uuid.dart';
 
 class SuggestionView {
   final SuggestedTransaction suggestion;
   final Category? category;
 
-  const SuggestionView({
-    required this.suggestion,
-    this.category,
-  });
+  const SuggestionView({required this.suggestion, this.category});
 }
 
 class SuggestionsRepository {
@@ -18,26 +16,24 @@ class SuggestionsRepository {
   final DateTime Function() _clock;
   final Uuid _uuid;
 
-  SuggestionsRepository(
-    this._db, {
-    DateTime Function()? clock,
-    Uuid? uuid,
-  })  : _clock = clock ?? DateTime.now,
-        _uuid = uuid ?? const Uuid();
+  SuggestionsRepository(this._db, {DateTime Function()? clock, Uuid? uuid})
+    : _clock = clock ?? DateTime.now,
+      _uuid = uuid ?? const Uuid();
 
   /// Emite sugerencias pendientes ordenadas por fecha más vieja primero.
   Stream<List<SuggestionView>> watchPending() {
-    final query = _db.select(_db.suggestedTransactions).join([
-      leftOuterJoin(
-        _db.categories,
-        _db.categories.id.equalsExp(_db.suggestedTransactions.categoryId),
-      ),
-    ])
-      ..where(_db.suggestedTransactions.status.equals('pending'))
-      ..orderBy([
-        OrderingTerm.asc(_db.suggestedTransactions.occurredAt),
-        OrderingTerm.asc(_db.suggestedTransactions.createdAt),
-      ]);
+    final query =
+        _db.select(_db.suggestedTransactions).join([
+            leftOuterJoin(
+              _db.categories,
+              _db.categories.id.equalsExp(_db.suggestedTransactions.categoryId),
+            ),
+          ])
+          ..where(_db.suggestedTransactions.status.equals('pending'))
+          ..orderBy([
+            OrderingTerm.asc(_db.suggestedTransactions.occurredAt),
+            OrderingTerm.asc(_db.suggestedTransactions.createdAt),
+          ]);
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -75,25 +71,26 @@ class SuggestionsRepository {
   }) async {
     final now = _clock();
     try {
-      final inserted =
-          await _db.into(_db.suggestedTransactions).insertReturningOrNull(
-                SuggestedTransactionsCompanion.insert(
-                  id: _uuid.v4(),
-                  type: type,
-                  amount: amount,
-                  currency: Value(currency),
-                  categoryId: Value(categoryId),
-                  merchant: Value(merchant),
-                  occurredAt: occurredAt,
-                  source: source,
-                  sourceRef: Value(sourceRef),
-                  status: 'pending',
-                  rawText: Value(rawText),
-                  fingerprint: Value(fingerprint),
-                  createdAt: now,
-                ),
-                mode: InsertMode.insertOrIgnore,
-              );
+      final inserted = await _db
+          .into(_db.suggestedTransactions)
+          .insertReturningOrNull(
+            SuggestedTransactionsCompanion.insert(
+              id: _uuid.v4(),
+              type: type,
+              amount: amount,
+              currency: Value(currency),
+              categoryId: Value(categoryId),
+              merchant: Value(merchant),
+              occurredAt: occurredAt,
+              source: source,
+              sourceRef: Value(sourceRef),
+              status: 'pending',
+              rawText: Value(rawText),
+              fingerprint: Value(fingerprint),
+              createdAt: now,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
       return inserted != null;
     } catch (_) {
       return false;
@@ -111,9 +108,9 @@ class SuggestionsRepository {
     DateTime? occurredAt,
   }) async {
     return _db.transaction(() async {
-      final sug = await (_db.select(_db.suggestedTransactions)
-            ..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      final sug = await (_db.select(
+        _db.suggestedTransactions,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
 
       if (sug == null) {
         throw StateError('Suggestion not found: $id');
@@ -132,9 +129,32 @@ class SuggestionsRepository {
       final txId = _uuid.v4();
       final now = _clock();
       final finalAmount = amount ?? sug.amount;
-      final finalOccurredAt = occurredAt ?? sug.occurredAt;
+      DateTime finalOccurredAt;
+      if (occurredAt != null) {
+        finalOccurredAt = occurredAt;
+      } else {
+        final sugLocal = toLocal(sug.occurredAt);
+        final nowLocal = toLocal(now);
+        final isToday =
+            sugLocal.year == nowLocal.year &&
+            sugLocal.month == nowLocal.month &&
+            sugLocal.day == nowLocal.day;
+        if (isToday) {
+          finalOccurredAt = combineDayWithNow(sugLocal, nowLocal);
+        } else {
+          finalOccurredAt = DateTime(
+            sugLocal.year,
+            sugLocal.month,
+            sugLocal.day,
+            12,
+            0,
+          );
+        }
+      }
 
-      await _db.into(_db.transactions).insert(
+      await _db
+          .into(_db.transactions)
+          .insert(
             TransactionsCompanion.insert(
               id: txId,
               type: sug.type,
@@ -153,9 +173,9 @@ class SuggestionsRepository {
             ),
           );
 
-      await (_db.update(_db.suggestedTransactions)
-            ..where((t) => t.id.equals(id)))
-          .write(
+      await (_db.update(
+        _db.suggestedTransactions,
+      )..where((t) => t.id.equals(id))).write(
         SuggestedTransactionsCompanion(
           status: const Value('confirmed'),
           transactionId: Value(txId),
@@ -168,12 +188,10 @@ class SuggestionsRepository {
 
   /// Marca una sugerencia como descartada.
   Future<void> dismiss(String id) async {
-    await (_db.update(_db.suggestedTransactions)
-          ..where((t) => t.id.equals(id)))
-        .write(
-      const SuggestedTransactionsCompanion(
-        status: Value('dismissed'),
-      ),
+    await (_db.update(
+      _db.suggestedTransactions,
+    )..where((t) => t.id.equals(id))).write(
+      const SuggestedTransactionsCompanion(status: Value('dismissed')),
     );
   }
 }

@@ -319,10 +319,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(17),
+                    borderRadius: BorderRadius.circular(PocktRadii.m),
                     color: _currentPage == i
-                        ? colors.glassBorder
+                        ? colors.brandStart.withValues(alpha: 0.18)
                         : Colors.transparent,
+                    border: _currentPage == i
+                        ? Border.all(
+                            color: colors.brandStart.withValues(alpha: 0.35),
+                          )
+                        : null,
                   ),
                   child: Center(
                     child: Text(
@@ -331,11 +336,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         fontFamily: 'Inter',
                         fontSize: 12,
                         fontWeight: _currentPage == i
-                            ? FontWeight.w600
+                            ? FontWeight.w700
                             : FontWeight.w500,
                         color: _currentPage == i
-                            ? colors.textPrimary
-                            : colors.textTertiary,
+                            ? colors.brandStart
+                            : colors.textSecondary,
                       ),
                     ),
                   ),
@@ -496,8 +501,10 @@ class _CategoryRow extends StatelessWidget {
       isDark ? item.category.colorDark : item.category.colorLight,
     );
     final pct = totalExpense > 0
-        ? (item.total / totalExpense * 100).toStringAsFixed(1)
-        : '0.0';
+        ? (item.total / totalExpense * 100)
+              .toStringAsFixed(1)
+              .replaceAll('.', ',')
+        : '0,0';
 
     return Pressable(
       onTap: onTap,
@@ -927,7 +934,7 @@ class _EvolutionView extends ConsumerWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  color: colors.positive,
+                  color: colors.textPrimary,
                 ),
               ),
             ],
@@ -954,7 +961,7 @@ class _EvolutionView extends ConsumerWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  color: netSaving >= 0 ? colors.positive : colors.danger,
+                  color: netSaving < 0 ? colors.danger : colors.textPrimary,
                 ),
               ),
             ],
@@ -1106,7 +1113,7 @@ class _ComparisonView extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _StatPill(
-                          label: 'Mes actual (${_kMonthNames[month - 1]})',
+                          label: 'Mes actual\n(${_kMonthNames[month - 1]})',
                           amount: comp.current,
                           color: colors.textPrimary,
                         ),
@@ -1114,7 +1121,7 @@ class _ComparisonView extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _StatPill(
-                          label: 'Mes anterior ($prevMonthName)',
+                          label: 'Mes anterior\n($prevMonthName)',
                           amount: comp.previous,
                           color: colors.textSecondary,
                         ),
@@ -1176,11 +1183,12 @@ class _StatPill extends StatelessWidget {
         children: [
           Text(
             label,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
+              height: 1.2,
               color: colors.textTertiary,
             ),
           ),
@@ -1469,16 +1477,33 @@ class _MerchantsView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           physics: const BouncingScrollPhysics(),
           children: [
-            Text(
-              'Por comercio',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${list.length} ${list.length == 1 ? 'comercio' : 'comercios'}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    formatGs(list.fold<int>(0, (s, e) => s + e.total)),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
             GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -1609,7 +1634,7 @@ class _AntExpensesView extends ConsumerWidget {
                     '≤ ${formatGs(threshold)}',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 11,
+                      fontSize: PocktType.caption,
                       fontWeight: FontWeight.w600,
                       color: colors.textSecondary,
                     ),
@@ -1632,20 +1657,24 @@ class _AntExpensesView extends ConsumerWidget {
                           'Total hormiga',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11,
+                            fontSize: PocktType.caption,
                             fontWeight: FontWeight.w500,
                             color: colors.textTertiary,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          formatGs(summary.total),
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: colors.textPrimary,
-                            letterSpacing: -0.3,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatGs(summary.total),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: colors.textPrimary,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1653,7 +1682,7 @@ class _AntExpensesView extends ConsumerWidget {
                           '${summary.count} ${summary.count == 1 ? 'compra' : 'compras'}',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11,
+                            fontSize: PocktType.caption,
                             fontWeight: FontWeight.w500,
                             color: colors.textSecondary,
                           ),
@@ -1673,20 +1702,24 @@ class _AntExpensesView extends ConsumerWidget {
                           'Proyección anual',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11,
+                            fontSize: PocktType.caption,
                             fontWeight: FontWeight.w500,
                             color: colors.textTertiary,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          formatGs(summary.annualProjection),
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: colors.textPrimary,
-                            letterSpacing: -0.3,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatGs(summary.annualProjection),
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: colors.textPrimary,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1694,7 +1727,7 @@ class _AntExpensesView extends ConsumerWidget {
                           'total × 12',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11,
+                            fontSize: PocktType.caption,
                             fontWeight: FontWeight.w500,
                             color: colors.textSecondary,
                           ),
@@ -1741,7 +1774,8 @@ class _AntGroupRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.pockt;
     final catColor =
-        (isDark ? group.colorDark : group.colorLight) ?? 0xFF8BA4B5;
+        (isDark ? group.colorDark : group.colorLight) ??
+        colors.textTertiary.toARGB32();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1755,8 +1789,8 @@ class _AntGroupRow extends StatelessWidget {
               color: Color(catColor).withValues(alpha: 0.16),
             ),
             child: Center(
-              child: Icon(
-                uiIcon(group.categoryIcon),
+              child: categoryIcon(
+                group.categoryIcon,
                 size: 18,
                 color: Color(catColor),
               ),

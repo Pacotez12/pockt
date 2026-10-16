@@ -25,7 +25,10 @@ void main() {
   setUp(() async {
     setLocalZone('America/Asuncion');
     db = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     txRepo = TransactionsRepository(db);
     reportsRepo = ReportsRepository(db);
@@ -104,6 +107,8 @@ void main() {
     expect(find.text('Reportes'), findsOneWidget);
     expect(find.text('Comida'), findsOneWidget);
     expect(find.text('Transporte'), findsOneWidget);
+    expect(find.text('60,0 %'), findsOneWidget);
+    expect(find.text('40,0 %'), findsOneWidget);
 
     // Deslizar a Vista 2: Evolución
     final pageView = find.byType(PageView);
@@ -130,29 +135,32 @@ void main() {
     expect(find.text('Bolt'), findsOneWidget);
   });
 
-  testWidgets('mes vacío muestra el estado vacío en cada vista (sin excepciones)', (tester) async {
-    // Sin transacciones
-    await pumpReportsScreen(tester);
+  testWidgets(
+    'mes vacío muestra el estado vacío en cada vista (sin excepciones)',
+    (tester) async {
+      // Sin transacciones
+      await pumpReportsScreen(tester);
 
-    // Vista 1 vacía
-    expect(find.text('Sin gastos este mes'), findsOneWidget);
+      // Vista 1 vacía
+      expect(find.text('Sin gastos este mes'), findsOneWidget);
 
-    // Deslizar a Vista 2 vacía
-    final pageView = find.byType(PageView);
-    await tester.drag(pageView, const Offset(-450, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Sin movimientos en este período'), findsOneWidget);
+      // Deslizar a Vista 2 vacía
+      final pageView = find.byType(PageView);
+      await tester.drag(pageView, const Offset(-450, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Sin movimientos en este período'), findsOneWidget);
 
-    // Deslizar a Vista 3 vacía
-    await tester.drag(pageView, const Offset(-450, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Sin datos para comparar'), findsOneWidget);
+      // Deslizar a Vista 3 vacía
+      await tester.drag(pageView, const Offset(-450, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Sin datos para comparar'), findsOneWidget);
 
-    // Deslizar a Vista 4 vacía
-    await tester.drag(pageView, const Offset(-450, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Sin comercios registrados este mes'), findsOneWidget);
-  });
+      // Deslizar a Vista 4 vacía
+      await tester.drag(pageView, const Offset(-450, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Sin comercios registrados este mes'), findsOneWidget);
+    },
+  );
 
   testWidgets('tocar una categoría abre la lista filtrada', (tester) async {
     await txRepo.add(
@@ -175,86 +183,109 @@ void main() {
     expect(find.text('Superseis'), findsOneWidget);
   });
 
-  testWidgets('en Comparación las tarjetas Mes actual / Mes anterior usan los tokens de diseño', (tester) async {
-    await txRepo.add(
-      type: TxType.expense,
-      amount: 120000,
-      categoryId: comidaId,
-      occurredAt: DateTime(2026, 10, 5, 12, 0),
-    );
-    await txRepo.add(
-      type: TxType.expense,
-      amount: 100000,
-      categoryId: comidaId,
-      occurredAt: DateTime(2026, 9, 5, 12, 0),
-    );
+  testWidgets(
+    'en Comparación las tarjetas Mes actual / Mes anterior usan los tokens de diseño',
+    (tester) async {
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 120000,
+        categoryId: comidaId,
+        occurredAt: DateTime(2026, 10, 5, 12, 0),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 100000,
+        categoryId: comidaId,
+        occurredAt: DateTime(2026, 9, 5, 12, 0),
+      );
 
-    await pumpReportsScreen(tester);
+      await pumpReportsScreen(tester);
 
-    final pageView = find.byType(PageView);
-    await tester.drag(pageView, const Offset(-450, 0));
-    await tester.pumpAndSettle();
-    await tester.drag(pageView, const Offset(-450, 0));
-    await tester.pumpAndSettle();
+      final pageView = find.byType(PageView);
+      await tester.drag(pageView, const Offset(-450, 0));
+      await tester.pumpAndSettle();
+      await tester.drag(pageView, const Offset(-450, 0));
+      await tester.pumpAndSettle();
 
-    final pillFinder = find.ancestor(
-      of: find.textContaining('Mes actual'),
-      matching: find.byType(Container),
-    ).first;
+      final pillFinder = find
+          .ancestor(
+            of: find.textContaining('Mes actual'),
+            matching: find.byType(Container),
+          )
+          .first;
 
-    final container = tester.widget<Container>(pillFinder);
-    final decoration = container.decoration as BoxDecoration;
-    expect(decoration.color, PocktColors.dark.glassFill);
-    expect(decoration.border, Border.all(color: PocktColors.dark.glassBorder));
-  });
+      final container = tester.widget<Container>(pillFinder);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, PocktColors.dark.glassFill);
+      expect(
+        decoration.border,
+        Border.all(color: PocktColors.dark.glassBorder),
+      );
+    },
+  );
 
-  testWidgets('en Evolución la serie Gastos usa color de marca y no peligro en la leyenda', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildDarkTheme(),
-        home: Scaffold(
-          body: EvolutionChart(
-            isDark: true,
-            totals: [
-              MonthTotals(year: 2026, month: 9, expense: 50000, income: 100000),
-              MonthTotals(year: 2026, month: 10, expense: 70000, income: 80000),
-            ],
+  testWidgets(
+    'en Evolución la serie Gastos usa color de marca y no peligro en la leyenda',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildDarkTheme(),
+          home: Scaffold(
+            body: EvolutionChart(
+              isDark: true,
+              totals: [
+                MonthTotals(
+                  year: 2026,
+                  month: 9,
+                  expense: 50000,
+                  income: 100000,
+                ),
+                MonthTotals(
+                  year: 2026,
+                  month: 10,
+                  expense: 70000,
+                  income: 80000,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Buscar el contenedor de color de la leyenda de Gastos
-    final gastosRowFinder = find.ancestor(
-      of: find.text('Gastos'),
-      matching: find.byType(Row),
-    ).first;
-    final gastosIndicatorFinder = find.descendant(
-      of: gastosRowFinder,
-      matching: find.byType(Container),
-    ).first;
-    final gastosDecoration = (tester.widget<Container>(gastosIndicatorFinder)).decoration as BoxDecoration;
+      // Buscar el contenedor de color de la leyenda de Gastos
+      final gastosRowFinder = find
+          .ancestor(of: find.text('Gastos'), matching: find.byType(Row))
+          .first;
+      final gastosIndicatorFinder = find
+          .descendant(of: gastosRowFinder, matching: find.byType(Container))
+          .first;
+      final gastosDecoration =
+          (tester.widget<Container>(gastosIndicatorFinder)).decoration
+              as BoxDecoration;
 
-    // Gastos debe ser color de marca, NO de peligro
-    expect(gastosDecoration.color, equals(PocktColors.dark.brandStart));
-    expect(gastosDecoration.color, isNot(equals(PocktColors.dark.danger)));
+      // Gastos debe ser color neutro (textSecondary), NO de peligro
+      expect(gastosDecoration.color, equals(PocktColors.dark.textSecondary));
+      expect(gastosDecoration.color, isNot(equals(PocktColors.dark.danger)));
 
-    // Ingresos debe ser positivo
-    final ingresosRowFinder = find.ancestor(
-      of: find.text('Ingresos'),
-      matching: find.byType(Row),
-    ).first;
-    final ingresosIndicatorFinder = find.descendant(
-      of: ingresosRowFinder,
-      matching: find.byType(Container),
-    ).first;
-    final ingresosDecoration = (tester.widget<Container>(ingresosIndicatorFinder)).decoration as BoxDecoration;
-    expect(ingresosDecoration.color, equals(PocktColors.dark.positive));
-  });
+      // Ingresos debe ser positivo
+      final ingresosRowFinder = find
+          .ancestor(of: find.text('Ingresos'), matching: find.byType(Row))
+          .first;
+      final ingresosIndicatorFinder = find
+          .descendant(of: ingresosRowFinder, matching: find.byType(Container))
+          .first;
+      final ingresosDecoration =
+          (tester.widget<Container>(ingresosIndicatorFinder)).decoration
+              as BoxDecoration;
+      expect(ingresosDecoration.color, equals(PocktColors.dark.positive));
+    },
+  );
 
   testWidgets('Ahorro neto muestra color positivo si es >= 0', (tester) async {
-    final sueldoCategory = (await db.select(db.categories).get()).firstWhere((c) => c.name == 'Sueldo');
+    final sueldoCategory = (await db.select(db.categories).get()).firstWhere(
+      (c) => c.name == 'Sueldo',
+    );
     await txRepo.add(
       type: TxType.income,
       amount: 200000,
@@ -285,12 +316,20 @@ void main() {
       matching: find.text(formatGs(150000)),
     );
     final positiveTextWidget = tester.widget<Text>(netPositiveTextFinder);
-    expect(positiveTextWidget.style?.color, equals(PocktColors.dark.positive));
-    expect(positiveTextWidget.style?.color, isNot(equals(PocktColors.dark.brandStart)));
+    expect(
+      positiveTextWidget.style?.color,
+      equals(PocktColors.dark.textPrimary),
+    );
+    expect(
+      positiveTextWidget.style?.color,
+      isNot(equals(PocktColors.dark.brandStart)),
+    );
   });
 
   testWidgets('Ahorro neto muestra color peligro si es < 0', (tester) async {
-    final sueldoCategory = (await db.select(db.categories).get()).firstWhere((c) => c.name == 'Sueldo');
+    final sueldoCategory = (await db.select(db.categories).get()).firstWhere(
+      (c) => c.name == 'Sueldo',
+    );
     await txRepo.add(
       type: TxType.income,
       amount: 200000,

@@ -690,45 +690,54 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        formatGs(spent),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formatGs(spent),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
-                      Text(
-                        ' de ${formatGs(budgetView.budget.monthlyLimit)}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          color: colors.textTertiary,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                        Text(
+                          ' de ${formatGs(budgetView.budget.monthlyLimit)}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            color: colors.textTertiary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    status.remaining >= 0
-                        ? 'Quedan ${formatGs(status.remaining)}'
-                        : 'Excedido por ${formatGs(-status.remaining)}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: status.level == BudgetLevel.over
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                      color: status.level == BudgetLevel.over
-                          ? colors.danger
-                          : (status.level == BudgetLevel.warning
-                                ? colors.warning
-                                : colors.textSecondary),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      status.remaining >= 0
+                          ? 'Quedan ${formatGs(status.remaining)}'
+                          : 'Excedido por ${formatGs(-status.remaining)}',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: status.level == BudgetLevel.over
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: status.level == BudgetLevel.over
+                            ? colors.danger
+                            : (status.level == BudgetLevel.warning
+                                  ? colors.warning
+                                  : colors.textSecondary),
+                      ),
                     ),
                   ),
                 ],
@@ -986,7 +995,7 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                                           ? colors.danger
                                           : (status.level == BudgetLevel.warning
                                                 ? colors.warning
-                                                : colors.positive),
+                                                : colors.textSecondary),
                                       fontFeatures: const [
                                         FontFeature.tabularFigures(),
                                       ],
@@ -1086,7 +1095,7 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
 
                       // Título de lista de movimientos
                       Text(
@@ -1125,20 +1134,17 @@ class _BudgetDetailSheetState extends ConsumerState<_BudgetDetailSheet> {
                                 ),
                               );
                             }
-                            return ListView.separated(
+                            return ListView(
                               physics: const BouncingScrollPhysics(),
-                              itemCount: txs.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 6),
-                              itemBuilder: (context, index) {
-                                return SwipeableTxRow(
-                                  view: txs[index],
-                                  subtitle: formatTxWhen(
-                                    toLocal(txs[index].tx.occurredAt),
+                              children: [
+                                TxGroupCard(
+                                  items: txs,
+                                  subtitleBuilder: (view) => formatTxWhen(
+                                    toLocal(view.tx.occurredAt),
                                     toLocal(DateTime.now()),
                                   ),
-                                );
-                              },
+                                ),
+                              ],
                             );
                           },
                         ),

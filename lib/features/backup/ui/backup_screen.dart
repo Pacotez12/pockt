@@ -1,6 +1,8 @@
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +62,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           Haptics.warning();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Ocurrió un error inesperado durante el respaldo'),
+              content: Text('Ocurrió un error inesperado al realizar la copia'),
             ),
           );
       }
@@ -91,8 +93,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ),
             title: Text(
               isInitial
-                  ? 'Configurar contraseña de respaldo'
-                  : 'Cambiar contraseña de respaldo',
+                  ? 'Configurar contraseña de la copia'
+                  : 'Cambiar contraseña de la copia',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 18,
@@ -107,7 +109,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 children: [
                   Text(
                     'Esta contraseña cifra tus copias con AES-256-GCM. '
-                    'Pockt nunca guarda tu contraseña: sin ella no podrás restaurar tus respaldos.',
+                    'Pockt nunca guarda tu contraseña: sin ella no podrás restaurar tus copias.',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
@@ -124,7 +126,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                         borderRadius: BorderRadius.circular(PocktRadii.m),
                       ),
                       child: Text(
-                        'Advertencia: Las copias creadas anteriormente requerirán la contraseña que tenían al momento del respaldo.',
+                        'Advertencia: Las copias creadas anteriormente requerirán la contraseña que tenían al momento de su creación.',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
@@ -138,7 +140,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     controller: passwordCtrl,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: 'Contraseña de respaldo',
+                      labelText: 'Contraseña de la copia',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(PocktRadii.m),
                       ),
@@ -189,7 +191,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Contraseña de respaldo guardada'),
+                        content: Text('Contraseña de la copia guardada'),
                       ),
                     );
                   }
@@ -290,7 +292,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ),
               ),
               Text(
-                'Respaldo automático y cifrado',
+                'Copia automática y cifrada',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
@@ -363,7 +365,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Último backup: $formattedDate',
+                'Última copia: $formattedDate',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 15,
@@ -386,11 +388,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(uiIcon('note'), size: 16, color: colors.warning),
+                  Icon(uiIcon('warning'), size: 16, color: colors.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Copia vencida: pasaron más de 5 días sin respaldo exitoso.',
+                      'Copia vencida: pasaron más de 5 días sin una copia exitosa.',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
@@ -476,7 +478,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ),
                     const SizedBox(width: 10),
                     const Text(
-                      'Respaldar ahora',
+                      'Hacer copia ahora',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 15,
@@ -512,7 +514,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(uiIcon('device-mobile'), size: 18, color: colors.textSecondary),
+              Icon(
+                uiIcon('device-mobile'),
+                size: 18,
+                color: colors.textSecondary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -544,7 +550,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           Text(
             'Para no perderla si perdés el teléfono, exportá una copia a Drive, '
             'WhatsApp o tu correo de vez en cuando.',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.textTertiary),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: colors.textTertiary,
+            ),
           ),
           const SizedBox(height: 12),
           Pressable(
@@ -560,7 +570,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(uiIcon('arrows-left-right'), size: 18, color: colors.brandStart),
+                  Icon(uiIcon('share'), size: 18, color: colors.brandStart),
                   const SizedBox(width: 8),
                   Text(
                     _isExporting ? 'Preparando…' : 'Exportar copia',
@@ -626,7 +636,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tus respaldos están cifrados de extremo a extremo con AES-256-GCM y clave derivada con Argon2id.',
+            'Tus copias de seguridad están cifradas de extremo a extremo con AES-256-GCM y clave derivada con Argon2id.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 13,
@@ -647,10 +657,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(uiIcon('note'), size: 16, color: colors.textPrimary),
+                  Icon(uiIcon('key'), size: 16, color: colors.textPrimary),
                   const SizedBox(width: 8),
                   Text(
-                    'Cambiar contraseña de respaldo',
+                    'Cambiar contraseña de la copia',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
@@ -721,7 +731,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   String _errorMessage(BackupResult error) {
     switch (error) {
       case BackupResult.noPassword:
-        return 'No se configuró una contraseña de respaldo.';
+        return 'No se configuró una contraseña para la copia.';
       case BackupResult.storage:
         return 'No se pudo guardar la copia en Documentos/Pockt.';
       case BackupResult.unknown:

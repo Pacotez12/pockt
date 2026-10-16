@@ -357,6 +357,7 @@ class GoalContributionRow extends ConsumerWidget {
 
     return Pressable(
       key: ValueKey('goal-contrib-${item.contribution.id}'),
+      semanticLabel: '$title, $amountStr, $subtitle',
       onTap: () {
         Haptics.tick();
         Navigator.of(context).push(
@@ -397,7 +398,7 @@ class GoalContributionRow extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 14,
+                      fontSize: PocktType.body,
                       fontWeight: FontWeight.w500,
                       color: colors.textPrimary,
                     ),
@@ -409,7 +410,7 @@ class GoalContributionRow extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12,
+                      fontSize: PocktType.caption,
                       color: colors.textTertiary,
                     ),
                   ),
@@ -421,7 +422,7 @@ class GoalContributionRow extends ConsumerWidget {
               amountStr,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 14,
+                fontSize: PocktType.body,
                 fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
                 color: colors.textSecondary,

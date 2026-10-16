@@ -167,7 +167,6 @@ class _AppShellState extends ConsumerState<AppShell> {
                 color: isSelected ? colors.textPrimary : colors.textTertiary,
               ),
               const SizedBox(height: 1),
-              // Con letra grande del sistema, la etiqueta se achica en vez de cortarse.
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -177,7 +176,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   softWrap: false,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 11,
                     height: 1.0,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     color: isSelected

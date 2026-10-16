@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:pockt/core/format/dates.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
@@ -20,11 +20,6 @@ class GoalsScreen extends ConsumerStatefulWidget {
 }
 
 class _GoalsScreenState extends ConsumerState<GoalsScreen> {
-  String _formatGs(int amount) {
-    final formatter = NumberFormat('#,###', 'es_PY');
-    return '₲ ${formatter.format(amount)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
@@ -56,8 +51,8 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                         semanticLabel: 'Volver',
                         onTap: () => Navigator.of(context).pop(),
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: colors.glassFill,
@@ -109,26 +104,25 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                           );
                         },
                         child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [colors.brandStart, colors.brandEnd],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colors.brandStart.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colors.brandAt(0).withValues(alpha: 0.15),
+                              border: Border.all(
+                                color: colors.brandAt(0).withValues(alpha: 0.4),
                               ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Icon(
-                              uiIcon('plus'),
-                              size: 20,
-                              color: Colors.white,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                uiIcon('plus'),
+                                size: 18,
+                                color: colors.textPrimary,
+                              ),
                             ),
                           ),
                         ),
@@ -189,7 +183,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          _formatGs(totalSaved),
+                                          formatGs(totalSaved),
                                           style: TextStyle(
                                             fontFamily: 'Inter',
                                             fontSize: 22,
@@ -207,7 +201,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: colors.glassFill,
-                                      borderRadius: BorderRadius.circular(999),
+                                      borderRadius: BorderRadius.circular(
+                                        PocktRadii.xl,
+                                      ),
                                       border: Border.all(
                                         color: colors.glassBorder,
                                       ),
@@ -268,6 +264,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Pressable(
         key: ValueKey('goal-card-${goal.id}'),
+        semanticLabel: 'Meta ${goal.name}',
         onTap: () {
           Haptics.tick();
           Navigator.of(context).push(
@@ -338,7 +335,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(PocktRadii.xl),
                       border: Border.all(
                         color: statusColor.withValues(alpha: 0.25),
                       ),
@@ -347,7 +344,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                       statusText,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11,
+                        fontSize: PocktType.caption,
                         fontWeight: FontWeight.w600,
                         color: statusColor,
                       ),
@@ -359,14 +356,14 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
 
               // Barra de progreso con degradé de marca
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(PocktRadii.s),
                 child: SizedBox(
                   height: 7,
                   child: Stack(
                     children: [
                       Container(color: colors.glassBorder),
                       FractionallySizedBox(
-                        widthFactor: progress.percent,
+                        widthFactor: progress.percent.clamp(0.0, 1.0),
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -385,20 +382,27 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${_formatGs(progress.saved)} de ${_formatGs(goal.targetAmount)}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colors.textSecondary,
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${formatGs(progress.saved)} de ${formatGs(goal.targetAmount)}',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: PocktType.caption,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '${(progress.percent * 100).toInt()} %',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: PocktType.caption,
                       fontWeight: FontWeight.w700,
                       color: colors.brandAt(0),
                     ),
@@ -409,10 +413,10 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                   !progress.isCompleted) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Ritmo: ${_formatGs(progress.requiredMonthlyPace!)} / mes',
+                  'Ritmo: ${formatGs(progress.requiredMonthlyPace!)} / mes',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: PocktType.caption,
                     color: colors.textTertiary,
                   ),
                 ),
@@ -469,6 +473,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
             ),
             const SizedBox(height: 24),
             Pressable(
+              semanticLabel: 'Crear primera meta',
               onTap: () {
                 Haptics.tick();
                 Navigator.of(context).push(

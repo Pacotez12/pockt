@@ -877,6 +877,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.only(top: 14),
           child: Pressable(
             key: const ValueKey('home-goals-card'),
+            semanticLabel: 'Ver metas',
             onTap: () {
               Haptics.tick();
               Navigator.of(context)
@@ -912,7 +913,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         'Metas',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 13,
+                          fontSize: PocktType.body,
                           fontWeight: FontWeight.w600,
                           color: colors.textPrimary,
                         ),
@@ -947,25 +948,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    uiIcon(goal.icon),
-                                    size: 14,
-                                    color: colors.brandAt(0),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    goal.name,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.textPrimary,
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      uiIcon(goal.icon),
+                                      size: 14,
+                                      color: colors.brandAt(0),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        goal.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: PocktType.caption,
+                                          fontWeight: FontWeight.w600,
+                                          color: colors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               Text(
                                 obscure
                                     ? '••••'
@@ -981,14 +989,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 6),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
+                            borderRadius: BorderRadius.circular(PocktRadii.s),
                             child: SizedBox(
                               height: 5,
                               child: Stack(
                                 children: [
                                   Container(color: colors.glassBorder),
                                   FractionallySizedBox(
-                                    widthFactor: progress.percent,
+                                    widthFactor: progress.percent.clamp(
+                                      0.0,
+                                      1.0,
+                                    ),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
@@ -1163,13 +1174,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Default: HomeHeadline.safeToSpend
     final safeToSpend = ref.watch(safeToSpendProvider).value;
     final amount = safeToSpend?.amount ?? 0;
-    final quedan = safeToSpend?.quedan ?? 0;
     final isNegative = amount < 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
+        semanticLabel: 'Alternar ocultar montos',
         onTap: () {
           ref.read(amountsRevealedProvider.notifier).toggle();
         },
@@ -1180,7 +1190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               'Podés gastar hoy',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12,
+                fontSize: PocktType.caption,
                 color: colors.textSecondary,
               ),
             ),
@@ -1211,15 +1221,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
             ),
             const SizedBox(height: 4),
-            Text(
-              obscure
-                  ? 'Gastado •••• · Quedan ••••'
-                  : 'Gastado ${formatGs(_monthTotal)} · Quedan ${formatGs(quedan)}',
-              key: const ValueKey('safe-to-spend-subtitle'),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: colors.textSecondary,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                obscure
+                    ? 'Gastado en $monthNameLower ••••'
+                    : 'Gastado en $monthNameLower ${formatGs(_monthTotal)}',
+                key: const ValueKey('safe-to-spend-subtitle'),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: PocktType.caption,
+                  color: colors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -1463,8 +1477,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? 'incluye •••• $previous'
         : 'incluye ${carry > 0 ? '+' : '−'}${formatGs(carry.abs())} $previous';
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Pressable(
+      semanticLabel: 'Línea del período',
       onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1480,7 +1494,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   key: const ValueKey('period-line-carry'),
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: PocktType.caption,
                     color: colors.textSecondary.withValues(alpha: 0.55),
                   ),
                 ),

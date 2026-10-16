@@ -2,7 +2,7 @@ name: pockt
 description: "Pockt - Finanzas personales"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 0.5.0+5
 
 environment:
   sdk: ^3.13.0

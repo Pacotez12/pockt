@@ -962,7 +962,7 @@ class _EntryShortcutsBar extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: SizedBox(
-        height: 38,
+        height: 44,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -974,6 +974,7 @@ class _EntryShortcutsBar extends ConsumerWidget {
             final catColor = isDark ? item.colorDark : item.colorLight;
 
             return Pressable(
+              semanticLabel: 'Atajo ${item.label}, ${formatGs(item.amount)}',
               onTap: () {
                 Haptics.tick();
                 onShortcutTapped(item);

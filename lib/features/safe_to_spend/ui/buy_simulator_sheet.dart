@@ -178,21 +178,26 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                   maxGoalDelayDays: maxDelay,
                 );
 
-                final message = getBuyMessage(
-                  tone: tone,
-                  situation: situation,
-                  variantIndex: _lastToneMessageIndex,
-                );
+                final message = _enteredAmount <= 0
+                    ? 'Escribí un monto'
+                    : getBuyMessage(
+                        tone: tone,
+                        situation: situation,
+                        variantIndex: _lastToneMessageIndex,
+                      );
 
                 return Container(
-                  height: MediaQuery.of(context).size.height * 0.90,
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.90,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.sheetSurface,
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
+                      top: Radius.circular(PocktRadii.xl),
                     ),
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const SizedBox(height: 10),
                       // Manija superior
@@ -222,7 +227,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                     '¿Lo compro?',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
-                                      fontSize: 20,
+                                      fontSize: PocktType.title,
                                       fontWeight: FontWeight.w700,
                                       color: colors.textPrimary,
                                     ),
@@ -233,7 +238,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontFamily: 'Inter',
-                                      fontSize: 12,
+                                      fontSize: PocktType.caption,
                                       color: colors.textSecondary,
                                     ),
                                   ),
@@ -251,6 +256,8 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                         : _selectedCategory!.colorLight,
                                   );
                                   return Pressable(
+                                    semanticLabel:
+                                        'Elegir categoría ${_selectedCategory!.name}',
                                     onTap: _pickCategory,
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
@@ -260,7 +267,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                       decoration: BoxDecoration(
                                         color: catColor.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(
-                                          999,
+                                          PocktRadii.xl,
                                         ),
                                         border: Border.all(
                                           color: catColor.withValues(
@@ -281,7 +288,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                             _selectedCategory!.name,
                                             style: TextStyle(
                                               fontFamily: 'Inter',
-                                              fontSize: 13,
+                                              fontSize: PocktType.caption,
                                               fontWeight: FontWeight.w600,
                                               color: catColor,
                                             ),
@@ -345,12 +352,15 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                     Icon(
                                       uiIcon('sparkle'),
                                       size: 18,
-                                      color: situation == BuySituation.withinDay
-                                          ? colors.brandStart
-                                          : (situation ==
-                                                    BuySituation.breaksBudget
-                                                ? colors.danger
-                                                : colors.warning),
+                                      color: _enteredAmount <= 0
+                                          ? colors.textSecondary
+                                          : (situation == BuySituation.withinDay
+                                                ? colors.brandStart
+                                                : (situation ==
+                                                          BuySituation
+                                                              .breaksBudget
+                                                      ? colors.danger
+                                                      : colors.warning)),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -358,7 +368,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                         message,
                                         style: TextStyle(
                                           fontFamily: 'Inter',
-                                          fontSize: 13,
+                                          fontSize: PocktType.caption,
                                           fontWeight: FontWeight.w500,
                                           color: colors.textPrimary,
                                         ),
@@ -395,7 +405,10 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                     // Presupuesto categoría
                                     if (currentBudgetRemaining != null &&
                                         afterBudgetRemaining != null) ...[
-                                      const Divider(height: 16),
+                                      Divider(
+                                        height: 16,
+                                        color: colors.glassBorder,
+                                      ),
                                       _buildComparisonRow(
                                         context,
                                         label:
@@ -413,7 +426,10 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
 
                                     // Metas con fecha
                                     if (goalsWithDate.isNotEmpty) ...[
-                                      const Divider(height: 16),
+                                      Divider(
+                                        height: 16,
+                                        color: colors.glassBorder,
+                                      ),
                                       ...goalsWithDate.map((g) {
                                         final delay =
                                             g.progress.delayDaysFor(
@@ -432,9 +448,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                                 child: Row(
                                                   children: [
                                                     Icon(
-                                                      categoryIconData(
-                                                        g.goal.icon,
-                                                      ),
+                                                      uiIcon(g.goal.icon),
                                                       size: 14,
                                                       color:
                                                           colors.textSecondary,
@@ -448,7 +462,8 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                                             .ellipsis,
                                                         style: TextStyle(
                                                           fontFamily: 'Inter',
-                                                          fontSize: 13,
+                                                          fontSize:
+                                                              PocktType.caption,
                                                           color: colors
                                                               .textSecondary,
                                                         ),
@@ -461,10 +476,10 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                               Text(
                                                 delay > 0
                                                     ? '+$delay días de atraso'
-                                                    : 'A tiempo (+0 d)',
+                                                    : 'Sin atraso',
                                                 style: TextStyle(
                                                   fontFamily: 'Inter',
-                                                  fontSize: 13,
+                                                  fontSize: PocktType.caption,
                                                   fontWeight: FontWeight.w600,
                                                   color: delay > 0
                                                       ? colors.warning
@@ -494,6 +509,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                       key: const ValueKey(
                                         'buy-simulator-cancel',
                                       ),
+                                      semanticLabel: 'No, gracias',
                                       onTap: () {
                                         Haptics.tick();
                                         Navigator.of(context).pop();
@@ -529,6 +545,7 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                                       key: const ValueKey(
                                         'buy-simulator-confirm',
                                       ),
+                                      semanticLabel: 'Lo compro',
                                       onTap: () {
                                         Haptics.save();
                                         Navigator.of(context).pop();
@@ -604,49 +621,74 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
     required Color limitWarningColor,
   }) {
     final colors = context.pockt;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 13,
+              fontSize: PocktType.caption,
               color: colors.textSecondary,
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Row(
-          children: [
-            Text(
-              beforeText,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: colors.textSecondary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: 3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    beforeText,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: PocktType.caption,
+                      color: colors.textTertiary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(uiIcon('caret-right'), size: 12, color: colors.textTertiary),
-            const SizedBox(width: 8),
-            Text(
-              afterText,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: crossedLimit ? limitWarningColor : colors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        uiIcon('caret-right'),
+                        size: 12,
+                        color: colors.textTertiary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        afterText,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: PocktType.caption,
+                          fontWeight: FontWeight.w700,
+                          color: crossedLimit
+                              ? limitWarningColor
+                              : colors.textPrimary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -664,6 +706,9 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
                 if (col > 0) const SizedBox(width: 6),
                 Expanded(
                   child: Pressable(
+                    semanticLabel: keys[row * 3 + col] == '⌫'
+                        ? 'Borrar'
+                        : 'Tecla ${keys[row * 3 + col]}',
                     onTap: () => _handleKey(keys[row * 3 + col]),
                     child: Container(
                       height: 44,

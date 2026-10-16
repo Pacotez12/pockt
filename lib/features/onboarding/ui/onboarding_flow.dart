@@ -5,6 +5,7 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
+import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/design/wordmark.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
@@ -196,9 +197,11 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final colors = context.pockt;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -208,26 +211,30 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const PocktWordmark(
-                    key: ValueKey('onboarding-wordmark'),
+                  PocktWordmark(
+                    key: const ValueKey('onboarding-wordmark'),
                     size: 26,
-                    color: Colors.white,
+                    color: colors.textPrimary,
                   ),
-                  TextButton(
-                    onPressed: _skip,
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.textSecondary,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                  Flexible(
+                    child: TextButton(
+                      onPressed: _skip,
+                      style: TextButton.styleFrom(
+                        foregroundColor: colors.textSecondary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Saltear',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      child: const Text(
+                        'Saltear',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -244,7 +251,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                   final isPassed = index < _currentStep;
                   return Expanded(
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 250),
                       curve: Curves.easeOutCubic,
                       height: 4,
                       margin: EdgeInsets.only(left: index > 0 ? 6 : 0),
@@ -253,7 +262,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                             ? colors.brandAt(0)
                             : (isPassed
                                   ? colors.brandAt(0).withValues(alpha: 0.5)
-                                  : Colors.white.withValues(alpha: 0.15)),
+                                  : colors.textTertiary.withValues(alpha: 0.2)),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -265,7 +274,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             // Contenido del paso actual
             Expanded(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 300),
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 child: _buildCurrentStep(context),
@@ -380,9 +391,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
+              color: colors.glassFill,
               borderRadius: BorderRadius.circular(PocktRadii.l),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: colors.glassBorder),
             ),
             child: Row(
               children: [
@@ -449,19 +460,18 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   }) {
     final colors = context.pockt;
 
-    return GestureDetector(
+    return Pressable(
+      semanticLabel: '$title: $subtitle',
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
               ? colors.brandAt(0).withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.05),
+              : colors.glassFill,
           borderRadius: BorderRadius.circular(PocktRadii.l),
           border: Border.all(
-            color: isSelected
-                ? colors.brandAt(0)
-                : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? colors.brandAt(0) : colors.glassBorder,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -482,7 +492,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               subtitle,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12,
+                fontSize: PocktType.caption,
                 color: colors.textSecondary,
               ),
             ),
@@ -593,9 +603,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: colors.glassFill,
         borderRadius: BorderRadius.circular(PocktRadii.l),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: colors.glassBorder),
       ),
       child: Row(
         children: [
@@ -603,7 +613,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: colors.textTertiary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -614,6 +624,8 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           Expanded(
             child: Text(
               name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 15,
@@ -622,6 +634,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             'Gs. ',
             style: TextStyle(
@@ -631,7 +644,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             ),
           ),
           SizedBox(
-            width: 100,
+            width: 88,
             child: TextField(
               controller: controller,
               keyboardType: TextInputType.number,
@@ -743,18 +756,14 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               labelText: 'Contraseña de respaldo',
               labelStyle: TextStyle(color: colors.textSecondary),
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
+              fillColor: colors.glassFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(PocktRadii.l),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                borderSide: BorderSide(color: colors.glassBorder),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(PocktRadii.l),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                borderSide: BorderSide(color: colors.glassBorder),
               ),
             ),
           ),
@@ -771,18 +780,14 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               labelText: 'Confirmar contraseña',
               labelStyle: TextStyle(color: colors.textSecondary),
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
+              fillColor: colors.glassFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(PocktRadii.l),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                borderSide: BorderSide(color: colors.glassBorder),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(PocktRadii.l),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                borderSide: BorderSide(color: colors.glassBorder),
               ),
             ),
           ),

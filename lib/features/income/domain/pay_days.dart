@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:pockt/features/income/domain/py_holidays.dart';
 
 /// Helper para parsear reglas desde un JSON string o fallback.
@@ -9,7 +10,9 @@ List<PayDayRule> parsePayDayRules(String? rulesJson, List<int> payDays) {
       return list.map((e) => PayDayRule.parse(e.toString())).toList();
     } catch (_) {}
   }
-  return payDays.map((d) => d == -1 ? PayDayRule.previous : PayDayRule.either).toList();
+  return payDays
+      .map((d) => d == -1 ? PayDayRule.previous : PayDayRule.either)
+      .toList();
 }
 
 /// Helper para parsear payDays desde un JSON string.
@@ -51,10 +54,7 @@ class PayWindow {
   final DateTime earliest;
   final DateTime latest;
 
-  const PayWindow({
-    required this.earliest,
-    required this.latest,
-  });
+  const PayWindow({required this.earliest, required this.latest});
 
   bool get isRange => earliest != latest;
 
@@ -147,23 +147,44 @@ List<PayWindow> payWindowsInMonth(
 }
 
 /// Devuelve la primera ventana de cobro cuyo fin (`latest`) sea mayor o igual a [fromLocalDay].
+/// Si [lastConfirmedSalaryDate] cae dentro de una ventana, ese cobro ya se registró
+/// y se devuelve la siguiente.
 PayWindow? nextPayWindow(
   DateTime fromLocalDay,
   List<int> payDays,
-  List<PayDayRule> rules,
-) {
+  List<PayDayRule> rules, {
+  DateTime? lastConfirmedSalaryDate,
+}) {
   if (payDays.isEmpty) {
     return null;
   }
 
-  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  final from = DateTime(
+    fromLocalDay.year,
+    fromLocalDay.month,
+    fromLocalDay.day,
+  );
+  final paid = lastConfirmedSalaryDate == null
+      ? null
+      : DateTime(
+          lastConfirmedSalaryDate.year,
+          lastConfirmedSalaryDate.month,
+          lastConfirmedSalaryDate.day,
+        );
+
   var y = from.year;
   var m = from.month;
 
   for (var i = 0; i < 24; i++) {
     final windows = payWindowsInMonth(y, m, payDays, rules);
     for (final window in windows) {
-      if (!window.latest.isBefore(from)) {
+      // Si el sueldo ya entró dentro de esta ventana (incluso antes de hoy),
+      // ese cobro ya pasó: la próxima es la siguiente.
+      final alreadyPaid =
+          paid != null &&
+          !paid.isBefore(window.earliest) &&
+          !paid.isAfter(window.latest);
+      if (!window.latest.isBefore(from) && !alreadyPaid) {
         return window;
       }
     }
@@ -188,7 +209,11 @@ PayWindow? previousPayWindow(
     return null;
   }
 
-  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  final from = DateTime(
+    fromLocalDay.year,
+    fromLocalDay.month,
+    fromLocalDay.day,
+  );
   var y = from.year;
   var m = from.month;
 
@@ -257,7 +282,11 @@ DateTime? nextPayDay(
   required bool shiftToPreviousBusinessDay,
 }) {
   if (payDays.isEmpty) return null;
-  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  final from = DateTime(
+    fromLocalDay.year,
+    fromLocalDay.month,
+    fromLocalDay.day,
+  );
   var y = from.year;
   var m = from.month;
 
@@ -288,7 +317,11 @@ DateTime? previousPayDay(
   required bool shiftToPreviousBusinessDay,
 }) {
   if (payDays.isEmpty) return null;
-  final from = DateTime(fromLocalDay.year, fromLocalDay.month, fromLocalDay.day);
+  final from = DateTime(
+    fromLocalDay.year,
+    fromLocalDay.month,
+    fromLocalDay.day,
+  );
   var y = from.year;
   var m = from.month;
 

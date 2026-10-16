@@ -32,18 +32,23 @@ class EventsScreen extends ConsumerWidget {
                     semanticLabel: 'Volver',
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colors.glassFill,
-                        border: Border.all(color: colors.glassBorder),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          uiIcon('arrow-left'),
-                          size: 18,
-                          color: colors.textPrimary,
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.glassFill,
+                          border: Border.all(color: colors.glassBorder),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            uiIcon('arrow-left'),
+                            size: 18,
+                            color: colors.textPrimary,
+                          ),
                         ),
                       ),
                     ),
@@ -66,20 +71,25 @@ class EventsScreen extends ConsumerWidget {
                     semanticLabel: 'Crear evento',
                     onTap: () => _showEventSheet(context, ref),
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colors.brandAt(0).withValues(alpha: 0.15),
-                        border: Border.all(
-                          color: colors.brandAt(0).withValues(alpha: 0.4),
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.brandAt(0).withValues(alpha: 0.15),
+                          border: Border.all(
+                            color: colors.brandAt(0).withValues(alpha: 0.4),
+                          ),
                         ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          uiIcon('plus'),
-                          size: 18,
-                          color: colors.brandAt(0),
+                        child: Center(
+                          child: Icon(
+                            uiIcon('plus'),
+                            size: 18,
+                            color: colors.brandAt(0),
+                          ),
                         ),
                       ),
                     ),
@@ -309,7 +319,7 @@ class _EventCard extends StatelessWidget {
                             'Activo',
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 10,
+                              fontSize: PocktType.caption,
                               fontWeight: FontWeight.w700,
                               color: colors.brandAt(0),
                             ),
@@ -566,7 +576,7 @@ class EventDetailScreen extends ConsumerWidget {
                                           : 'Pausado · No se asignan gastos',
                                       style: TextStyle(
                                         fontFamily: 'Inter',
-                                        fontSize: 11,
+                                        fontSize: PocktType.caption,
                                         color: colors.textSecondary,
                                       ),
                                     ),
@@ -817,7 +827,7 @@ class EventDetailScreen extends ConsumerWidget {
                                           note,
                                           style: TextStyle(
                                             fontFamily: 'Inter',
-                                            fontSize: 11,
+                                            fontSize: PocktType.caption,
                                             color: colors.textSecondary,
                                           ),
                                           maxLines: 1,
@@ -876,7 +886,7 @@ Future<void> _showEventSheet(
             decoration: BoxDecoration(
               color: colors.sheetSurface,
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
+                top: Radius.circular(PocktRadii.xl),
               ),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -940,7 +950,7 @@ Future<void> _showEventSheet(
                     'Ícono',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: PocktType.caption,
                       fontWeight: FontWeight.w500,
                       color: colors.textSecondary,
                     ),
@@ -957,6 +967,7 @@ Future<void> _showEventSheet(
                         final isSelected = key == selectedIcon;
 
                         return Pressable(
+                          semanticLabel: 'Ícono $key',
                           onTap: () {
                             Haptics.tick();
                             setSheetState(() => selectedIcon = key);
@@ -1015,25 +1026,37 @@ Future<void> _showEventSheet(
                   Row(
                     children: [
                       Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          child: Text(
-                            'Cancelar',
-                            style: TextStyle(color: colors.textSecondary),
+                        child: Pressable(
+                          semanticLabel: 'Cancelar',
+                          onTap: () => Navigator.of(sheetContext).pop(),
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: colors.glassFill,
+                              borderRadius: BorderRadius.circular(
+                                PocktRadii.xl,
+                              ),
+                              border: Border.all(color: colors.glassBorder),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textSecondary,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton(
+                        child: Pressable(
                           key: const ValueKey('save-event-btn'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colors.brandAt(0),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(PocktRadii.m),
-                            ),
-                          ),
-                          onPressed: () async {
+                          semanticLabel: 'Guardar evento',
+                          onTap: () async {
                             final name = nameController.text.trim();
                             if (name.isEmpty) return;
 
@@ -1063,11 +1086,34 @@ Future<void> _showEventSheet(
                               Navigator.of(sheetContext).pop();
                             }
                           },
-                          child: const Text(
-                            'Guardar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [colors.brandStart, colors.brandEnd],
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                PocktRadii.xl,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.brandStart.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),

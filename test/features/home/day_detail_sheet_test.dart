@@ -20,7 +20,14 @@ void main() {
   late TransactionsRepository txRepo;
 
   DateTime localToUtc(int y, int m, int d, [int h = 12, int min = 0]) =>
-      tz.TZDateTime(tz.getLocation('America/Asuncion'), y, m, d, h, min).toUtc();
+      tz.TZDateTime(
+        tz.getLocation('America/Asuncion'),
+        y,
+        m,
+        d,
+        h,
+        min,
+      ).toUtc();
 
   setUpAll(() {
     tz.initializeTimeZones();
@@ -29,7 +36,10 @@ void main() {
   setUp(() {
     setLocalZone('America/Asuncion');
     testDb = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     catRepo = CategoriesRepository(testDb);
     txRepo = TransactionsRepository(testDb);
@@ -44,24 +54,51 @@ void main() {
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
 
-    final cats = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
+    final cats = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
     String id(String name) => cats.firstWhere((c) => c.name == name).id;
 
     await t.runAsync(() async {
       // Sábado 17: 612.000 en tres categorías.
-      await txRepo.add(type: TxType.expense, amount: 380000, categoryId: id('Hogar'),
-          merchant: 'Superseis', occurredAt: localToUtc(2026, 10, 17, 19, 40));
-      await txRepo.add(type: TxType.expense, amount: 186000, categoryId: id('Comida'),
-          occurredAt: localToUtc(2026, 10, 17, 21, 15));
-      await txRepo.add(type: TxType.expense, amount: 46000, categoryId: id('Transporte'),
-          occurredAt: localToUtc(2026, 10, 17, 9, 0));
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 380000,
+        categoryId: id('Hogar'),
+        merchant: 'Superseis',
+        occurredAt: localToUtc(2026, 10, 17, 19, 40),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 186000,
+        categoryId: id('Comida'),
+        occurredAt: localToUtc(2026, 10, 17, 21, 15),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 46000,
+        categoryId: id('Transporte'),
+        occurredAt: localToUtc(2026, 10, 17, 9, 0),
+      );
       // Otros 3 días suman 108.000 → promedio (720.000 / 4) = 180.000.
-      await txRepo.add(type: TxType.expense, amount: 50000, categoryId: id('Comida'),
-          occurredAt: localToUtc(2026, 10, 3));
-      await txRepo.add(type: TxType.expense, amount: 30000, categoryId: id('Comida'),
-          occurredAt: localToUtc(2026, 10, 5));
-      await txRepo.add(type: TxType.expense, amount: 28000, categoryId: id('Transporte'),
-          occurredAt: localToUtc(2026, 10, 9));
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 50000,
+        categoryId: id('Comida'),
+        occurredAt: localToUtc(2026, 10, 3),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 30000,
+        categoryId: id('Comida'),
+        occurredAt: localToUtc(2026, 10, 5),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 28000,
+        categoryId: id('Transporte'),
+        occurredAt: localToUtc(2026, 10, 9),
+      );
     });
 
     await t.pumpWidget(
@@ -73,7 +110,8 @@ void main() {
             builder: (context) => Scaffold(
               body: Center(
                 child: TextButton(
-                  onPressed: () => showDayDetail(context, DateTime(2026, 10, 17)),
+                  onPressed: () =>
+                      showDayDetail(context, DateTime(2026, 10, 17)),
                   child: const Text('abrir'),
                 ),
               ),
@@ -100,13 +138,17 @@ void main() {
   });
 
   testWidgets('único día con gasto: sin múltiplo del promedio', (t) async {
-    final cats = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    await t.runAsync(() => txRepo.add(
-          type: TxType.expense,
-          amount: 15000,
-          categoryId: cats.first.id,
-          occurredAt: localToUtc(2026, 10, 17),
-        ));
+    final cats = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
+    await t.runAsync(
+      () => txRepo.add(
+        type: TxType.expense,
+        amount: 15000,
+        categoryId: cats.first.id,
+        occurredAt: localToUtc(2026, 10, 17),
+      ),
+    );
 
     await t.pumpWidget(
       ProviderScope(
@@ -132,15 +174,90 @@ void main() {
   });
 
   testWidgets(
-      'el contenido de la hoja se funde al final de la apertura y se oculta al inicio del cierre',
-      (t) async {
-    final cats = (await t.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
-    await t.runAsync(() => txRepo.add(
+    'el contenido de la hoja se funde al final de la apertura y se oculta al inicio del cierre',
+    (t) async {
+      final cats = (await t.runAsync(
+        () => catRepo.watchActive(CategoryKind.expense).first,
+      ))!;
+      await t.runAsync(
+        () => txRepo.add(
           type: TxType.expense,
           amount: 50000,
           categoryId: cats.first.id,
           occurredAt: localToUtc(2026, 10, 17),
-        ));
+        ),
+      );
+
+      await t.pumpWidget(
+        ProviderScope(
+          overrides: [databaseProvider.overrideWithValue(testDb)],
+          child: MaterialApp(
+            theme: buildDarkTheme(),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      showDayDetail(context, DateTime(2026, 10, 17)),
+                  child: const Text('abrir'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Abrir: a mitad de transición (150ms de 350ms, t < 0.7), el contenido tiene opacidad 0
+      await t.tap(find.text('abrir'));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 150));
+
+      final opacityFinder = find.descendant(
+        of: find.byType(DayDetailSheet),
+        matching: find.byType(Opacity),
+      );
+      expect(opacityFinder, findsOneWidget);
+      final openOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      expect(openOpacity, 0.0);
+
+      // Completar la apertura: opacidad 1.0
+      await t.pumpAndSettle();
+      final settledOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      expect(settledOpacity, 1.0);
+      expect(find.text('Gs. 50.000'), findsOneWidget);
+
+      // Iniciar cierre: a 60ms (de 300ms, t < 0.85), el contenido ya se ocultó (opacidad 0)
+      await t.tapAt(const Offset(50, 50));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 60));
+
+      final closeOpacity = t.widget<Opacity>(opacityFinder).opacity;
+      expect(closeOpacity, 0.0);
+
+      await t.pumpAndSettle();
+      expect(find.byType(DayDetailSheet), findsNothing);
+    },
+  );
+
+  testWidgets('día con gasto menor al promedio muestra flecha abajo', (
+    t,
+  ) async {
+    final cats = (await t.runAsync(
+      () => catRepo.watchActive(CategoryKind.expense).first,
+    ))!;
+    await t.runAsync(() async {
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 20000,
+        categoryId: cats.first.id,
+        occurredAt: localToUtc(2026, 10, 1),
+      );
+      await txRepo.add(
+        type: TxType.expense,
+        amount: 180000,
+        categoryId: cats.first.id,
+        occurredAt: localToUtc(2026, 10, 2),
+      );
+    });
 
     await t.pumpWidget(
       ProviderScope(
@@ -150,7 +267,7 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
-                onPressed: () => showDayDetail(context, DateTime(2026, 10, 17)),
+                onPressed: () => showDayDetail(context, DateTime(2026, 10, 1)),
                 child: const Text('abrir'),
               ),
             ),
@@ -158,35 +275,9 @@ void main() {
         ),
       ),
     );
-
-    // Abrir: a mitad de transición (150ms de 350ms, t < 0.7), el contenido tiene opacidad 0
     await t.tap(find.text('abrir'));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 150));
-
-    final opacityFinder = find.descendant(
-      of: find.byType(DayDetailSheet),
-      matching: find.byType(Opacity),
-    );
-    expect(opacityFinder, findsOneWidget);
-    final openOpacity = t.widget<Opacity>(opacityFinder).opacity;
-    expect(openOpacity, 0.0);
-
-    // Completar la apertura: opacidad 1.0
     await t.pumpAndSettle();
-    final settledOpacity = t.widget<Opacity>(opacityFinder).opacity;
-    expect(settledOpacity, 1.0);
-    expect(find.text('Gs. 50.000'), findsOneWidget);
 
-    // Iniciar cierre: a 60ms (de 300ms, t < 0.85), el contenido ya se ocultó (opacidad 0)
-    await t.tapAt(const Offset(50, 50));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 60));
-
-    final closeOpacity = t.widget<Opacity>(opacityFinder).opacity;
-    expect(closeOpacity, 0.0);
-
-    await t.pumpAndSettle();
-    expect(find.byType(DayDetailSheet), findsNothing);
+    expect(find.textContaining('↓ 0,2× tu día promedio'), findsOneWidget);
   });
 }

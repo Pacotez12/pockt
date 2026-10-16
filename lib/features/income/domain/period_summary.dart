@@ -134,7 +134,12 @@ PeriodLine? periodLine({
 
   final rules = parsePayDayRules(schedule.payDayRules, payDays);
 
-  final nextWindow = nextPayWindow(todayLocal, payDays, rules);
+  final nextWindow = nextPayWindow(
+    todayLocal,
+    payDays,
+    rules,
+    lastConfirmedSalaryDate: lastConfirmedSalaryDate,
+  );
   if (nextWindow == null) return null;
 
   final today = DateTime(todayLocal.year, todayLocal.month, todayLocal.day);
@@ -149,15 +154,17 @@ PeriodLine? periodLine({
   if (schedule.mode.toLowerCase() == 'monthly') {
     label = 'Este mes';
   } else {
-    // Modo quincenal: dividimos el mes según el primer día de cobro
-    final positiveDays = payDays.where((d) => d > 0).toList()..sort();
-    final firstPayDay = positiveDays.isNotEmpty ? positiveDays.first : 15;
-
-    if (todayLocal.day <= firstPayDay) {
-      label = '1ª quincena';
-    } else {
-      label = '2ª quincena';
-    }
+    // Modo quincenal: el período termina en el próximo cobro; si ese cobro es
+    // el primero de su mes, estamos en la 1ª quincena.
+    final monthWindows = payWindowsInMonth(
+      nextWindow.earliest.year,
+      nextWindow.earliest.month,
+      payDays,
+      rules,
+    );
+    label = monthWindows.isNotEmpty && monthWindows.first == nextWindow
+        ? '1ª quincena'
+        : '2ª quincena';
   }
 
   // Determinación de periodStartDate:

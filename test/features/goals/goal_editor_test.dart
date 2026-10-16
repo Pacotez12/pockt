@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/ui/goal_editor.dart';
@@ -109,4 +110,34 @@ void main() {
     final goal = await repo.getGoal(goalId);
     expect(goal!.name, equals('MacBook Pro'));
   });
+
+  testWidgets(
+    'con campos vacíos o monto 0 el botón Guardar está deshabilitado',
+    (tester) async {
+      await tester.pumpWidget(buildEditor());
+      await tester.pumpAndSettle();
+
+      final saveButtonFinder = find.byKey(const ValueKey('goal-save-button'));
+      expect(saveButtonFinder, findsOneWidget);
+
+      var savePressable = tester.widget<Pressable>(saveButtonFinder);
+      expect(savePressable.onTap, isNull);
+
+      // Ingresar solo nombre sin monto
+      final nameField = find.byKey(const ValueKey('goal-name-input'));
+      await tester.enterText(nameField, 'Ahorro');
+      await tester.pump();
+
+      savePressable = tester.widget<Pressable>(saveButtonFinder);
+      expect(savePressable.onTap, isNull);
+
+      // Ingresar monto válido
+      final amountField = find.byKey(const ValueKey('goal-amount-input'));
+      await tester.enterText(amountField, '500000');
+      await tester.pump();
+
+      savePressable = tester.widget<Pressable>(saveButtonFinder);
+      expect(savePressable.onTap, isNotNull);
+    },
+  );
 }

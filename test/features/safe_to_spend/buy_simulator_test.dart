@@ -173,4 +173,16 @@ void main() {
       expect(find.text('¿Lo compro?'), findsOneWidget);
     },
   );
+
+  testWidgets('¿Lo compro?: cuando el monto es 0 muestra Escribí un monto', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSheetApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Abrir simulador'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribí un monto'), findsOneWidget);
+  });
 }

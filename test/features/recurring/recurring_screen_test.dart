@@ -24,7 +24,10 @@ void main() {
   setUp(() async {
     setLocalZone('America/Asuncion');
     testDb = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
     notifier = FakeNotifier();
     recurringRepo = RecurringRepository(
@@ -67,7 +70,9 @@ void main() {
     expect(find.text('Agregar recurrente'), findsOneWidget);
   });
 
-  testWidgets('crear un recurrente lo lista con su próxima fecha', (tester) async {
+  testWidgets('crear un recurrente lo lista con su próxima fecha', (
+    tester,
+  ) async {
     await pumpRecurringScreen(tester);
 
     // Abrir formulario de creación
@@ -145,7 +150,9 @@ void main() {
     expect(updated!.first.active, isFalse);
   });
 
-  testWidgets('borrar una regla recurrente la quita de la lista', (tester) async {
+  testWidgets('borrar una regla recurrente la quita de la lista', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       await recurringRepo.add(
         name: 'Gimnasio',
@@ -163,8 +170,17 @@ void main() {
     final rules = await tester.runAsync(() => recurringRepo.watchAll().first);
     final ruleId = rules!.first.id;
 
+    await tester.tap(find.byKey(ValueKey('delete-recurring-$ruleId')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('confirm-delete-recurring-btn')),
+      findsOneWidget,
+    );
     await tester.runAsync(() async {
-      await tester.tap(find.byKey(ValueKey('delete-recurring-$ruleId')));
+      await tester.tap(
+        find.byKey(const ValueKey('confirm-delete-recurring-btn')),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
@@ -172,56 +188,61 @@ void main() {
     expect(find.text('Gimnasio'), findsNothing);
   });
 
-  testWidgets('crear un recurrente eligiendo Transporte lo guarda con esa categoría', (tester) async {
-    const transporteId = '018f0000-0000-7000-8000-000000000002';
-    await pumpRecurringScreen(tester);
+  testWidgets(
+    'crear un recurrente eligiendo Transporte lo guarda con esa categoría',
+    (tester) async {
+      const transporteId = '018f0000-0000-7000-8000-000000000002';
+      await pumpRecurringScreen(tester);
 
-    // Abrir formulario de creación
-    await tester.tap(find.byKey(const ValueKey('add-recurring-button')));
-    await tester.pumpAndSettle();
+      // Abrir formulario de creación
+      await tester.tap(find.byKey(const ValueKey('add-recurring-button')));
+      await tester.pumpAndSettle();
 
-    // Nombre
-    await tester.enterText(
-      find.byKey(const ValueKey('recurring-name-input')),
-      'Pase mensual bus',
-    );
-    await tester.pumpAndSettle();
+      // Nombre
+      await tester.enterText(
+        find.byKey(const ValueKey('recurring-name-input')),
+        'Pase mensual bus',
+      );
+      await tester.pumpAndSettle();
 
-    // Categoría: abrir selector y elegir Transporte
-    await tester.tap(find.byKey(const ValueKey('recurring-category-button')));
-    await tester.pumpAndSettle();
+      // Categoría: abrir selector y elegir Transporte
+      await tester.tap(find.byKey(const ValueKey('recurring-category-button')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Transporte'), findsWidgets);
-    await tester.tap(find.text('Transporte').last);
-    await tester.pumpAndSettle();
+      expect(find.text('Transporte'), findsWidgets);
+      await tester.tap(find.text('Transporte').last);
+      await tester.pumpAndSettle();
 
-    // Monto usando el teclado
-    await tester.tap(find.byKey(const ValueKey('recurring-amount-button')));
-    await tester.pumpAndSettle();
+      // Monto usando el teclado
+      await tester.tap(find.byKey(const ValueKey('recurring-amount-button')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('1'));
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(find.text('0'));
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(find.text('0'));
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('1'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('0'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('0'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
 
-    // Guardar regla recurrente
-    await tester.runAsync(() async {
-      await tester.tap(find.byKey(const ValueKey('save-recurring-button')));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+      // Guardar regla recurrente
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const ValueKey('save-recurring-button')));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
 
-    final rules = await tester.runAsync(() => recurringRepo.watchAll().first);
-    expect(rules, isNotEmpty);
-    final savedRule = rules!.firstWhere((r) => r.name == 'Pase mensual bus');
-    expect(savedRule.categoryId, equals(transporteId));
-  });
+      final rules = await tester.runAsync(() => recurringRepo.watchAll().first);
+      expect(rules, isNotEmpty);
+      final savedRule = rules!.firstWhere((r) => r.name == 'Pase mensual bus');
+      expect(savedRule.categoryId, equals(transporteId));
+    },
+  );
 
-  testWidgets('al editar una regla existente muestra su categoría', (tester) async {
+  testWidgets('al editar una regla existente muestra su categoría', (
+    tester,
+  ) async {
     const transporteId = '018f0000-0000-7000-8000-000000000002';
     await tester.runAsync(() async {
       await recurringRepo.add(
@@ -246,7 +267,9 @@ void main() {
     expect(find.text('Transporte'), findsOneWidget);
   });
 
-  testWidgets('al cambiar el tipo resetea a una categoría válida de ese tipo', (tester) async {
+  testWidgets('al cambiar el tipo resetea a una categoría válida de ese tipo', (
+    tester,
+  ) async {
     await pumpRecurringScreen(tester);
 
     await tester.tap(find.byKey(const ValueKey('add-recurring-button')));
@@ -264,15 +287,25 @@ void main() {
     expect(find.text('Comida'), findsNothing);
   });
 
-  testWidgets('estado vacío usa color neutro y no marca en el ícono decorativo', (tester) async {
-    await pumpRecurringScreen(tester);
+  testWidgets(
+    'estado vacío usa color neutro y no marca en el ícono decorativo',
+    (tester) async {
+      await pumpRecurringScreen(tester);
 
-    expect(find.text('Sin recurrentes'), findsOneWidget);
-    final sparkleIcon = tester.widget<Icon>(find.descendant(
-      of: find.ancestor(of: find.text('Sin recurrentes'), matching: find.byType(Column)),
-      matching: find.byType(Icon),
-    ).first);
-    expect(sparkleIcon.color, equals(PocktColors.dark.textSecondary));
-    expect(sparkleIcon.color, isNot(equals(PocktColors.dark.brandStart)));
-  });
+      expect(find.text('Sin recurrentes'), findsOneWidget);
+      final sparkleIcon = tester.widget<Icon>(
+        find
+            .descendant(
+              of: find.ancestor(
+                of: find.text('Sin recurrentes'),
+                matching: find.byType(Column),
+              ),
+              matching: find.byType(Icon),
+            )
+            .first,
+      );
+      expect(sparkleIcon.color, equals(PocktColors.dark.textSecondary));
+      expect(sparkleIcon.color, isNot(equals(PocktColors.dark.brandStart)));
+    },
+  );
 }

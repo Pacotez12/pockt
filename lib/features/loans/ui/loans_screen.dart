@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
@@ -97,17 +97,25 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                       );
                     },
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colors.brandStart,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          uiIcon('plus'),
-                          size: 20,
-                          color: Colors.white,
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.brandAt(0).withValues(alpha: 0.15),
+                          border: Border.all(
+                            color: colors.brandAt(0).withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            uiIcon('plus'),
+                            size: 18,
+                            color: colors.textPrimary,
+                          ),
                         ),
                       ),
                     ),
@@ -187,29 +195,102 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
     final loans = loansAsync.value ?? [];
 
     if (loans.isEmpty) {
-      final emptyText = switch (_currentTab) {
-        LoansTab.owe => 'No tenés deudas ni compras en cuotas activas.',
-        LoansTab.lent => 'No prestaste dinero a nadie actualmente.',
-        LoansTab.closed => 'No tenés préstamos finalizados todavía.',
+      final (emptyTitle, emptySubtitle) = switch (_currentTab) {
+        LoansTab.owe => (
+          'No tenés deudas',
+          'Llevá el control de tus deudas, compras en cuotas y préstamos pendientes.',
+        ),
+        LoansTab.lent => (
+          'No prestaste dinero',
+          'Anotá el dinero que prestaste a amigos, familiares o clientes.',
+        ),
+        LoansTab.closed => (
+          'Sin préstamos finalizados',
+          'Acá van a aparecer los préstamos y deudas que ya terminaste de pagar.',
+        ),
       };
 
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(uiIcon('coins'), size: 40, color: colors.textTertiary),
-              const SizedBox(height: 12),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.brandAt(0).withValues(alpha: 0.15),
+                  border: Border.all(
+                    color: colors.brandAt(0).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    uiIcon('coins'),
+                    size: 32,
+                    color: colors.brandAt(0),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text(
-                emptyText,
+                emptyTitle,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                emptySubtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
                   color: colors.textSecondary,
+                  height: 1.4,
                 ),
               ),
+              if (_currentTab != LoansTab.closed) ...[
+                const SizedBox(height: 24),
+                Pressable(
+                  key: const ValueKey('add-loan-empty-btn'),
+                  semanticLabel: 'Agregar préstamo',
+                  onTap: () {
+                    Haptics.tick();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LoanEditorScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [colors.brandStart, colors.brandEnd],
+                      ),
+                      borderRadius: BorderRadius.circular(PocktRadii.xl),
+                    ),
+                    child: const Text(
+                      'Agregar préstamo',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -282,10 +363,7 @@ class _LoanCard extends ConsumerWidget {
 
   const _LoanCard({required this.loan});
 
-  String _formatGs(int amount) {
-    final formatter = NumberFormat('#,###', 'es_PY');
-    return '₲ ${formatter.format(amount)}';
-  }
+  String _formatGs(int amount) => formatGs(amount);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

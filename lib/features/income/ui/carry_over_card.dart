@@ -177,7 +177,7 @@ class _CardButton extends StatelessWidget {
       semanticLabel: label,
       onTap: onTap,
       child: Container(
-        height: 40,
+        height: 44,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
@@ -249,19 +249,31 @@ class _GoalPickerSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              for (final goal in goals)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(uiIcon(goal.icon), color: colors.textSecondary),
-                  title: Text(
-                    goal.name,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      color: colors.textPrimary,
-                    ),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final goal in goals)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            uiIcon(goal.icon),
+                            color: colors.textSecondary,
+                          ),
+                          title: Text(
+                            goal.name,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          onTap: () => Navigator.of(context).pop(goal),
+                        ),
+                    ],
                   ),
-                  onTap: () => Navigator.of(context).pop(goal),
                 ),
+              ),
             ],
           ),
         ),

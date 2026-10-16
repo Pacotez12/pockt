@@ -65,6 +65,8 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   String _incomeCategoryId = '018f0000-0000-7000-8000-000000000011';
   List<SalaryDeductionItem> _deductions = [];
   StreamSubscription<IncomeSchedule?>? _scheduleSub;
+  StreamSubscription<DateTime?>? _lastSalarySub;
+  DateTime? _lastSalaryDate;
 
   DateTime get _today => widget.nowLocal ?? toLocal(DateTime.now());
 
@@ -85,7 +87,12 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   }
 
   PayWindow? get _nextPayWindow {
-    return nextPayWindow(_today, _payDays, _payDayRules);
+    return nextPayWindow(
+      _today,
+      _payDays,
+      _payDayRules,
+      lastConfirmedSalaryDate: _lastSalaryDate,
+    );
   }
 
   String get _splitPreviewText {
@@ -130,6 +137,18 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
         .watchCurrent()
         .listen((schedule) async {
           if (!mounted || schedule == null) return;
+          _lastSalarySub?.cancel();
+          _lastSalarySub = ref
+              .read(transactionsRepositoryProvider)
+              .watchLastConfirmedSalaryDate(
+                categoryId: schedule.categoryId,
+                beforeOrOnLocalDay: _today,
+              )
+              .listen((date) {
+                if (mounted) {
+                  setState(() => _lastSalaryDate = date);
+                }
+              });
           try {
             final parsedDays = parsePayDays(schedule.payDays);
             final parsedRules = parsePayDayRules(
@@ -185,6 +204,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
   @override
   void dispose() {
     _scheduleSub?.cancel();
+    _lastSalarySub?.cancel();
     super.dispose();
   }
 
@@ -1363,7 +1383,7 @@ class _IncomeScheduleScreenState extends ConsumerState<IncomeScheduleScreen> {
                   fontFamily: 'Inter',
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: colors.positive,
+                  color: colors.textPrimary,
                 ),
               ),
             ],
