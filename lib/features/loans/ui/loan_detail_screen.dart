@@ -347,7 +347,10 @@ class LoanDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _MetricItem(
                     label: 'Cuotas',
-                    value: loan.installmentsTotal != null
+                    // Terminado con adelantos: no mostrar cuotas faltantes.
+                    value: progress.isClosed
+                        ? 'Pagado'
+                        : loan.installmentsTotal != null
                         ? '${progress.installmentsPaid} de ${loan.installmentsTotal}'
                         : '${progress.installmentsPaid} pag.',
                   ),

@@ -126,3 +126,18 @@ LoanProgress calculateLoanProgress({
     daysUntilNextDue: daysUntilNextDue,
   );
 }
+
+/// Texto de cuotas de un préstamo. Si se terminó de pagar con adelantos antes
+/// de completar las cuotas, no muestra las que "faltan".
+String installmentsSummary({
+  required int paid,
+  required int? total,
+  required bool closed,
+}) {
+  final count = total != null
+      ? '$paid de $total cuotas'
+      : '$paid cuota${paid == 1 ? '' : 's'}';
+  if (!closed) return count;
+  if (total != null && paid < total) return 'Pagado antes de tiempo · $count';
+  return 'Pagado · $count';
+}

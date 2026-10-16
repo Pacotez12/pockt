@@ -45,42 +45,68 @@ void main() {
       );
     }
 
-    test('una cuota normal con "extra" en la nota sigue contando como cuota', () {
-      final payments = [
-        makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
-        makePayment(
-          id: 'p2',
-          amount: 110000,
-          date: DateTime(2026, 2, 15),
-          note: 'incluye extra por mora',
-        ),
-      ];
+    test(
+      'una cuota normal con "extra" en la nota sigue contando como cuota',
+      () {
+        final payments = [
+          makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
+          makePayment(
+            id: 'p2',
+            amount: 110000,
+            date: DateTime(2026, 2, 15),
+            note: 'incluye extra por mora',
+          ),
+        ];
 
-      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+        final progress = calculateLoanProgress(
+          loan: baseLoan,
+          payments: payments,
+        );
 
-      expect(progress.installmentsPaid, equals(2));
-    });
+        expect(progress.installmentsPaid, equals(2));
+      },
+    );
 
-    test('un pago marcado isExtra no cuenta como cuota aunque la nota no lo diga', () {
-      final payments = [
-        makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
-        makePayment(id: 'p2', amount: 200000, date: DateTime(2026, 2, 20), isExtra: true),
-      ];
+    test(
+      'un pago marcado isExtra no cuenta como cuota aunque la nota no lo diga',
+      () {
+        final payments = [
+          makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
+          makePayment(
+            id: 'p2',
+            amount: 200000,
+            date: DateTime(2026, 2, 20),
+            isExtra: true,
+          ),
+        ];
 
-      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+        final progress = calculateLoanProgress(
+          loan: baseLoan,
+          payments: payments,
+        );
 
-      expect(progress.installmentsPaid, equals(1));
-      expect(progress.paid, equals(300000));
-    });
+        expect(progress.installmentsPaid, equals(1));
+        expect(progress.paid, equals(300000));
+      },
+    );
 
     test('pagado, saldo y cuotas con pagos regulares y un extra', () {
       final payments = [
         makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 1, 15)),
         makePayment(id: 'p2', amount: 100000, date: DateTime(2026, 2, 15)),
-        makePayment(id: 'p3', amount: 200000, date: DateTime(2026, 2, 20), note: 'Pago extra adelanto', isExtra: true),
+        makePayment(
+          id: 'p3',
+          amount: 200000,
+          date: DateTime(2026, 2, 20),
+          note: 'Pago extra adelanto',
+          isExtra: true,
+        ),
       ];
 
-      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+      final progress = calculateLoanProgress(
+        loan: baseLoan,
+        payments: payments,
+      );
 
       // Total pagado: 100k + 100k + 200k = 400.000 Gs
       expect(progress.paid, equals(400000));
@@ -122,7 +148,10 @@ void main() {
         makePayment(id: 'p1', amount: 1200000, date: DateTime(2026, 1, 15)),
       ];
 
-      final progress = calculateLoanProgress(loan: baseLoan, payments: payments);
+      final progress = calculateLoanProgress(
+        loan: baseLoan,
+        payments: payments,
+      );
 
       expect(progress.paid, equals(1200000));
       expect(progress.balance, equals(0));
@@ -130,39 +159,45 @@ void main() {
       expect(progress.isClosed, isTrue);
     });
 
-    test('un pago en préstamo lent (presté) es un ingreso que reduce el saldo', () {
-      final lentLoan = Loan(
-        id: 'loan-lent',
-        direction: LoanDirection.lent,
-        kind: LoanKind.loan,
-        name: 'Préstamo a Juan',
-        counterparty: 'Juan',
-        totalAmount: 500000,
-        installmentAmount: null,
-        installmentsTotal: null,
-        dueDay: 20,
-        startDate: DateTime(2026, 2, 1),
-        reminderDays: 2,
-        createdAt: DateTime(2026, 2, 1),
-        updatedAt: DateTime(2026, 2, 1),
-      );
+    test(
+      'un pago en préstamo lent (presté) es un ingreso que reduce el saldo',
+      () {
+        final lentLoan = Loan(
+          id: 'loan-lent',
+          direction: LoanDirection.lent,
+          kind: LoanKind.loan,
+          name: 'Préstamo a Juan',
+          counterparty: 'Juan',
+          totalAmount: 500000,
+          installmentAmount: null,
+          installmentsTotal: null,
+          dueDay: 20,
+          startDate: DateTime(2026, 2, 1),
+          reminderDays: 2,
+          createdAt: DateTime(2026, 2, 1),
+          updatedAt: DateTime(2026, 2, 1),
+        );
 
-      final payments = [
-        makePayment(
-          id: 'p-in-1',
-          amount: 200000,
-          date: DateTime(2026, 2, 20),
-          type: TxType.income,
-        ),
-      ];
+        final payments = [
+          makePayment(
+            id: 'p-in-1',
+            amount: 200000,
+            date: DateTime(2026, 2, 20),
+            type: TxType.income,
+          ),
+        ];
 
-      final progress = calculateLoanProgress(loan: lentLoan, payments: payments);
+        final progress = calculateLoanProgress(
+          loan: lentLoan,
+          payments: payments,
+        );
 
-      expect(progress.paid, equals(200000));
-      expect(progress.balance, equals(300000));
-      expect(progress.isClosed, isFalse);
-    });
-  
+        expect(progress.paid, equals(200000));
+        expect(progress.balance, equals(300000));
+        expect(progress.isClosed, isFalse);
+      },
+    );
+
     test('si la cuota del mes ya está pagada, el próximo vencimiento pasa al mes siguiente', () {
       final payments = [
         makePayment(id: 'p1', amount: 100000, date: DateTime(2026, 10, 3)),
@@ -175,5 +210,36 @@ void main() {
       expect(progress.nextDueDate, DateTime(2026, 11, 15));
       expect(progress.daysUntilNextDue, 34);
     });
-});
+  });
+
+  group('installmentsSummary', () {
+    test('en curso muestra N de M cuotas', () {
+      expect(
+        installmentsSummary(paid: 5, total: 12, closed: false),
+        '5 de 12 cuotas',
+      );
+    });
+    test('terminado con adelantos no muestra cuotas faltantes', () {
+      expect(
+        installmentsSummary(paid: 5, total: 12, closed: true),
+        'Pagado antes de tiempo · 5 de 12 cuotas',
+      );
+    });
+    test('terminado con todas las cuotas', () {
+      expect(
+        installmentsSummary(paid: 12, total: 12, closed: true),
+        'Pagado · 12 de 12 cuotas',
+      );
+    });
+    test('sin cantidad de cuotas', () {
+      expect(
+        installmentsSummary(paid: 1, total: null, closed: false),
+        '1 cuota',
+      );
+      expect(
+        installmentsSummary(paid: 3, total: null, closed: true),
+        'Pagado · 3 cuotas',
+      );
+    });
+  });
 }

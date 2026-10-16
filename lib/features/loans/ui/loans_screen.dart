@@ -507,9 +507,11 @@ class _LoanCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    loan.installmentsTotal != null
-                        ? '${progress.installmentsPaid} de ${loan.installmentsTotal} cuotas'
-                        : '${progress.installmentsPaid} cuota${progress.installmentsPaid == 1 ? '' : 's'}',
+                    installmentsSummary(
+                      paid: progress.installmentsPaid,
+                      total: loan.installmentsTotal,
+                      closed: progress.isClosed,
+                    ),
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
