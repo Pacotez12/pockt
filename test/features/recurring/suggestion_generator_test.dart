@@ -229,6 +229,32 @@ void main() {
     expect(notifier.shown, isEmpty);
   });
 
+  test('no sugiere el cobro si el sueldo ya entró confirmado desde un SMS', () async {
+    await insertSchedule();
+    final at = DateTime(2026, 10, 15, 15, 19);
+    await db.into(db.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'tx-sms',
+            type: TxType.income,
+            amount: 4000000,
+            categoryId: sueldoId,
+            occurredAt: at,
+            createdAt: at,
+            updatedAt: at,
+            source: TxSource.capture,
+            suggestionId: const Value('sug-sms'),
+          ),
+        );
+
+    final generator = SuggestionGenerator(
+      db,
+      notifier,
+      clock: () => DateTime(2026, 10, 15, 23, 38),
+    );
+    expect(await generator.run(), 0);
+    expect(await db.select(db.suggestedTransactions).get(), isEmpty);
+  });
+
   test('descarta el cobro pendiente si después se cargó el sueldo a mano', () async {
     await insertSchedule();
     final generator = SuggestionGenerator(

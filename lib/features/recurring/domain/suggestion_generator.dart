@@ -262,9 +262,9 @@ class SuggestionGenerator {
 }
 
 extension on SuggestionGenerator {
-  /// Hay un ingreso cargado a mano (no confirmado desde una sugerencia) en la
-  /// categoría del sueldo, entre 3 días antes y 3 días después de [day]
-  /// (el cobro puede correrse por feriados o fines de semana).
+  /// Ya hay un ingreso en la categoría del sueldo (cargado a mano, confirmado
+  /// desde un SMS o desde otra sugerencia) entre 3 días antes y 3 días después
+  /// de [day] (el cobro puede correrse por feriados o fines de semana).
   Future<bool> _salaryAlreadyLogged(String? categoryId, DateTime day) async {
     final date = DateTime(day.year, day.month, day.day);
     final from = date.subtract(const Duration(days: 3));
@@ -274,7 +274,6 @@ extension on SuggestionGenerator {
         (t) =>
             t.type.equalsValue(TxType.income) &
             t.deletedAt.isNull() &
-            t.suggestionId.isNull() &
             t.occurredAt.isBiggerOrEqualValue(from) &
             t.occurredAt.isSmallerThanValue(to),
       );
