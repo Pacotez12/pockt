@@ -1,6 +1,6 @@
 # Pockt — Plan final: partición de pantallas y refactor
 
-> **Estado:** en espera. Es el **último plan** del proyecto: se ejecuta después del plan 4 (backup, seguridad, primer uso), del motor de captura y de cualquier otro plan de funciones. Antes de empezarlo se vuelve a medir el tamaño de los archivos y se detalla cada tarea con `writing-plans` (pasos TDD, comandos exactos).
+> **Estado:** en curso desde 2026-10-16 (medición actualizada abajo). Es el **último plan** del proyecto: se ejecuta después del plan 4 (backup, seguridad, primer uso), del motor de captura y de cualquier otro plan de funciones. Antes de empezarlo se vuelve a medir el tamaño de los archivos y se detalla cada tarea con `writing-plans` (pasos TDD, comandos exactos).
 
 **Goal:** que el código sea fácil de mantener y de leer para la comunidad, **sin cambiar nada de lo que el usuario ve ni de cómo se comporta la app**. Cada tarea es un refactor puro: la suite completa pasa igual antes y después, y la medición de rendimiento por escenario no empeora.
 
@@ -23,6 +23,14 @@
 - Objetivo orientativo: ningún archivo de UI escrito a mano por encima de ~400 líneas.
 
 ---
+
+**Medición 2026-10-16** (archivos de UI escritos a mano, líneas): reports_screen 1.863 · budgets_screen 1.780 · income_schedule_screen 1.704 · home_screen 1.612 · settings_screen 1.479 · entry_flow 1.396 · events_screen 1.131 · recurring_screen 1.041 · inbox_screen 907 · loan_detail_screen 892 · onboarding_flow 875 · goal_detail_screen 838 · amount_keypad 804.
+
+### Task 6: Ajustes por sección
+Partir `settings_screen.dart` en la portada y un archivo por sección (Tu dinero, Carga, Inicio y apariencia, Avisos, Privacidad y datos) más los tiles compartidos (`_SettingsGroup`, `_TileShell`, `_InGroup`).
+
+### Task 7: Pantallas nuevas que crecieron
+Partir `events_screen.dart`, `inbox_screen.dart`, `loan_detail_screen.dart`, `goal_detail_screen.dart` y `onboarding_flow.dart` en lista/detalle/editor/pasos según corresponda.
 
 ### Task 1: Reportes, una vista por archivo
 Partir `reports_screen.dart` en `reports/ui/views/` (Categorías, Evolución, Por comercio, Comparación) más el contenedor con el `PageView` y los widgets compartidos (`_StatPill`, encabezados) en su propio archivo.
