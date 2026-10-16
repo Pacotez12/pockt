@@ -30,6 +30,7 @@ import 'package:pockt/features/goals/data/goals_repository.dart';
 import 'package:pockt/features/goals/ui/goals_screen.dart';
 import 'package:pockt/features/income/domain/period_summary.dart';
 import 'package:pockt/features/income/ui/carry_over_card.dart';
+import 'package:pockt/features/income/ui/income_schedule_screen.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/ui/loans_screen.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
@@ -1189,6 +1190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         spent: safe?.spentToday ?? 0,
         obscure: obscure,
         reduceMotion: ref.watch(motionReduceProvider).value ?? false,
+        untilPayday: safe?.hasIncomeSchedule ?? true,
       ),
     );
   }
@@ -1242,10 +1244,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 12),
           _buildSegmentedBar(context),
-          if (pLine != null) ...[
-            const SizedBox(height: 12),
-            _buildPeriodLine(context, pLine),
-          ],
+          const SizedBox(height: 12),
+          if (pLine != null)
+            _buildPeriodLine(context, pLine)
+          else
+            // Sin esquema de cobro no hay "quedan · cobrás en": se invita a
+            // configurarlo en vez de esconder la línea.
+            Pressable(
+              key: const ValueKey('home-setup-payday'),
+              semanticLabel: 'Configurá cuándo cobrás',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const IncomeScheduleScreen()),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Configurá cuándo cobrás para ver cuánto te queda',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: PocktType.caption,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      uiIcon('caret-right'),
+                      size: 16,
+                      color: colors.textTertiary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

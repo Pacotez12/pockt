@@ -12,12 +12,16 @@ class TodayArc extends StatelessWidget {
   final bool obscure;
   final bool reduceMotion;
 
+  /// false sin esquema de cobro: el período corre hasta fin de mes.
+  final bool untilPayday;
+
   const TodayArc({
     super.key,
     required this.allowance,
     required this.spent,
     this.obscure = false,
     this.reduceMotion = false,
+    this.untilPayday = true,
   });
 
   @override
@@ -32,7 +36,9 @@ class TodayArc extends StatelessWidget {
     final String amount;
     final String detail;
     if (noMargin) {
-      title = 'No queda margen hasta el cobro';
+      title = untilPayday
+          ? 'No queda margen hasta el cobro'
+          : 'No queda margen este mes';
       amount = gs(allowance);
       detail = 'gastaste ${gs(spent)} hoy';
     } else if (over) {

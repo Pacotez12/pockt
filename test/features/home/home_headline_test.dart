@@ -83,6 +83,8 @@ void main() {
       expect(find.text('Te quedan hoy'), findsOneWidget);
       expect(find.text('Gs. 150.000'), findsOneWidget);
       expect(find.text('Gastado en octubre'), findsOneWidget);
+      // Sin esquema de cobro se invita a configurarlo.
+      expect(find.byKey(const ValueKey('home-setup-payday')), findsOneWidget);
       expect(
         tester.widget<Text>(find.byKey(const ValueKey('home-month-total'))).data,
         'Gs. 0',
@@ -114,7 +116,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('No queda margen hasta el cobro'), findsOneWidget);
+    expect(find.text('No queda margen este mes'), findsOneWidget);
     expect(find.text('−Gs. 25.000'), findsOneWidget);
 
     final textWidget = tester.widget<Text>(

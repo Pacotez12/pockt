@@ -213,6 +213,9 @@ void main() {
         // Paso 1: Esquema de cobro
         expect(find.text('¿Cómo cobrás?'), findsOneWidget);
         expect(find.text('Saltear'), findsOneWidget);
+        // El sueldo arranca vacío (el ejemplo es solo un hint).
+        expect(find.text('3.500.000'), findsNothing);
+        expect(find.text('Ej. 3.500.000'), findsOneWidget);
 
         // Avanzar al paso 2
         await t.tap(find.text('Continuar'));

@@ -32,8 +32,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
   // Paso 1: Esquema de cobro
   PayMode _payMode = PayMode.biweekly;
+  // Vacío: el ejemplo va como hint, para no dejar un sueldo que no es el tuyo.
   final TextEditingController _salaryController = TextEditingController(
-    text: '3.500.000',
+    text: '',
   );
 
   // Paso 2: Presupuestos sugeridos
@@ -418,7 +419,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                     ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      hintText: '0',
+                      hintText: 'Ej. 3.500.000',
                     ),
                   ),
                 ),
@@ -430,7 +431,18 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           ElevatedButton(
             onPressed: _handleStep1Continue,
             style: ElevatedButton.styleFrom(
-              backgroundColor: colors.brandAt(0),
+              // Botón primario con el degradé de marca, como en el resto.
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              backgroundBuilder: (context, states, child) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [colors.brandStart, colors.brandEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
+                ),
+                child: child,
+              ),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -571,7 +583,18 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           ElevatedButton(
             onPressed: _handleStep2Continue,
             style: ElevatedButton.styleFrom(
-              backgroundColor: colors.brandAt(0),
+              // Botón primario con el degradé de marca, como en el resto.
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              backgroundBuilder: (context, states, child) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [colors.brandStart, colors.brandEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
+                ),
+                child: child,
+              ),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -808,7 +831,18 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           ElevatedButton(
             onPressed: _isSaving ? null : _handleStep3Finish,
             style: ElevatedButton.styleFrom(
-              backgroundColor: colors.brandAt(0),
+              // Botón primario con el degradé de marca, como en el resto.
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              backgroundBuilder: (context, states, child) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [colors.brandStart, colors.brandEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(PocktRadii.xl),
+                ),
+                child: child,
+              ),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(

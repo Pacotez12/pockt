@@ -84,4 +84,18 @@ void main() {
     );
     handle.dispose();
   });
+
+  testWidgets('sin esquema de cobro habla del mes, no del cobro', (tester) async {
+    await tester.pumpWidget(
+      host(
+        const TodayArc(
+          allowance: -20000,
+          spent: 0,
+          reduceMotion: true,
+          untilPayday: false,
+        ),
+      ),
+    );
+    expect(find.text('No queda margen este mes'), findsOneWidget);
+  });
 }
