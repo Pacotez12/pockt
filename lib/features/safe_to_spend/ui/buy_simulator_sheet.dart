@@ -142,12 +142,9 @@ class _BuySimulatorSheetState extends ConsumerState<_BuySimulatorSheet> {
 
                 // Cálculos antes -> después
                 final currentSafe = safeToSpend.amount;
-                final afterSafe = calculateSafeToSpend(
-                  remaining: safeToSpend.quedan - _enteredAmount,
-                  pendingRecurring: safeToSpend.pendingRecurring,
-                  proratedGoals: safeToSpend.proratedGoals,
-                  daysUntilPay: safeToSpend.daysUntilPay,
-                );
+                // El límite de hoy es fijo (spec §7d-bis): comprar hoy lo
+                // descuenta entero de lo que te queda hoy.
+                final afterSafe = currentSafe - _enteredAmount;
 
                 final int? currentBudgetRemaining = categoryLimit != null
                     ? categoryLimit - categorySpent

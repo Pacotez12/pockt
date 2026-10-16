@@ -107,6 +107,9 @@ void main() {
       // Monto ingresado 2.000
       expect(find.textContaining('2.000'), findsWidgets);
 
+      // Comprar hoy descuenta todo de lo que queda hoy: 150.000 → 148.000.
+      expect(find.textContaining('148.000'), findsWidgets);
+
       // Muestra sección antes -> después
       expect(find.text('Podés gastar hoy'), findsWidgets);
       expect(
