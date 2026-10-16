@@ -133,7 +133,9 @@ void main() {
     expect(db.schemaVersion, greaterThanOrEqualTo(11));
 
     // 1. Datos existentes intactos
-    final cat = await db.select(db.categories).getSingle();
+    final cat = await (db.select(
+      db.categories,
+    )..where((c) => c.name.equals('Comida'))).getSingle();
     expect(cat.name, equals('Comida'));
 
     final loan = await db.select(db.loans).getSingle();

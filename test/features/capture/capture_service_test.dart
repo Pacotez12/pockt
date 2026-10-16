@@ -50,6 +50,7 @@ void main() {
   const catServiciosId = '018f0000-0000-7000-8000-000000000006';
   const catSueldoId = '018f0000-0000-7000-8000-000000000011';
   const catPrestamosId = '018f0000-0000-7000-8000-000000000014';
+  const catTarjetasId = '018f0000-0000-7000-8000-000000000015';
 
   setUp(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -398,5 +399,57 @@ void main() {
     smsSource.permissionsGranted = true;
     expect(await service.syncInbox(), 1);
     expect((await suggestionsRepo.watchPending().first).length, 1);
+  });
+
+  test('SMS Pago de tarjeta crea sugerencia de gasto en Tarjetas y se auto-confirma si está configurado', () async {
+    const sms =
+        'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.*****1.500.000 por Bancop Pago de tarjeta con cedula al 15/10/2026 14:00:00';
+
+    // 1. Sin autoConfirm -> sugerencia pendiente de tipo expense en Tarjetas
+    final count = await service.ingest([
+      RawSms(
+        sender: '4828',
+        body: sms,
+        receivedAt: DateTime(2026, 10, 15, 14, 1),
+      ),
+    ]);
+    expect(count, 1);
+
+    final pending = await suggestionsRepo.watchPending().first;
+    expect(pending.length, 1);
+    expect(pending.single.suggestion.type, TxType.expense);
+    expect(pending.single.suggestion.categoryId, catTarjetasId);
+    expect(pending.single.suggestion.amount, 1500000);
+
+    // 2. Con autoConfirm configurado para el comercio -> se confirma directamente
+    await db
+        .into(db.merchantMemory)
+        .insert(
+          MerchantMemoryCompanion.insert(
+            merchantKey: 'financiera fic pago de tarjeta con',
+            categoryId: catTarjetasId,
+            uses: 2,
+            lastUsedAt: DateTime(2026, 10, 15),
+            autoConfirm: const Value(true),
+          ),
+        );
+
+    const smsAuto =
+        'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.*****850.000 por FINANCIERA FIC Pago de tarjeta con al 15/10/2026 15:00:00';
+    final countAuto = await service.ingest([
+      RawSms(
+        sender: '4828',
+        body: smsAuto,
+        receivedAt: DateTime(2026, 10, 15, 15, 1),
+      ),
+    ]);
+    expect(countAuto, 0); // confirmado directamente
+
+    final txs = await (db.select(
+      db.transactions,
+    )..where((t) => t.amount.equals(850000))).get();
+    expect(txs.length, 1);
+    expect(txs.single.type, TxType.expense);
+    expect(txs.single.categoryId, catTarjetasId);
   });
 }

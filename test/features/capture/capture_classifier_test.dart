@@ -142,25 +142,30 @@ void main() {
       expect(result.amount, 1100000);
     });
 
-    test(
-      'Pago de tarjeta (completo o cortado) se clasifica como transferencia',
-      () {
-        final sms1 = parseItauSms(
-          'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.**1.500.000 por Bancop Pago de tarjeta con cedula al 14/10/2026 17:10:00',
-        );
-        final sms2 = parseItauSms(
-          'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.***850.000 por FINANCIERA FIC Pago de tarjeta con al 14/10/2026 17:20:00',
-        );
+    test('Pago de tarjeta (completo o cortado) se clasifica como gasto en categoría Tarjetas', () {
+      final sms1 = parseItauSms(
+        'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.**1.500.000 por Bancop Pago de tarjeta con cedula al 14/10/2026 17:10:00',
+      );
+      final sms2 = parseItauSms(
+        'Itau informa: Registramos un debito en tu Cuenta ****XXXX de Gs.***850.000 por FINANCIERA FIC Pago de tarjeta con al 14/10/2026 17:20:00',
+      );
 
-        final r1 = classifyCapture(sms1);
-        expect(r1.kind, CaptureClassificationKind.cardPaymentTransfer);
-        expect(r1.amount, 1500000);
+      final r1 = classifyCapture(sms1, cardsCategoryId: 'cat-tarjetas');
+      expect(r1.kind, CaptureClassificationKind.expense);
+      expect(r1.categoryId, 'cat-tarjetas');
+      expect(r1.amount, 1500000);
+      expect(r1.autoConfirm, isFalse);
 
-        final r2 = classifyCapture(sms2);
-        expect(r2.kind, CaptureClassificationKind.cardPaymentTransfer);
-        expect(r2.amount, 850000);
-      },
-    );
+      final r2 = classifyCapture(
+        sms2,
+        cardsCategoryId: 'cat-tarjetas',
+        autoConfirmMerchants: {'financiera fic pago de tarjeta con'},
+      );
+      expect(r2.kind, CaptureClassificationKind.expense);
+      expect(r2.categoryId, 'cat-tarjetas');
+      expect(r2.amount, 850000);
+      expect(r2.autoConfirm, isTrue);
+    });
 
     test('Acreditación de sueldo confirma sola la sugerencia del esquema si está en ±3 días', () {
       final sms = parseItauSms(

@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:pockt/core/db/app_database.dart';
 
 /// Resultado del parseo de una entrada en lenguaje natural.
@@ -26,7 +27,8 @@ class ParsedEntry {
           merchant == other.merchant;
 
   @override
-  int get hashCode => Object.hash(amount, categoryId, occurredLocalDay, merchant);
+  int get hashCode =>
+      Object.hash(amount, categoryId, occurredLocalDay, merchant);
 
   @override
   String toString() =>
@@ -166,13 +168,7 @@ const Map<String, List<String>> kSeedCategoryKeywords = {
     'libros',
     'cuota',
   ],
-  'Regalos': [
-    'regalo',
-    'regalos',
-    'cumpleaños',
-    'cumpleanos',
-    'aniversario',
-  ],
+  'Regalos': ['regalo', 'regalos', 'cumpleaños', 'cumpleanos', 'aniversario'],
   'Ropa': [
     'ropa',
     'zapatos',
@@ -182,33 +178,18 @@ const Map<String, List<String>> kSeedCategoryKeywords = {
     'remera',
     'pantalon',
   ],
-  'Otros': [
-    'varios',
-    'otros',
-  ],
-  'Sueldo': [
-    'sueldo',
-    'salario',
-    'pago',
-  ],
-  'Extra': [
-    'extra',
-    'honorarios',
-    'freelance',
-    'bonus',
-  ],
-  'Otros ingresos': [
-    'transferencia',
-    'devolución',
-    'devolucion',
-  ],
-  'Préstamos': [
-    'préstamo',
-    'prestamo',
-    'cuota',
-    'deuda',
-    'interés',
-    'interes',
+  'Otros': ['varios', 'otros'],
+  'Sueldo': ['sueldo', 'salario', 'pago'],
+  'Extra': ['extra', 'honorarios', 'freelance', 'bonus'],
+  'Otros ingresos': ['transferencia', 'devolución', 'devolucion'],
+  'Préstamos': ['préstamo', 'prestamo', 'cuota', 'deuda', 'interés', 'interes'],
+  'Tarjetas': [
+    'tarjeta',
+    'tarjetas',
+    'pago de tarjeta',
+    'pago tarjeta',
+    'resumen',
+    'tc',
   ],
 };
 

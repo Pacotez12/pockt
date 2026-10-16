@@ -141,6 +141,7 @@ CaptureClassification classifyCapture(
   int? expectedSalaryAmount,
   String? salaryCategoryId,
   String? loansCategoryId,
+  String? cardsCategoryId,
 }) {
   switch (capture.kind) {
     case CaptureKind.ignored:
@@ -189,14 +190,25 @@ CaptureClassification classifyCapture(
           capture.merchantKey ?? extractMerchantKey(description);
       final occurredAt = capture.occurredAt!;
 
-      // 1. Pago de tarjeta -> transferencia (no cuenta como gasto)
+      // 1. Pago de tarjeta -> gasto en Tarjetas (spec §4.3)
       if (_cardPaymentRegex.hasMatch(description)) {
+        final categoryId =
+            cardsCategoryId ??
+            _lookupMerchantCategory(merchantKey, description, merchantMemory);
+        final normalizedAuto = autoConfirmMerchants
+            .map((e) => e.trim().toLowerCase())
+            .toSet();
+        final shouldAutoConfirm =
+            categoryId != null && normalizedAuto.contains(merchantKey);
+
         return CaptureClassification(
-          kind: CaptureClassificationKind.cardPaymentTransfer,
+          kind: CaptureClassificationKind.expense,
           amount: amount,
           merchant: description,
           merchantKey: merchantKey,
+          categoryId: categoryId,
           occurredAt: occurredAt,
+          autoConfirm: shouldAutoConfirm,
         );
       }
 

@@ -109,6 +109,7 @@ class CaptureService {
   static const _kPrestamosCatId = '018f0000-0000-7000-8000-000000000014';
   static const _kSueldoCatId = '018f0000-0000-7000-8000-000000000011';
   static const _kOtrosCatId = '018f0000-0000-7000-8000-000000000010';
+  static const _kTarjetasCatId = '018f0000-0000-7000-8000-000000000015';
 
   /// Relee el buzón de SMS desde `max(capture.since, capture.lastSmsAt)` solo si
   /// `capture.smsEnabled` está activo y hay permisos concedidos.
@@ -332,6 +333,7 @@ class CaptureService {
         expectedSalaryAmount: expectedSalaryAmount,
         salaryCategoryId: salaryCatId,
         loansCategoryId: _kPrestamosCatId,
+        cardsCategoryId: _kTarjetasCatId,
       );
 
       switch (classification.kind) {

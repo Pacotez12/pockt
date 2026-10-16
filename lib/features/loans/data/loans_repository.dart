@@ -13,8 +13,10 @@ class LoansRepository {
   final AppDatabase _db;
   final Notifier? notifier;
   final _uuid = const Uuid();
+  final DateTime Function() _clock;
 
-  LoansRepository(this._db, {this.notifier});
+  LoansRepository(this._db, {this.notifier, DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   Future<void> _triggerRemindersUpdate() async {
     final notif = notifier;
@@ -24,7 +26,7 @@ class LoansRepository {
           db: _db,
           notifier: notif,
           settingsRepo: SettingsRepository(_db),
-          nowLocal: DateTime.now(),
+          nowLocal: _clock(),
         );
       } catch (_) {}
     }
@@ -78,7 +80,7 @@ class LoansRepository {
             }
           }
 
-          final now = DateTime.now();
+          final now = _clock();
           final list = <LoanWithProgress>[];
           for (final loan in loansMap.values) {
             final payments = paymentsMap[loan.id] ?? const [];

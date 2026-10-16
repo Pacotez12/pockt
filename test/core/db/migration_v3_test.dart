@@ -196,7 +196,7 @@ void main() {
 
       // 2. Palabras clave intactas
       final keywords = await db.select(db.categoryKeywords).get();
-      expect(keywords, hasLength(2));
+      expect(keywords, hasLength(8));
       expect(
         keywords.any(
           (k) => k.keyword == 'pizza' && k.source == KeywordSource.seed,

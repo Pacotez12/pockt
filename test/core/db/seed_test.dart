@@ -19,10 +19,10 @@ void main() {
     await db.close();
   });
 
-  test('seed: 11 categorías de gasto y 3 de ingreso', () async {
+  test('seed: 12 categorías de gasto y 3 de ingreso', () async {
     final expenses = await repo.watchActive(CategoryKind.expense).first;
     final incomes = await repo.watchActive(CategoryKind.income).first;
-    expect(expenses, hasLength(11));
+    expect(expenses, hasLength(12));
     expect(incomes, hasLength(3));
   });
 
@@ -37,10 +37,16 @@ void main() {
     );
 
     for (final cat in all) {
-      expect(cat.name, isNot(matches(emojiRegex)),
-          reason: 'Categoría ${cat.name} contiene emoji en el nombre');
-      expect(cat.icon, isNot(matches(emojiRegex)),
-          reason: 'Categoría ${cat.name} tiene emoji en icon: ${cat.icon}');
+      expect(
+        cat.name,
+        isNot(matches(emojiRegex)),
+        reason: 'Categoría ${cat.name} contiene emoji en el nombre',
+      );
+      expect(
+        cat.icon,
+        isNot(matches(emojiRegex)),
+        reason: 'Categoría ${cat.name} tiene emoji en icon: ${cat.icon}',
+      );
     }
   });
 
@@ -50,13 +56,17 @@ void main() {
     final all = [...expenses, ...incomes];
 
     for (final cat in all) {
-      expect(kCategoryIconKeys, contains(cat.icon),
-          reason: 'La clave de ícono ${cat.icon} no está en kCategoryIconKeys');
+      expect(
+        kCategoryIconKeys,
+        contains(cat.icon),
+        reason: 'La clave de ícono ${cat.icon} no está en kCategoryIconKeys',
+      );
       if (cat.icon != 'package') {
         expect(
           categoryIconData(cat.icon),
           isNot(equals(PhosphorIconsDuotone.package)),
-          reason: 'La categoría ${cat.name} (${cat.icon}) resolvió al respaldo package',
+          reason:
+              'La categoría ${cat.name} (${cat.icon}) resolvió al respaldo package',
         );
       }
     }

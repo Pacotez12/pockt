@@ -114,7 +114,7 @@ void main() {
 
         expect(await db.select(db.transactions).get(), isNotEmpty);
         final categoriesBefore = await db.select(db.categories).get();
-        expect(categoriesBefore.length, 15); // 14 de fábrica + 1 personalizada
+        expect(categoriesBefore.length, 16); // 15 de fábrica + 1 personalizada
 
         // 2. Ejecutamos el borrado
         await db.wipeAllData();
@@ -123,9 +123,9 @@ void main() {
         final txsAfter = await db.select(db.transactions).get();
         expect(txsAfter, isEmpty);
 
-        // 4. Verificamos que solo quedaron las 14 categorías de fábrica
+        // 4. Verificamos que solo quedaron las 15 categorías de fábrica
         final categoriesAfter = await db.select(db.categories).get();
-        expect(categoriesAfter.length, 14);
+        expect(categoriesAfter.length, 15);
         expect(categoriesAfter.any((c) => c.id == customCatId), isFalse);
         expect(categoriesAfter.any((c) => c.name == 'Comida'), isTrue);
       },
@@ -169,7 +169,10 @@ void main() {
         find.byKey(const ValueKey('spending-total-obscured')),
         findsOneWidget,
       );
-      expect(find.byKey(const ValueKey('spending-total-obscured')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('spending-total-obscured')),
+        findsOneWidget,
+      );
 
       // Al tocar el total, se revela el monto real
       await t.tap(find.byKey(const ValueKey('spending-total-obscured')));

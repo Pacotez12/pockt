@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -288,6 +288,91 @@ class AppDatabase extends _$AppDatabase {
             );
           }
         }
+        if (from < 13) {
+          final hasCategories = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='categories';",
+          ).get()).isNotEmpty;
+
+          if (hasCategories) {
+            final existing = await customSelect(
+              'SELECT id FROM categories WHERE name = ? LIMIT 1;',
+              variables: [Variable.withString('Tarjetas')],
+            ).get();
+
+            String tarjetasId = _kTarjetasId;
+            if (existing.isEmpty) {
+              await into(categories).insert(
+                const CategoriesCompanion(
+                  id: Value(_kTarjetasId),
+                  name: Value('Tarjetas'),
+                  icon: Value('credit-card'),
+                  colorDark: Value(_kTarjetasDark),
+                  colorLight: Value(_kTarjetasLight),
+                  kind: Value(CategoryKind.expense),
+                  sortOrder: Value(11),
+                ),
+              );
+            } else {
+              tarjetasId = existing.first.read<String>('id');
+            }
+
+            final hasCategoryKeywords = (await customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='category_keywords';",
+            ).get()).isNotEmpty;
+
+            if (hasCategoryKeywords) {
+              final keywords = kSeedCategoryKeywords['Tarjetas'] ?? [];
+              if (keywords.isNotEmpty) {
+                const uuid = Uuid();
+                final existingKws = (await customSelect(
+                  'SELECT keyword FROM category_keywords WHERE category_id = ?;',
+                  variables: [Variable.withString(tarjetasId)],
+                ).get()).map((r) => r.read<String>('keyword')).toSet();
+
+                final companionList = <CategoryKeywordsCompanion>[];
+                for (final kw in keywords) {
+                  final norm = normalizeKeyword(kw);
+                  if (norm.isNotEmpty && !existingKws.contains(norm)) {
+                    companionList.add(
+                      CategoryKeywordsCompanion.insert(
+                        id: uuid.v4(),
+                        categoryId: tarjetasId,
+                        keyword: norm,
+                        source: KeywordSource.seed,
+                      ),
+                    );
+                    existingKws.add(norm);
+                  }
+                }
+                if (companionList.isNotEmpty) {
+                  await batch((b) {
+                    b.insertAll(categoryKeywords, companionList);
+                  });
+                }
+              }
+            }
+
+            final hasTransactions = (await customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='transactions';",
+            ).get()).isNotEmpty;
+            if (hasTransactions) {
+              await customStatement(
+                'UPDATE transactions SET type = ?, category_id = ? WHERE type = ?;',
+                ['expense', tarjetasId, 'transfer'],
+              );
+            }
+
+            final hasSuggested = (await customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='suggested_transactions';",
+            ).get()).isNotEmpty;
+            if (hasSuggested) {
+              await customStatement(
+                'UPDATE suggested_transactions SET type = ?, category_id = ? WHERE type = ?;',
+                ['expense', tarjetasId, 'transfer'],
+              );
+            }
+          }
+        }
       },
     );
   }
@@ -505,6 +590,15 @@ class AppDatabase extends _$AppDatabase {
         kind: Value(CategoryKind.expense),
         sortOrder: Value(10),
       ),
+      const CategoriesCompanion(
+        id: Value(_kTarjetasId),
+        name: Value('Tarjetas'),
+        icon: Value('credit-card'),
+        colorDark: Value(_kTarjetasDark),
+        colorLight: Value(_kTarjetasLight),
+        kind: Value(CategoryKind.expense),
+        sortOrder: Value(11),
+      ),
 
       // 3 categorías de ingreso
       const CategoriesCompanion(
@@ -553,6 +647,11 @@ const _kPrestamosLight = 0xFF007E5E;
 // Color de fábrica de la v8 (casi igual a "Otros").
 const _kPrestamosOldDark = 0xFF8BA4B5;
 const _kPrestamosOldLight = 0xFF3D6176;
+
+const _kTarjetasId = '018f0000-0000-7000-8000-000000000015';
+// Paleta OKLCH §6.2b, matiz ~15 (carmesí / coral suave): L 0,76 C 0,11 oscuro / L 0,52 C 0,12 claro.
+const _kTarjetasDark = 0xFFE88A96;
+const _kTarjetasLight = 0xFF9E3D4D;
 
 const _kFactoryCategoryColorUpdates = [
   (

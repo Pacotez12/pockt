@@ -201,7 +201,7 @@ void main() {
     expect(db.schemaVersion, greaterThanOrEqualTo(10));
 
     final cats = await db.select(db.categories).get();
-    expect(cats.length, equals(14));
+    expect(cats.length, equals(15));
 
     final expectedColors = <String, ({int dark, int light})>{
       'Comida': (dark: 0xFFE4A067, light: 0xFF9A5505),
@@ -215,6 +215,7 @@ void main() {
       'Ropa': (dark: 0xFFC1B35B, light: 0xFF796900),
       'Otros': (dark: 0xFF9BA6B1, light: 0xFF606A74),
       'Préstamos': (dark: 0xFF5FC8A6, light: 0xFF007E5E),
+      'Tarjetas': (dark: 0xFFE88A96, light: 0xFF9E3D4D),
       'Sueldo': (dark: 0xFF74C692, light: 0xFF187C49),
       'Extra': (dark: 0xFF47C5D2, light: 0xFF007B89),
       'Otros ingresos': (dark: 0xFF9BA6B1, light: 0xFF606A74),
