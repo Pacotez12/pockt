@@ -36,6 +36,7 @@ void main() {
 
   final testSafeToSpend = SafeToSpend(
     amount: 150000,
+    todayAllowance: 150000,
     quedan: 1500000,
     pendingRecurring: 0,
     proratedGoals: 0,
@@ -46,6 +47,7 @@ void main() {
 
   final testNegativeSafeToSpend = SafeToSpend(
     amount: -25000,
+    todayAllowance: -25000,
     quedan: -250000,
     pendingRecurring: 0,
     proratedGoals: 0,
@@ -55,7 +57,7 @@ void main() {
   );
 
   testWidgets(
-    'modo safeToSpend por defecto: muestra "Podés gastar hoy" y subtítulo',
+    'modo safeToSpend por defecto: Arco de hoy y tarjeta del mes',
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -78,9 +80,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Podés gastar hoy'), findsOneWidget);
+      expect(find.text('Te quedan hoy'), findsOneWidget);
       expect(find.text('Gs. 150.000'), findsOneWidget);
-      expect(find.text('Gastado en octubre Gs. 0'), findsOneWidget);
+      expect(find.text('Gastado en octubre'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('home-month-total'))).data,
+        'Gs. 0',
+      );
     },
   );
 
@@ -108,11 +114,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Podés gastar hoy'), findsOneWidget);
+    expect(find.text('No queda margen hasta el cobro'), findsOneWidget);
     expect(find.text('−Gs. 25.000'), findsOneWidget);
 
     final textWidget = tester.widget<Text>(
-      find.byKey(const ValueKey('safe-to-spend-amount')),
+      find.byKey(const ValueKey('today-arc-amount')),
     );
     expect(textWidget.style?.color, equals(PocktColors.dark.danger));
   });
@@ -178,11 +184,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Podés gastar hoy'), findsOneWidget);
+    expect(find.text('Te quedan hoy'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('spending-total-obscured')),
-      findsOneWidget,
+      tester.widget<Text>(find.byKey(const ValueKey('today-arc-amount'))).data,
+      '••••',
     );
-    expect(find.text('Gastado en octubre ••••'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('home-month-total'))).data,
+      '••••',
+    );
+    expect(find.textContaining('Gs.'), findsNothing);
   });
 }

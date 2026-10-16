@@ -134,7 +134,9 @@ void main() {
       // El 4to no debe aparecer en los 3 primeros
       expect(find.text('Deuda extra'), findsNothing);
 
-      // Al tocar la tarjeta navega a LoansScreen
+      // Al tocar la tarjeta navega a LoansScreen (el Arco de hoy la empuja abajo).
+      await tester.ensureVisible(find.byKey(const ValueKey('home-loans-card')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('home-loans-card')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
