@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:pockt/features/income/domain/salary_deduction.dart';
 
-enum TxType { expense, income }
+enum TxType { expense, income, transfer }
 
 enum CategoryKind { expense, income }
 
@@ -218,6 +218,7 @@ class MerchantMemory extends Table {
   TextColumn get categoryId => text().references(Categories, #id)();
   IntColumn get uses => integer()();
   DateTimeColumn get lastUsedAt => dateTime()();
+  BoolColumn get autoConfirm => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {merchantKey, categoryId};

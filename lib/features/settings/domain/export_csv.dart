@@ -17,7 +17,10 @@ String escapeCsvField(String field) {
   if (value.isNotEmpty && '=+-@'.contains(value[0])) {
     value = "'$value";
   }
-  if (value.contains(';') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
+  if (value.contains(';') ||
+      value.contains('"') ||
+      value.contains('\n') ||
+      value.contains('\r')) {
     return '"${value.replaceAll('"', '""')}"';
   }
   return value;
@@ -35,7 +38,11 @@ String generateTransactionsCsv(List<TxView> items) {
     final tx = item.tx;
     final cat = item.category;
     final fecha = dateFormat.format(toLocal(tx.occurredAt));
-    final tipo = tx.type == TxType.expense ? 'Gasto' : 'Ingreso';
+    final tipo = switch (tx.type) {
+      TxType.expense => 'Gasto',
+      TxType.income => 'Ingreso',
+      TxType.transfer => 'Transferencia',
+    };
     final monto = tx.amount.toString();
     final categoria = escapeCsvField(cat.name);
     final nota = escapeCsvField(tx.note ?? '');

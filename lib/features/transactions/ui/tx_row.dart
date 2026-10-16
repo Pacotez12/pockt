@@ -111,6 +111,7 @@ class TxRow extends StatelessWidget {
       isDark ? view.category.colorDark : view.category.colorLight,
     );
     final isIncome = view.tx.type == TxType.income;
+    final isTransfer = view.tx.type == TxType.transfer;
 
     return Padding(
       padding: padding,
@@ -121,14 +122,19 @@ class TxRow extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: catColor.withValues(alpha: isDark ? 0.16 : 0.12),
+              color: isTransfer
+                  ? colors.glassFill
+                  : catColor.withValues(alpha: isDark ? 0.16 : 0.12),
+              border: isTransfer ? Border.all(color: colors.glassBorder) : null,
             ),
             child: Center(
-              child: categoryIcon(
-                view.category.icon,
-                size: 17,
-                color: catColor,
-              ),
+              child: isTransfer
+                  ? Icon(
+                      uiIcon('arrows-left-right', filled: true),
+                      size: 17,
+                      color: colors.textSecondary,
+                    )
+                  : categoryIcon(view.category.icon, size: 17, color: catColor),
             ),
           ),
           const SizedBox(width: 12),
@@ -178,7 +184,11 @@ class TxRow extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  color: isIncome ? colors.positive : colors.textPrimary,
+                  color: isIncome
+                      ? colors.positive
+                      : (isTransfer
+                            ? colors.textSecondary
+                            : colors.textPrimary),
                 ),
               );
             },

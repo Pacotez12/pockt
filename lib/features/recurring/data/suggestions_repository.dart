@@ -2,7 +2,28 @@ import 'package:drift/drift.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/capture/domain/itau_sms_parser.dart';
+import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:uuid/uuid.dart';
+
+extension CaptureSuggestionExt on SuggestedTransaction {
+  String? get duplicateTxId =>
+      (source == TxSource.capture && (sourceRef?.startsWith('dup:') ?? false))
+      ? sourceRef!.substring(4)
+      : null;
+
+  String? get linkedLoanId =>
+      (source == TxSource.capture && (sourceRef?.startsWith('loan:') ?? false))
+      ? sourceRef!.substring(5)
+      : null;
+
+  String? get linkedRecurringRuleId =>
+      (source == TxSource.capture && (sourceRef?.startsWith('rule:') ?? false))
+      ? sourceRef!.substring(5)
+      : (source == TxSource.recurring ? sourceRef : null);
+
+  bool get isPossibleDuplicate => duplicateTxId != null;
+}
 
 class SuggestionView {
   final SuggestedTransaction suggestion;
@@ -55,7 +76,7 @@ class SuggestionsRepository {
     return query.watchSingle().map((row) => row.read(countCol) ?? 0);
   }
 
-  /// Inserta una sugerencia si no existe (usando el índice único en [source, sourceRef, occurredAt]).
+  /// Inserta una sugerencia si no existe (usando el índice único en [source, sourceRef, occurredAt] o [fingerprint]).
   /// Devuelve `true` si fue creada o `false` si ya existía.
   Future<bool> createIfAbsent({
     required TxType type,
@@ -106,6 +127,7 @@ class SuggestionsRepository {
     int? amount,
     String? categoryId,
     DateTime? occurredAt,
+    bool autoConfirmMerchant = false,
   }) async {
     return _db.transaction(() async {
       final sug = await (_db.select(
@@ -121,7 +143,24 @@ class SuggestionsRepository {
         return sug.transactionId!;
       }
 
-      final finalCategoryId = categoryId ?? sug.categoryId;
+      String? finalCategoryId = categoryId ?? sug.categoryId;
+      if (finalCategoryId == null && sug.type == TxType.transfer) {
+        final otros =
+            await (_db.select(_db.categories)
+                  ..where(
+                    (c) => c.id.equals('018f0000-0000-7000-8000-000000000010'),
+                  )
+                  ..limit(1))
+                .getSingleOrNull();
+        if (otros != null) {
+          finalCategoryId = otros.id;
+        } else {
+          final firstCat = await (_db.select(
+            _db.categories,
+          )..limit(1)).getSingleOrNull();
+          finalCategoryId = firstCat?.id;
+        }
+      }
       if (finalCategoryId == null) {
         throw StateError('Cannot confirm suggestion without a category');
       }
@@ -132,6 +171,8 @@ class SuggestionsRepository {
       DateTime finalOccurredAt;
       if (occurredAt != null) {
         finalOccurredAt = occurredAt;
+      } else if (sug.source == TxSource.capture) {
+        finalOccurredAt = sug.occurredAt;
       } else {
         final sugLocal = toLocal(sug.occurredAt);
         final nowLocal = toLocal(now);
@@ -167,11 +208,53 @@ class SuggestionsRepository {
               updatedAt: now,
               source: sug.source,
               suggestionId: Value(sug.id),
-              recurringRuleId: Value(
-                sug.source == TxSource.recurring ? sug.sourceRef : null,
-              ),
+              recurringRuleId: Value(sug.linkedRecurringRuleId),
+              loanId: Value(sug.linkedLoanId),
             ),
           );
+
+      if (sug.type == TxType.expense &&
+          sug.merchant != null &&
+          sug.merchant!.trim().isNotEmpty) {
+        final mKey = extractMerchantKey(normalizeKeyword(sug.merchant!));
+        if (mKey.isNotEmpty) {
+          final existing =
+              await (_db.select(_db.merchantMemory)..where(
+                    (m) =>
+                        m.merchantKey.equals(mKey) &
+                        m.categoryId.equals(finalCategoryId!),
+                  ))
+                  .getSingleOrNull();
+          if (existing != null) {
+            await (_db.update(_db.merchantMemory)..where(
+                  (m) =>
+                      m.merchantKey.equals(mKey) &
+                      m.categoryId.equals(finalCategoryId!),
+                ))
+                .write(
+                  MerchantMemoryCompanion(
+                    uses: Value(existing.uses + 1),
+                    lastUsedAt: Value(finalOccurredAt),
+                    autoConfirm: autoConfirmMerchant
+                        ? const Value(true)
+                        : const Value.absent(),
+                  ),
+                );
+          } else {
+            await _db
+                .into(_db.merchantMemory)
+                .insert(
+                  MerchantMemoryCompanion.insert(
+                    merchantKey: mKey,
+                    categoryId: finalCategoryId,
+                    uses: 1,
+                    lastUsedAt: finalOccurredAt,
+                    autoConfirm: Value(autoConfirmMerchant),
+                  ),
+                );
+          }
+        }
+      }
 
       await (_db.update(
         _db.suggestedTransactions,
@@ -183,6 +266,32 @@ class SuggestionsRepository {
       );
 
       return txId;
+    });
+  }
+
+  /// "Es el mismo": descarta la sugerencia marcada como posible duplicado y la
+  /// une al movimiento manual existente (spec §4.4).
+  Future<void> resolveDuplicateAsSame(String id) async {
+    await _db.transaction(() async {
+      final sug = await (_db.select(
+        _db.suggestedTransactions,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (sug == null) return;
+
+      final dupTxId = sug.duplicateTxId;
+      await (_db.update(
+        _db.suggestedTransactions,
+      )..where((t) => t.id.equals(id))).write(
+        SuggestedTransactionsCompanion(
+          status: const Value('dismissed'),
+          transactionId: Value(dupTxId),
+        ),
+      );
+
+      if (dupTxId != null) {
+        await (_db.update(_db.transactions)..where((t) => t.id.equals(dupTxId)))
+            .write(TransactionsCompanion(suggestionId: Value(sug.id)));
+      }
     });
   }
 

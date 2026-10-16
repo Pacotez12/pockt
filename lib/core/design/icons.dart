@@ -216,6 +216,8 @@ const Map<String, PhosphorFlatIconData> _kUiIconsRegular = {
   'music-notes': PhosphorIconsRegular.musicNotes,
   'popcorn': PhosphorIconsRegular.popcorn,
   'cake': PhosphorIconsRegular.cake,
+  'chat-text': PhosphorIconsRegular.chatText,
+  'caret-up': PhosphorIconsRegular.caretUp,
 };
 
 /// Mapeo estático a constantes de Phosphor Fill para UI general cuando está activo.
@@ -297,6 +299,8 @@ const Map<String, PhosphorFlatIconData> _kUiIconsFill = {
   'music-notes': PhosphorIconsFill.musicNotes,
   'popcorn': PhosphorIconsFill.popcorn,
   'cake': PhosphorIconsFill.cake,
+  'chat-text': PhosphorIconsFill.chatText,
+  'caret-up': PhosphorIconsFill.caretUp,
 };
 
 /// Claves de íconos curados para eventos especiales (spec §7d).

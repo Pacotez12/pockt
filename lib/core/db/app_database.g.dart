@@ -6027,12 +6027,28 @@ class $MerchantMemoryTable extends MerchantMemory
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _autoConfirmMeta = const VerificationMeta(
+    'autoConfirm',
+  );
+  @override
+  late final GeneratedColumn<bool> autoConfirm = GeneratedColumn<bool>(
+    'auto_confirm',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_confirm" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     merchantKey,
     categoryId,
     uses,
     lastUsedAt,
+    autoConfirm,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6084,6 +6100,15 @@ class $MerchantMemoryTable extends MerchantMemory
     } else if (isInserting) {
       context.missing(_lastUsedAtMeta);
     }
+    if (data.containsKey('auto_confirm')) {
+      context.handle(
+        _autoConfirmMeta,
+        autoConfirm.isAcceptableOrUnknown(
+          data['auto_confirm']!,
+          _autoConfirmMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -6109,6 +6134,10 @@ class $MerchantMemoryTable extends MerchantMemory
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_used_at'],
       )!,
+      autoConfirm: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_confirm'],
+      )!,
     );
   }
 
@@ -6124,11 +6153,13 @@ class MerchantMemoryData extends DataClass
   final String categoryId;
   final int uses;
   final DateTime lastUsedAt;
+  final bool autoConfirm;
   const MerchantMemoryData({
     required this.merchantKey,
     required this.categoryId,
     required this.uses,
     required this.lastUsedAt,
+    required this.autoConfirm,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6137,6 +6168,7 @@ class MerchantMemoryData extends DataClass
     map['category_id'] = Variable<String>(categoryId);
     map['uses'] = Variable<int>(uses);
     map['last_used_at'] = Variable<DateTime>(lastUsedAt);
+    map['auto_confirm'] = Variable<bool>(autoConfirm);
     return map;
   }
 
@@ -6146,6 +6178,7 @@ class MerchantMemoryData extends DataClass
       categoryId: Value(categoryId),
       uses: Value(uses),
       lastUsedAt: Value(lastUsedAt),
+      autoConfirm: Value(autoConfirm),
     );
   }
 
@@ -6159,6 +6192,7 @@ class MerchantMemoryData extends DataClass
       categoryId: serializer.fromJson<String>(json['categoryId']),
       uses: serializer.fromJson<int>(json['uses']),
       lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+      autoConfirm: serializer.fromJson<bool>(json['autoConfirm']),
     );
   }
   @override
@@ -6169,6 +6203,7 @@ class MerchantMemoryData extends DataClass
       'categoryId': serializer.toJson<String>(categoryId),
       'uses': serializer.toJson<int>(uses),
       'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+      'autoConfirm': serializer.toJson<bool>(autoConfirm),
     };
   }
 
@@ -6177,11 +6212,13 @@ class MerchantMemoryData extends DataClass
     String? categoryId,
     int? uses,
     DateTime? lastUsedAt,
+    bool? autoConfirm,
   }) => MerchantMemoryData(
     merchantKey: merchantKey ?? this.merchantKey,
     categoryId: categoryId ?? this.categoryId,
     uses: uses ?? this.uses,
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+    autoConfirm: autoConfirm ?? this.autoConfirm,
   );
   MerchantMemoryData copyWithCompanion(MerchantMemoryCompanion data) {
     return MerchantMemoryData(
@@ -6195,6 +6232,9 @@ class MerchantMemoryData extends DataClass
       lastUsedAt: data.lastUsedAt.present
           ? data.lastUsedAt.value
           : this.lastUsedAt,
+      autoConfirm: data.autoConfirm.present
+          ? data.autoConfirm.value
+          : this.autoConfirm,
     );
   }
 
@@ -6204,13 +6244,15 @@ class MerchantMemoryData extends DataClass
           ..write('merchantKey: $merchantKey, ')
           ..write('categoryId: $categoryId, ')
           ..write('uses: $uses, ')
-          ..write('lastUsedAt: $lastUsedAt')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('autoConfirm: $autoConfirm')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(merchantKey, categoryId, uses, lastUsedAt);
+  int get hashCode =>
+      Object.hash(merchantKey, categoryId, uses, lastUsedAt, autoConfirm);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6218,7 +6260,8 @@ class MerchantMemoryData extends DataClass
           other.merchantKey == this.merchantKey &&
           other.categoryId == this.categoryId &&
           other.uses == this.uses &&
-          other.lastUsedAt == this.lastUsedAt);
+          other.lastUsedAt == this.lastUsedAt &&
+          other.autoConfirm == this.autoConfirm);
 }
 
 class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
@@ -6226,12 +6269,14 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   final Value<String> categoryId;
   final Value<int> uses;
   final Value<DateTime> lastUsedAt;
+  final Value<bool> autoConfirm;
   final Value<int> rowid;
   const MerchantMemoryCompanion({
     this.merchantKey = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.uses = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
+    this.autoConfirm = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MerchantMemoryCompanion.insert({
@@ -6239,6 +6284,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     required String categoryId,
     required int uses,
     required DateTime lastUsedAt,
+    this.autoConfirm = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : merchantKey = Value(merchantKey),
        categoryId = Value(categoryId),
@@ -6249,6 +6295,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     Expression<String>? categoryId,
     Expression<int>? uses,
     Expression<DateTime>? lastUsedAt,
+    Expression<bool>? autoConfirm,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6256,6 +6303,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
       if (categoryId != null) 'category_id': categoryId,
       if (uses != null) 'uses': uses,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (autoConfirm != null) 'auto_confirm': autoConfirm,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6265,6 +6313,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     Value<String>? categoryId,
     Value<int>? uses,
     Value<DateTime>? lastUsedAt,
+    Value<bool>? autoConfirm,
     Value<int>? rowid,
   }) {
     return MerchantMemoryCompanion(
@@ -6272,6 +6321,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
       categoryId: categoryId ?? this.categoryId,
       uses: uses ?? this.uses,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      autoConfirm: autoConfirm ?? this.autoConfirm,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6291,6 +6341,9 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     if (lastUsedAt.present) {
       map['last_used_at'] = Variable<DateTime>(lastUsedAt.value);
     }
+    if (autoConfirm.present) {
+      map['auto_confirm'] = Variable<bool>(autoConfirm.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6304,6 +6357,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
           ..write('categoryId: $categoryId, ')
           ..write('uses: $uses, ')
           ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('autoConfirm: $autoConfirm, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -13263,6 +13317,7 @@ typedef $$MerchantMemoryTableCreateCompanionBuilder =
       required String categoryId,
       required int uses,
       required DateTime lastUsedAt,
+      Value<bool> autoConfirm,
       Value<int> rowid,
     });
 typedef $$MerchantMemoryTableUpdateCompanionBuilder =
@@ -13271,6 +13326,7 @@ typedef $$MerchantMemoryTableUpdateCompanionBuilder =
       Value<String> categoryId,
       Value<int> uses,
       Value<DateTime> lastUsedAt,
+      Value<bool> autoConfirm,
       Value<int> rowid,
     });
 
@@ -13329,6 +13385,11 @@ class $$MerchantMemoryTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get autoConfirm => $composableBuilder(
+    column: $table.autoConfirm,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$CategoriesTableFilterComposer get categoryId {
     final $$CategoriesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -13377,6 +13438,11 @@ class $$MerchantMemoryTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get autoConfirm => $composableBuilder(
+    column: $table.autoConfirm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -13420,6 +13486,11 @@ class $$MerchantMemoryTableAnnotationComposer
 
   GeneratedColumn<DateTime> get lastUsedAt => $composableBuilder(
     column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoConfirm => $composableBuilder(
+    column: $table.autoConfirm,
     builder: (column) => column,
   );
 
@@ -13481,12 +13552,14 @@ class $$MerchantMemoryTableTableManager
                 Value<String> categoryId = const Value.absent(),
                 Value<int> uses = const Value.absent(),
                 Value<DateTime> lastUsedAt = const Value.absent(),
+                Value<bool> autoConfirm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MerchantMemoryCompanion(
                 merchantKey: merchantKey,
                 categoryId: categoryId,
                 uses: uses,
                 lastUsedAt: lastUsedAt,
+                autoConfirm: autoConfirm,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -13495,12 +13568,14 @@ class $$MerchantMemoryTableTableManager
                 required String categoryId,
                 required int uses,
                 required DateTime lastUsedAt,
+                Value<bool> autoConfirm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MerchantMemoryCompanion.insert(
                 merchantKey: merchantKey,
                 categoryId: categoryId,
                 uses: uses,
                 lastUsedAt: lastUsedAt,
+                autoConfirm: autoConfirm,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

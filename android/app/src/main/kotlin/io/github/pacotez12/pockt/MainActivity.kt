@@ -11,6 +11,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     private lateinit var backupFiles: BackupFiles
+    private var smsCapture: SmsCapture? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,6 +23,10 @@ class MainActivity : FlutterFragmentActivity() {
         backupFiles = BackupFiles(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "pockt/backup_files")
             .setMethodCallHandler(backupFiles)
+        val smsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "pockt/sms")
+        smsCapture = SmsCapture(this, smsChannel).also {
+            smsChannel.setMethodCallHandler(it)
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "pockt/secure").setMethodCallHandler { call, result ->
             when (call.method) {
                 "setSecure" -> {
@@ -36,6 +41,20 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onDestroy() {
+        smsCapture?.detach()
+        super.onDestroy()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (smsCapture?.onRequestPermissionsResult(requestCode, grantResults) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     @Deprecated("Selector de archivos de restauración")

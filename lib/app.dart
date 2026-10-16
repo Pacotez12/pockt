@@ -7,6 +7,7 @@ import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
+import 'package:pockt/features/capture/data/capture_service.dart';
 import 'package:pockt/features/onboarding/domain/onboarding_check.dart';
 import 'package:pockt/features/onboarding/ui/onboarding_flow.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
@@ -23,18 +24,30 @@ class PocktApp extends ConsumerStatefulWidget {
 
 class _PocktAppState extends ConsumerState<PocktApp>
     with WidgetsBindingObserver {
+  StreamSubscription<RawSms>? _smsSub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _smsSub = ref.read(smsSourceProvider).incomingSms.listen((sms) async {
+      final enabled = await ref
+          .read(settingsRepositoryProvider)
+          .get(SettingsKeys.captureSmsEnabled);
+      if (enabled == 'true') {
+        await ref.read(captureServiceProvider).ingest([sms]);
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runSuggestionGenerator();
+      _runSmsCaptureSync();
       _runBackupIfDue();
     });
   }
 
   @override
   void dispose() {
+    _smsSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -47,6 +60,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
       ref.read(appLockControllerProvider).onResumed();
       ref.read(amountsRevealedProvider.notifier).reset();
       _runSuggestionGenerator();
+      _runSmsCaptureSync();
       _runBackupIfDue();
     }
   }
@@ -60,6 +74,12 @@ class _PocktAppState extends ConsumerState<PocktApp>
 
   void _runSuggestionGenerator() {
     unawaited(ref.read(suggestionGeneratorProvider).run().catchError((_) => 0));
+  }
+
+  void _runSmsCaptureSync() {
+    unawaited(
+      ref.read(captureServiceProvider).syncInbox().catchError((_) => 0),
+    );
   }
 
   @override

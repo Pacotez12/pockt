@@ -56,7 +56,11 @@ class IncomeScheduleRepository {
 
     var net = 0;
     for (final t in txs) {
-      net += t.type == TxType.income ? t.amount : -t.amount;
+      if (t.type == TxType.income) {
+        net += t.amount;
+      } else if (t.type == TxType.expense) {
+        net -= t.amount;
+      }
     }
     for (final c in contribs) {
       net -= c.amount;
@@ -149,16 +153,17 @@ class IncomeScheduleRepository {
                   : List.filled(payDays.length, 100 ~/ payDays.length)));
 
     await _db.transaction(() async {
-      final hadNoPreviousSchedule =
-          (await (_db.select(_db.incomeSchedules)..limit(1)).get()).isEmpty;
+      final hadNoPreviousSchedule = (await (_db.select(
+        _db.incomeSchedules,
+      )..limit(1)).get()).isEmpty;
 
-      final existingForToday = await (_db.select(_db.incomeSchedules)
-            ..where((t) => t.effectiveFrom.equals(today)))
-          .get();
+      final existingForToday = await (_db.select(
+        _db.incomeSchedules,
+      )..where((t) => t.effectiveFrom.equals(today))).get();
       for (final s in existingForToday) {
-        await (_db.delete(_db.salaryDeductions)
-              ..where((t) => t.scheduleId.equals(s.id)))
-            .go();
+        await (_db.delete(
+          _db.salaryDeductions,
+        )..where((t) => t.scheduleId.equals(s.id))).go();
       }
 
       await (_db.delete(
@@ -184,15 +189,17 @@ class IncomeScheduleRepository {
       if (deductions != null && deductions.isNotEmpty) {
         for (final d in deductions) {
           final dedId = _uuid.v4();
-          await _db.into(_db.salaryDeductions).insert(
-            SalaryDeductionsCompanion.insert(
-              id: dedId,
-              scheduleId: newScheduleId,
-              name: d.name,
-              kind: d.kind,
-              value: d.value,
-            ),
-          );
+          await _db
+              .into(_db.salaryDeductions)
+              .insert(
+                SalaryDeductionsCompanion.insert(
+                  id: dedId,
+                  scheduleId: newScheduleId,
+                  name: d.name,
+                  kind: d.kind,
+                  value: d.value,
+                ),
+              );
         }
       }
 
@@ -237,15 +244,20 @@ class IncomeScheduleRepository {
             amount = 0;
           }
 
-          final alreadyExists = await (_db.select(_db.suggestedTransactions)
-                ..where((t) =>
-                    t.source.equalsValue(TxSource.incomeSchedule) &
-                    t.occurredAt.equals(prevWindow.earliest)))
-              .get();
+          final alreadyExists =
+              await (_db.select(_db.suggestedTransactions)..where(
+                    (t) =>
+                        t.source.equalsValue(TxSource.incomeSchedule) &
+                        t.occurredAt.equals(prevWindow.earliest),
+                  ))
+                  .get();
 
           if (alreadyExists.isEmpty) {
-            final suggestionsRepo =
-                SuggestionsRepository(_db, clock: _clock, uuid: _uuid);
+            final suggestionsRepo = SuggestionsRepository(
+              _db,
+              clock: _clock,
+              uuid: _uuid,
+            );
             await suggestionsRepo.createIfAbsent(
               type: TxType.income,
               amount: amount,
@@ -262,4 +274,3 @@ class IncomeScheduleRepository {
     });
   }
 }
-

@@ -24,6 +24,7 @@ import 'package:pockt/features/settings/domain/export_csv.dart';
 import 'package:pockt/features/settings/domain/wipe_data.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
 import 'package:pockt/features/safe_to_spend/domain/tone.dart';
+import 'package:pockt/features/capture/ui/capture_settings_screen.dart';
 import 'package:pockt/features/settings/ui/appearance_screen.dart';
 import 'package:pockt/features/settings/ui/category_keywords_screen.dart';
 
@@ -263,6 +264,19 @@ class SettingsScreen extends ConsumerWidget {
           Haptics.tick();
           Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const EventsScreen()));
+        },
+      ),
+      _SettingsTile(
+        key: const ValueKey('settings-capture-tile'),
+        icon: 'chat-text',
+        title: 'Captura automática',
+        subtitle: 'Avisos por SMS de Itaú',
+        iconColor: colors.brandAt(0),
+        onTap: () {
+          Haptics.tick();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CaptureSettingsScreen()),
+          );
         },
       ),
     ];

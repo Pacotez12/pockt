@@ -271,6 +271,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final localTime = toLocal(view.tx.occurredAt);
     final timeStr =
         '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
+    if (view.tx.type == TxType.transfer) {
+      return 'Transferencia · $timeStr';
+    }
     final merchant = view.tx.merchant?.trim();
     if (merchant != null && merchant.isNotEmpty) {
       return '${view.category.name} · $timeStr';

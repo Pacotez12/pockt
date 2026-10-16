@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -47,6 +47,10 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
           'ON suggested_transactions (source, source_ref, occurred_at);',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_fingerprint '
+          'ON suggested_transactions (fingerprint);',
         );
       },
       onUpgrade: (m, from, to) async {
@@ -255,6 +259,34 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(entryShortcuts);
           await m.createTable(events);
           await m.addColumn(transactions, transactions.eventId);
+        }
+        if (from < 12) {
+          final hasMerchantMemory = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='merchant_memory';",
+          ).get()).isNotEmpty;
+          if (hasMerchantMemory) {
+            final cols = await customSelect(
+              'PRAGMA table_info(merchant_memory);',
+            ).get();
+            final hasAutoConfirm = cols.any(
+              (r) => r.read<String>('name') == 'auto_confirm',
+            );
+            if (!hasAutoConfirm) {
+              await m.addColumn(merchantMemory, merchantMemory.autoConfirm);
+            }
+          } else {
+            await m.createTable(merchantMemory);
+          }
+
+          final hasSuggested = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='suggested_transactions';",
+          ).get()).isNotEmpty;
+          if (hasSuggested) {
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_fingerprint '
+              'ON suggested_transactions (fingerprint);',
+            );
+          }
         }
       },
     );

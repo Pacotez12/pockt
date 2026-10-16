@@ -51,6 +51,12 @@ abstract class SettingsKeys {
 
   // Primer uso (Plan 4 Task 7 / §5.11)
   static const onboardingDone = 'onboarding.done';
+
+  // Captura automática de SMS (Plan 7 / spec §5)
+  static const captureSmsEnabled = 'capture.smsEnabled';
+  static const captureSince = 'capture.since';
+  static const captureLastSmsAt = 'capture.lastSmsAt';
+  static const captureUnrecognizedCount = 'capture.unrecognizedCount';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -280,4 +286,34 @@ final weeklySummaryEnabledProvider = StreamProvider<bool>((ref) {
   return repo
       .watch(SettingsKeys.weeklySummaryEnabled)
       .map((val) => val == null || val == 'true');
+});
+
+final captureSmsEnabledProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.captureSmsEnabled).map((val) => val == 'true');
+});
+
+final captureSinceProvider = StreamProvider<DateTime>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.captureSince).map((val) {
+    final parsed = val != null ? DateTime.tryParse(val) : null;
+    if (parsed != null) {
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    }
+    return DateTime(2026, 10, 15);
+  });
+});
+
+final captureLastSmsAtProvider = StreamProvider<DateTime?>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureLastSmsAt)
+      .map((val) => val != null ? DateTime.tryParse(val) : null);
+});
+
+final captureUnrecognizedCountProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureUnrecognizedCount)
+      .map((val) => int.tryParse(val ?? '') ?? 0);
 });
