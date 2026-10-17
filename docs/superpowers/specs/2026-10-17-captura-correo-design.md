@@ -92,10 +92,10 @@ Del lado Dart, interfaz `EmailSource` (`authorize`, `fetchSince`, `disconnect`) 
 - **Transferencia recibida** (aprende por pagador):
   - Sin regla → bandeja con opciones **Ingreso** (categoría), **Me pagaron un préstamo** (préstamos `lent` activos) o **No contar**.
   - Al confirmar se guarda la regla del pagador. Con regla → se registra sola y se notifica. Si la regla apunta a un préstamo ya saldado → vuelve a la bandeja.
-- **Transferencia enviada** (siempre a la bandeja): opciones **Gasto** (categoría), **Le presté a alguien** (crea un préstamo `lent` o suma a uno), **Pagué una deuda** (préstamo `owe` activo), **No contar**. Precargada con lo último elegido para ese destinatario; nunca se confirma sola.
+- **Transferencia enviada** (siempre a la bandeja): opciones **Gasto** (categoría), **Le presté a alguien** (crea un préstamo `lent` nuevo con la persona y el monto), **Pagué una deuda** (préstamo `owe` activo), **No contar**. Precargada con lo último elegido para ese destinatario; nunca se confirma sola.
 - **Entre cuentas propias:** si la otra persona coincide con el titular (nombre normalizado igual al "Cliente Pagador" de las enviadas, guardado al conectar como `capture.emailOwnerName`), la opción precargada es **No contar**.
 - **Pago de servicios:** mismas reglas que el SMS (§4.3 de la spec SMS): recurrente coincidente (±10 % y ±5 días) la reemplaza; `Pago de tarjeta` → gasto en **Tarjetas**; `Pago de Prestamos` → préstamo con cuota coincidente; resto → gasto con categoría de la libreta de comercios.
-- **Efecto en los números:** "Me pagaron un préstamo" y "Pagué una deuda" solo mueven el préstamo (no son ingreso ni gasto); "Le presté a alguien" tampoco es gasto; "No contar" no registra movimiento. "Ingreso" y "Gasto" son movimientos normales.
+- **Efecto en los números** (mismo modelo de caja que ya usa Préstamos, sin cambiarlo): "Me pagaron un préstamo" y "Pagué una deuda" usan `LoansRepository.recordPayment` (ingreso / gasto en la categoría Préstamos, ligado al préstamo); "Le presté a alguien" crea el préstamo `lent` con su salida en Préstamos (`createLoan(recordInitialDisbursement: true)`); "No contar" no registra movimiento. "Ingreso" y "Gasto" son movimientos normales. Así la plata que prestás baja lo que podés gastar y la que te devuelven lo repone, y nada se cuenta dos veces.
 
 ### 4.6 Duplicados
 - Clave única `email:<id de Gmail>` en `fingerprint`: un correo nunca se procesa dos veces.
