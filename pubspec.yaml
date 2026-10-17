@@ -31,6 +31,8 @@ dependencies:
   local_auth: 3.0.2
   package_info_plus: 10.2.2
   share_plus: 13.3.1
+  pockt_gmail:
+    path: packages/pockt_gmail
 
 dev_dependencies:
   flutter_test:

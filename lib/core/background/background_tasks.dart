@@ -9,6 +9,7 @@ import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
+import 'package:pockt/features/capture/data/email_source.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
@@ -29,6 +30,31 @@ void callbackDispatcher() {
       final scheduler =
           ReminderScheduler(notifier, txRepo, marksRepo, settingsRepo);
       final now = DateTime.now();
+
+      if (task == 'pockt-email-probe') {
+        final emailSource = const AndroidEmailSource();
+        try {
+          final emails = await emailSource.fetchSince(
+            now.subtract(const Duration(days: 7)),
+          );
+          await notifier.show(
+            'Gmail en segundo plano',
+            '${emails.length} correos',
+          );
+        } on GmailReconnectRequired {
+          await notifier.show(
+            'Gmail en segundo plano',
+            'necesita reconectar',
+          );
+        } catch (e) {
+          await notifier.show(
+            'Gmail en segundo plano',
+            'error: $e',
+          );
+        }
+        await db.close();
+        return true;
+      }
 
       // 1. Generar sugerencias pendientes de cobro y recurrentes
       final generator = SuggestionGenerator(db, notifier, clock: () => now);

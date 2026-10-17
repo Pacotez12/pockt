@@ -1,0 +1,19 @@
+name: pockt_gmail
+description: Plugin local de captura de correos Gmail para Pockt
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.github.pacotez12.pockt_gmail
+        pluginClass: PocktGmailPlugin
