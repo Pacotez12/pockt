@@ -89,6 +89,7 @@ class SuggestionsRepository {
     String? sourceRef,
     String? rawText,
     String? fingerprint,
+    String? captureMeta,
   }) async {
     final now = _clock();
     try {
@@ -108,6 +109,7 @@ class SuggestionsRepository {
               status: 'pending',
               rawText: Value(rawText),
               fingerprint: Value(fingerprint),
+              captureMeta: Value(captureMeta),
               createdAt: now,
             ),
             mode: InsertMode.insertOrIgnore,

@@ -222,6 +222,53 @@ class CaptureService {
         continue;
       }
 
+      // Deduplicación contra captura por correo (mismo monto, mismo día local)
+      if (parsed.amount != null && parsed.amount! > 0) {
+        final occurredLocal = effectiveTime.toLocal();
+        final dayStart = DateTime(
+          occurredLocal.year,
+          occurredLocal.month,
+          occurredLocal.day,
+        );
+        final dayEnd = dayStart.add(const Duration(days: 1));
+
+        final allSugs = await (_db.select(_db.suggestedTransactions)
+              ..where(
+                (s) =>
+                    s.amount.equals(parsed.amount!) &
+                    s.occurredAt.isBiggerOrEqualValue(dayStart) &
+                    s.occurredAt.isSmallerThanValue(dayEnd),
+              ))
+            .get();
+
+        final matchedEmailSug = allSugs
+            .where(
+              (s) =>
+                  (s.fingerprint?.startsWith('email:') ?? false) ||
+                  (s.captureMeta != null &&
+                      s.captureMeta!.contains('"channel":"email"')),
+            )
+            .firstOrNull;
+
+        if (matchedEmailSug != null) {
+          continue;
+        }
+
+        final existingEmailTx = await (_db.select(_db.transactions)
+              ..where(
+                (t) =>
+                    t.deletedAt.isNull() &
+                    t.amount.equals(parsed.amount!) &
+                    t.occurredAt.isBiggerOrEqualValue(dayStart) &
+                    t.occurredAt.isSmallerThanValue(dayEnd) &
+                    t.source.equalsValue(TxSource.capture),
+              ))
+            .get();
+        if (existingEmailTx.isNotEmpty) {
+          continue;
+        }
+      }
+
       // 2. Cargar contexto para clasificar
       final keywordMap = await KeywordsRepository(_db).keywordMap();
       final memRows = await _db.select(_db.merchantMemory).get();
@@ -336,6 +383,12 @@ class CaptureService {
         cardsCategoryId: _kTarjetasCatId,
       );
 
+      final smsCaptureMeta = jsonEncode({
+        'channel': 'sms',
+        'kind': parsed.kind.name,
+        if (parsed.merchantKey != null) 'merchantKey': parsed.merchantKey,
+      });
+
       switch (classification.kind) {
         case CaptureClassificationKind.ignored:
         case CaptureClassificationKind.unrecognized:
@@ -351,6 +404,7 @@ class CaptureService {
               fingerprint: Value(fingerprint),
               rawText: Value(parsed.sanitizedRawText),
               occurredAt: Value(occurredUtc),
+              captureMeta: Value(smsCaptureMeta),
             ),
           );
           await _suggestionsRepo.confirm(sugId, occurredAt: occurredUtc);
@@ -373,6 +427,7 @@ class CaptureService {
             sourceRef: dupTx != null ? 'dup:${dupTx.id}' : null,
             rawText: parsed.sanitizedRawText,
             fingerprint: fingerprint,
+            captureMeta: smsCaptureMeta,
           );
           if (created) pendingCreatedCount++;
           break;
@@ -394,6 +449,7 @@ class CaptureService {
             sourceRef: dupTx != null ? 'dup:${dupTx.id}' : null,
             rawText: parsed.sanitizedRawText,
             fingerprint: fingerprint,
+            captureMeta: smsCaptureMeta,
           );
           if (created) pendingCreatedCount++;
           break;
@@ -426,6 +482,7 @@ class CaptureService {
             sourceRef: sourceRef,
             rawText: parsed.sanitizedRawText,
             fingerprint: fingerprint,
+            captureMeta: smsCaptureMeta,
           );
           if (created) pendingCreatedCount++;
           break;
@@ -452,6 +509,7 @@ class CaptureService {
             sourceRef: sourceRef,
             rawText: parsed.sanitizedRawText,
             fingerprint: fingerprint,
+            captureMeta: smsCaptureMeta,
           );
           if (created) pendingCreatedCount++;
           break;
@@ -483,6 +541,7 @@ class CaptureService {
                     status: 'pending',
                     rawText: Value(parsed.sanitizedRawText),
                     fingerprint: Value(fingerprint),
+                    captureMeta: Value(smsCaptureMeta),
                     createdAt: now,
                   ),
                   mode: InsertMode.insertOrIgnore,
@@ -499,6 +558,7 @@ class CaptureService {
               sourceRef: dupTx != null ? 'dup:${dupTx.id}' : null,
               rawText: parsed.sanitizedRawText,
               fingerprint: fingerprint,
+              captureMeta: smsCaptureMeta,
             );
             if (created) pendingCreatedCount++;
           }
