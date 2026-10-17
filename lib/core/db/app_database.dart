@@ -27,6 +27,7 @@ part 'app_database.g.dart';
     GoalContributions,
     EntryShortcuts,
     Events,
+    CounterpartyRules,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -34,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -51,6 +52,10 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_fingerprint '
           'ON suggested_transactions (fingerprint);',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_counterparty_rules_name_direction '
+          'ON counterparty_rules (name_key, direction);',
         );
       },
       onUpgrade: (m, from, to) async {
@@ -369,6 +374,33 @@ class AppDatabase extends _$AppDatabase {
               await customStatement(
                 'UPDATE suggested_transactions SET type = ?, category_id = ? WHERE type = ?;',
                 ['expense', tarjetasId, 'transfer'],
+              );
+            }
+          }
+        }
+        if (from < 14) {
+          final hasCounterpartyRules = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='counterparty_rules';",
+          ).get()).isNotEmpty;
+          if (!hasCounterpartyRules) {
+            await m.createTable(counterpartyRules);
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_counterparty_rules_name_direction '
+              'ON counterparty_rules (name_key, direction);',
+            );
+          }
+
+          final hasSuggested = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='suggested_transactions';",
+          ).get()).isNotEmpty;
+          if (hasSuggested) {
+            final hasCaptureMeta = (await customSelect(
+              "SELECT name FROM pragma_table_info('suggested_transactions') WHERE name = 'capture_meta';",
+            ).get()).isNotEmpty;
+            if (!hasCaptureMeta) {
+              await m.addColumn(
+                suggestedTransactions,
+                suggestedTransactions.captureMeta,
               );
             }
           }

@@ -11,6 +11,17 @@ enum LoanDirection { owe, lent }
 
 enum LoanKind { loan, installments }
 
+enum TransferDirection { incoming, outgoing }
+
+enum CounterpartyAction {
+  income,
+  expense,
+  loanRepayment,
+  loanLent,
+  loanPayment,
+  ignore,
+}
+
 class Loans extends Table {
   TextColumn get id => text()();
   TextColumn get direction => textEnum<LoanDirection>()();
@@ -115,6 +126,7 @@ class SuggestedTransactions extends Table {
       text().nullable().references(Transactions, #id)();
   TextColumn get rawText => text().nullable()();
   TextColumn get fingerprint => text().nullable()();
+  TextColumn get captureMeta => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -248,3 +260,23 @@ class GoalContributions extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class CounterpartyRules extends Table {
+  TextColumn get id => text()();
+  TextColumn get nameKey => text()();
+  TextColumn get direction => textEnum<TransferDirection>()();
+  TextColumn get action => textEnum<CounterpartyAction>()();
+  TextColumn get categoryId => text().nullable().references(Categories, #id)();
+  TextColumn get loanId => text().nullable().references(Loans, #id)();
+  BoolColumn get autoApply => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {nameKey, direction},
+  ];
+}
+

@@ -2933,6 +2933,17 @@ class $SuggestedTransactionsTable extends SuggestedTransactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _captureMetaMeta = const VerificationMeta(
+    'captureMeta',
+  );
+  @override
+  late final GeneratedColumn<String> captureMeta = GeneratedColumn<String>(
+    'capture_meta',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2959,6 +2970,7 @@ class $SuggestedTransactionsTable extends SuggestedTransactions
     transactionId,
     rawText,
     fingerprint,
+    captureMeta,
     createdAt,
   ];
   @override
@@ -3050,6 +3062,15 @@ class $SuggestedTransactionsTable extends SuggestedTransactions
         ),
       );
     }
+    if (data.containsKey('capture_meta')) {
+      context.handle(
+        _captureMetaMeta,
+        captureMeta.isAcceptableOrUnknown(
+          data['capture_meta']!,
+          _captureMetaMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3127,6 +3148,10 @@ class $SuggestedTransactionsTable extends SuggestedTransactions
         DriftSqlType.string,
         data['${effectivePrefix}fingerprint'],
       ),
+      captureMeta: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}capture_meta'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3160,6 +3185,7 @@ class SuggestedTransaction extends DataClass
   final String? transactionId;
   final String? rawText;
   final String? fingerprint;
+  final String? captureMeta;
   final DateTime createdAt;
   const SuggestedTransaction({
     required this.id,
@@ -3175,6 +3201,7 @@ class SuggestedTransaction extends DataClass
     this.transactionId,
     this.rawText,
     this.fingerprint,
+    this.captureMeta,
     required this.createdAt,
   });
   @override
@@ -3213,6 +3240,9 @@ class SuggestedTransaction extends DataClass
     if (!nullToAbsent || fingerprint != null) {
       map['fingerprint'] = Variable<String>(fingerprint);
     }
+    if (!nullToAbsent || captureMeta != null) {
+      map['capture_meta'] = Variable<String>(captureMeta);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3244,6 +3274,9 @@ class SuggestedTransaction extends DataClass
       fingerprint: fingerprint == null && nullToAbsent
           ? const Value.absent()
           : Value(fingerprint),
+      captureMeta: captureMeta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(captureMeta),
       createdAt: Value(createdAt),
     );
   }
@@ -3271,6 +3304,7 @@ class SuggestedTransaction extends DataClass
       transactionId: serializer.fromJson<String?>(json['transactionId']),
       rawText: serializer.fromJson<String?>(json['rawText']),
       fingerprint: serializer.fromJson<String?>(json['fingerprint']),
+      captureMeta: serializer.fromJson<String?>(json['captureMeta']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3295,6 +3329,7 @@ class SuggestedTransaction extends DataClass
       'transactionId': serializer.toJson<String?>(transactionId),
       'rawText': serializer.toJson<String?>(rawText),
       'fingerprint': serializer.toJson<String?>(fingerprint),
+      'captureMeta': serializer.toJson<String?>(captureMeta),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3313,6 +3348,7 @@ class SuggestedTransaction extends DataClass
     Value<String?> transactionId = const Value.absent(),
     Value<String?> rawText = const Value.absent(),
     Value<String?> fingerprint = const Value.absent(),
+    Value<String?> captureMeta = const Value.absent(),
     DateTime? createdAt,
   }) => SuggestedTransaction(
     id: id ?? this.id,
@@ -3330,6 +3366,7 @@ class SuggestedTransaction extends DataClass
         : this.transactionId,
     rawText: rawText.present ? rawText.value : this.rawText,
     fingerprint: fingerprint.present ? fingerprint.value : this.fingerprint,
+    captureMeta: captureMeta.present ? captureMeta.value : this.captureMeta,
     createdAt: createdAt ?? this.createdAt,
   );
   SuggestedTransaction copyWithCompanion(SuggestedTransactionsCompanion data) {
@@ -3355,6 +3392,9 @@ class SuggestedTransaction extends DataClass
       fingerprint: data.fingerprint.present
           ? data.fingerprint.value
           : this.fingerprint,
+      captureMeta: data.captureMeta.present
+          ? data.captureMeta.value
+          : this.captureMeta,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3375,6 +3415,7 @@ class SuggestedTransaction extends DataClass
           ..write('transactionId: $transactionId, ')
           ..write('rawText: $rawText, ')
           ..write('fingerprint: $fingerprint, ')
+          ..write('captureMeta: $captureMeta, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3395,6 +3436,7 @@ class SuggestedTransaction extends DataClass
     transactionId,
     rawText,
     fingerprint,
+    captureMeta,
     createdAt,
   );
   @override
@@ -3414,6 +3456,7 @@ class SuggestedTransaction extends DataClass
           other.transactionId == this.transactionId &&
           other.rawText == this.rawText &&
           other.fingerprint == this.fingerprint &&
+          other.captureMeta == this.captureMeta &&
           other.createdAt == this.createdAt);
 }
 
@@ -3432,6 +3475,7 @@ class SuggestedTransactionsCompanion
   final Value<String?> transactionId;
   final Value<String?> rawText;
   final Value<String?> fingerprint;
+  final Value<String?> captureMeta;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const SuggestedTransactionsCompanion({
@@ -3448,6 +3492,7 @@ class SuggestedTransactionsCompanion
     this.transactionId = const Value.absent(),
     this.rawText = const Value.absent(),
     this.fingerprint = const Value.absent(),
+    this.captureMeta = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3465,6 +3510,7 @@ class SuggestedTransactionsCompanion
     this.transactionId = const Value.absent(),
     this.rawText = const Value.absent(),
     this.fingerprint = const Value.absent(),
+    this.captureMeta = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3488,6 +3534,7 @@ class SuggestedTransactionsCompanion
     Expression<String>? transactionId,
     Expression<String>? rawText,
     Expression<String>? fingerprint,
+    Expression<String>? captureMeta,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -3505,6 +3552,7 @@ class SuggestedTransactionsCompanion
       if (transactionId != null) 'transaction_id': transactionId,
       if (rawText != null) 'raw_text': rawText,
       if (fingerprint != null) 'fingerprint': fingerprint,
+      if (captureMeta != null) 'capture_meta': captureMeta,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3524,6 +3572,7 @@ class SuggestedTransactionsCompanion
     Value<String?>? transactionId,
     Value<String?>? rawText,
     Value<String?>? fingerprint,
+    Value<String?>? captureMeta,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -3541,6 +3590,7 @@ class SuggestedTransactionsCompanion
       transactionId: transactionId ?? this.transactionId,
       rawText: rawText ?? this.rawText,
       fingerprint: fingerprint ?? this.fingerprint,
+      captureMeta: captureMeta ?? this.captureMeta,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3592,6 +3642,9 @@ class SuggestedTransactionsCompanion
     if (fingerprint.present) {
       map['fingerprint'] = Variable<String>(fingerprint.value);
     }
+    if (captureMeta.present) {
+      map['capture_meta'] = Variable<String>(captureMeta.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3617,6 +3670,7 @@ class SuggestedTransactionsCompanion
           ..write('transactionId: $transactionId, ')
           ..write('rawText: $rawText, ')
           ..write('fingerprint: $fingerprint, ')
+          ..write('captureMeta: $captureMeta, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -8161,6 +8215,548 @@ class EntryShortcutsCompanion extends UpdateCompanion<EntryShortcut> {
   }
 }
 
+class $CounterpartyRulesTable extends CounterpartyRules
+    with TableInfo<$CounterpartyRulesTable, CounterpartyRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CounterpartyRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameKeyMeta = const VerificationMeta(
+    'nameKey',
+  );
+  @override
+  late final GeneratedColumn<String> nameKey = GeneratedColumn<String>(
+    'name_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<TransferDirection, String>
+  direction =
+      GeneratedColumn<String>(
+        'direction',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<TransferDirection>(
+        $CounterpartyRulesTable.$converterdirection,
+      );
+  @override
+  late final GeneratedColumnWithTypeConverter<CounterpartyAction, String>
+  action = GeneratedColumn<String>(
+    'action',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<CounterpartyAction>($CounterpartyRulesTable.$converteraction);
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id)',
+    ),
+  );
+  static const VerificationMeta _loanIdMeta = const VerificationMeta('loanId');
+  @override
+  late final GeneratedColumn<String> loanId = GeneratedColumn<String>(
+    'loan_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES loans (id)',
+    ),
+  );
+  static const VerificationMeta _autoApplyMeta = const VerificationMeta(
+    'autoApply',
+  );
+  @override
+  late final GeneratedColumn<bool> autoApply = GeneratedColumn<bool>(
+    'auto_apply',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_apply" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nameKey,
+    direction,
+    action,
+    categoryId,
+    loanId,
+    autoApply,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'counterparty_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CounterpartyRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name_key')) {
+      context.handle(
+        _nameKeyMeta,
+        nameKey.isAcceptableOrUnknown(data['name_key']!, _nameKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameKeyMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('loan_id')) {
+      context.handle(
+        _loanIdMeta,
+        loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta),
+      );
+    }
+    if (data.containsKey('auto_apply')) {
+      context.handle(
+        _autoApplyMeta,
+        autoApply.isAcceptableOrUnknown(data['auto_apply']!, _autoApplyMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {nameKey, direction},
+  ];
+  @override
+  CounterpartyRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CounterpartyRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      nameKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_key'],
+      )!,
+      direction: $CounterpartyRulesTable.$converterdirection.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}direction'],
+        )!,
+      ),
+      action: $CounterpartyRulesTable.$converteraction.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}action'],
+        )!,
+      ),
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      loanId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}loan_id'],
+      ),
+      autoApply: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_apply'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CounterpartyRulesTable createAlias(String alias) {
+    return $CounterpartyRulesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<TransferDirection, String, String>
+  $converterdirection = const EnumNameConverter<TransferDirection>(
+    TransferDirection.values,
+  );
+  static JsonTypeConverter2<CounterpartyAction, String, String>
+  $converteraction = const EnumNameConverter<CounterpartyAction>(
+    CounterpartyAction.values,
+  );
+}
+
+class CounterpartyRule extends DataClass
+    implements Insertable<CounterpartyRule> {
+  final String id;
+  final String nameKey;
+  final TransferDirection direction;
+  final CounterpartyAction action;
+  final String? categoryId;
+  final String? loanId;
+  final bool autoApply;
+  final DateTime updatedAt;
+  const CounterpartyRule({
+    required this.id,
+    required this.nameKey,
+    required this.direction,
+    required this.action,
+    this.categoryId,
+    this.loanId,
+    required this.autoApply,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name_key'] = Variable<String>(nameKey);
+    {
+      map['direction'] = Variable<String>(
+        $CounterpartyRulesTable.$converterdirection.toSql(direction),
+      );
+    }
+    {
+      map['action'] = Variable<String>(
+        $CounterpartyRulesTable.$converteraction.toSql(action),
+      );
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || loanId != null) {
+      map['loan_id'] = Variable<String>(loanId);
+    }
+    map['auto_apply'] = Variable<bool>(autoApply);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  CounterpartyRulesCompanion toCompanion(bool nullToAbsent) {
+    return CounterpartyRulesCompanion(
+      id: Value(id),
+      nameKey: Value(nameKey),
+      direction: Value(direction),
+      action: Value(action),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      loanId: loanId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanId),
+      autoApply: Value(autoApply),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory CounterpartyRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CounterpartyRule(
+      id: serializer.fromJson<String>(json['id']),
+      nameKey: serializer.fromJson<String>(json['nameKey']),
+      direction: $CounterpartyRulesTable.$converterdirection.fromJson(
+        serializer.fromJson<String>(json['direction']),
+      ),
+      action: $CounterpartyRulesTable.$converteraction.fromJson(
+        serializer.fromJson<String>(json['action']),
+      ),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      loanId: serializer.fromJson<String?>(json['loanId']),
+      autoApply: serializer.fromJson<bool>(json['autoApply']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'nameKey': serializer.toJson<String>(nameKey),
+      'direction': serializer.toJson<String>(
+        $CounterpartyRulesTable.$converterdirection.toJson(direction),
+      ),
+      'action': serializer.toJson<String>(
+        $CounterpartyRulesTable.$converteraction.toJson(action),
+      ),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'loanId': serializer.toJson<String?>(loanId),
+      'autoApply': serializer.toJson<bool>(autoApply),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  CounterpartyRule copyWith({
+    String? id,
+    String? nameKey,
+    TransferDirection? direction,
+    CounterpartyAction? action,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> loanId = const Value.absent(),
+    bool? autoApply,
+    DateTime? updatedAt,
+  }) => CounterpartyRule(
+    id: id ?? this.id,
+    nameKey: nameKey ?? this.nameKey,
+    direction: direction ?? this.direction,
+    action: action ?? this.action,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    loanId: loanId.present ? loanId.value : this.loanId,
+    autoApply: autoApply ?? this.autoApply,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  CounterpartyRule copyWithCompanion(CounterpartyRulesCompanion data) {
+    return CounterpartyRule(
+      id: data.id.present ? data.id.value : this.id,
+      nameKey: data.nameKey.present ? data.nameKey.value : this.nameKey,
+      direction: data.direction.present ? data.direction.value : this.direction,
+      action: data.action.present ? data.action.value : this.action,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      loanId: data.loanId.present ? data.loanId.value : this.loanId,
+      autoApply: data.autoApply.present ? data.autoApply.value : this.autoApply,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CounterpartyRule(')
+          ..write('id: $id, ')
+          ..write('nameKey: $nameKey, ')
+          ..write('direction: $direction, ')
+          ..write('action: $action, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('loanId: $loanId, ')
+          ..write('autoApply: $autoApply, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    nameKey,
+    direction,
+    action,
+    categoryId,
+    loanId,
+    autoApply,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CounterpartyRule &&
+          other.id == this.id &&
+          other.nameKey == this.nameKey &&
+          other.direction == this.direction &&
+          other.action == this.action &&
+          other.categoryId == this.categoryId &&
+          other.loanId == this.loanId &&
+          other.autoApply == this.autoApply &&
+          other.updatedAt == this.updatedAt);
+}
+
+class CounterpartyRulesCompanion extends UpdateCompanion<CounterpartyRule> {
+  final Value<String> id;
+  final Value<String> nameKey;
+  final Value<TransferDirection> direction;
+  final Value<CounterpartyAction> action;
+  final Value<String?> categoryId;
+  final Value<String?> loanId;
+  final Value<bool> autoApply;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const CounterpartyRulesCompanion({
+    this.id = const Value.absent(),
+    this.nameKey = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.action = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.loanId = const Value.absent(),
+    this.autoApply = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CounterpartyRulesCompanion.insert({
+    required String id,
+    required String nameKey,
+    required TransferDirection direction,
+    required CounterpartyAction action,
+    this.categoryId = const Value.absent(),
+    this.loanId = const Value.absent(),
+    this.autoApply = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       nameKey = Value(nameKey),
+       direction = Value(direction),
+       action = Value(action),
+       updatedAt = Value(updatedAt);
+  static Insertable<CounterpartyRule> custom({
+    Expression<String>? id,
+    Expression<String>? nameKey,
+    Expression<String>? direction,
+    Expression<String>? action,
+    Expression<String>? categoryId,
+    Expression<String>? loanId,
+    Expression<bool>? autoApply,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nameKey != null) 'name_key': nameKey,
+      if (direction != null) 'direction': direction,
+      if (action != null) 'action': action,
+      if (categoryId != null) 'category_id': categoryId,
+      if (loanId != null) 'loan_id': loanId,
+      if (autoApply != null) 'auto_apply': autoApply,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CounterpartyRulesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? nameKey,
+    Value<TransferDirection>? direction,
+    Value<CounterpartyAction>? action,
+    Value<String?>? categoryId,
+    Value<String?>? loanId,
+    Value<bool>? autoApply,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return CounterpartyRulesCompanion(
+      id: id ?? this.id,
+      nameKey: nameKey ?? this.nameKey,
+      direction: direction ?? this.direction,
+      action: action ?? this.action,
+      categoryId: categoryId ?? this.categoryId,
+      loanId: loanId ?? this.loanId,
+      autoApply: autoApply ?? this.autoApply,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (nameKey.present) {
+      map['name_key'] = Variable<String>(nameKey.value);
+    }
+    if (direction.present) {
+      map['direction'] = Variable<String>(
+        $CounterpartyRulesTable.$converterdirection.toSql(direction.value),
+      );
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(
+        $CounterpartyRulesTable.$converteraction.toSql(action.value),
+      );
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (loanId.present) {
+      map['loan_id'] = Variable<String>(loanId.value);
+    }
+    if (autoApply.present) {
+      map['auto_apply'] = Variable<bool>(autoApply.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CounterpartyRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('nameKey: $nameKey, ')
+          ..write('direction: $direction, ')
+          ..write('action: $action, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('loanId: $loanId, ')
+          ..write('autoApply: $autoApply, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8188,6 +8784,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GoalContributionsTable goalContributions =
       $GoalContributionsTable(this);
   late final $EntryShortcutsTable entryShortcuts = $EntryShortcutsTable(this);
+  late final $CounterpartyRulesTable counterpartyRules =
+      $CounterpartyRulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8209,6 +8807,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     goals,
     goalContributions,
     entryShortcuts,
+    counterpartyRules,
   ];
 }
 
@@ -8390,6 +8989,27 @@ final class $$CategoriesTableReferences
     ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_entryShortcutsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CounterpartyRulesTable, List<CounterpartyRule>>
+  _counterpartyRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.counterpartyRules,
+        aliasName: 'categories__id__counterparty_rules__category_id',
+      );
+
+  $$CounterpartyRulesTableProcessedTableManager get counterpartyRulesRefs {
+    final manager = $$CounterpartyRulesTableTableManager(
+      $_db,
+      $_db.counterpartyRules,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _counterpartyRulesRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -8638,6 +9258,31 @@ class $$CategoriesTableFilterComposer
           }) => $$EntryShortcutsTableFilterComposer(
             $db: $db,
             $table: $db.entryShortcuts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> counterpartyRulesRefs(
+    Expression<bool> Function($$CounterpartyRulesTableFilterComposer f) f,
+  ) {
+    final $$CounterpartyRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.counterpartyRules,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CounterpartyRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.counterpartyRules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8933,6 +9578,32 @@ class $$CategoriesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> counterpartyRulesRefs<T extends Object>(
+    Expression<T> Function($$CounterpartyRulesTableAnnotationComposer a) f,
+  ) {
+    final $$CounterpartyRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.counterpartyRules,
+          getReferencedColumn: (t) => t.categoryId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CounterpartyRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.counterpartyRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$CategoriesTableTableManager
@@ -8957,6 +9628,7 @@ class $$CategoriesTableTableManager
             bool categoryKeywordsRefs,
             bool merchantMemoryRefs,
             bool entryShortcutsRefs,
+            bool counterpartyRulesRefs,
           })
         > {
   $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
@@ -9032,6 +9704,7 @@ class $$CategoriesTableTableManager
                 categoryKeywordsRefs = false,
                 merchantMemoryRefs = false,
                 entryShortcutsRefs = false,
+                counterpartyRulesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -9044,6 +9717,7 @@ class $$CategoriesTableTableManager
                     if (categoryKeywordsRefs) db.categoryKeywords,
                     if (merchantMemoryRefs) db.merchantMemory,
                     if (entryShortcutsRefs) db.entryShortcuts,
+                    if (counterpartyRulesRefs) db.counterpartyRules,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -9216,6 +9890,27 @@ class $$CategoriesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (counterpartyRulesRefs)
+                        await $_getPrefetchedData<
+                          Category,
+                          $CategoriesTable,
+                          CounterpartyRule
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._counterpartyRulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).counterpartyRulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.categoryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -9245,6 +9940,7 @@ typedef $$CategoriesTableProcessedTableManager =
         bool categoryKeywordsRefs,
         bool merchantMemoryRefs,
         bool entryShortcutsRefs,
+        bool counterpartyRulesRefs,
       })
     >;
 typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
@@ -9299,6 +9995,27 @@ final class $$LoansTableReferences
     ).filter((f) => f.loanId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_transactionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CounterpartyRulesTable, List<CounterpartyRule>>
+  _counterpartyRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.counterpartyRules,
+        aliasName: 'loans__id__counterparty_rules__loan_id',
+      );
+
+  $$CounterpartyRulesTableProcessedTableManager get counterpartyRulesRefs {
+    final manager = $$CounterpartyRulesTableTableManager(
+      $_db,
+      $_db.counterpartyRules,
+    ).filter((f) => f.loanId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _counterpartyRulesRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -9401,6 +10118,31 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
           }) => $$TransactionsTableFilterComposer(
             $db: $db,
             $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> counterpartyRulesRefs(
+    Expression<bool> Function($$CounterpartyRulesTableFilterComposer f) f,
+  ) {
+    final $$CounterpartyRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.counterpartyRules,
+      getReferencedColumn: (t) => t.loanId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CounterpartyRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.counterpartyRules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -9576,6 +10318,32 @@ class $$LoansTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> counterpartyRulesRefs<T extends Object>(
+    Expression<T> Function($$CounterpartyRulesTableAnnotationComposer a) f,
+  ) {
+    final $$CounterpartyRulesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.counterpartyRules,
+          getReferencedColumn: (t) => t.loanId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CounterpartyRulesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.counterpartyRules,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LoansTableTableManager
@@ -9591,7 +10359,10 @@ class $$LoansTableTableManager
           $$LoansTableUpdateCompanionBuilder,
           (Loan, $$LoansTableReferences),
           Loan,
-          PrefetchHooks Function({bool transactionsRefs})
+          PrefetchHooks Function({
+            bool transactionsRefs,
+            bool counterpartyRulesRefs,
+          })
         > {
   $$LoansTableTableManager(_$AppDatabase db, $LoansTable table)
     : super(
@@ -9680,31 +10451,63 @@ class $$LoansTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({transactionsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (transactionsRefs) db.transactions],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (transactionsRefs)
-                    await $_getPrefetchedData<Loan, $LoansTable, Transaction>(
-                      currentTable: table,
-                      referencedTable: $$LoansTableReferences
-                          ._transactionsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$LoansTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).transactionsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.loanId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({transactionsRefs = false, counterpartyRulesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (transactionsRefs) db.transactions,
+                    if (counterpartyRulesRefs) db.counterpartyRules,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (transactionsRefs)
+                        await $_getPrefetchedData<
+                          Loan,
+                          $LoansTable,
+                          Transaction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LoansTableReferences
+                              ._transactionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LoansTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).transactionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.loanId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (counterpartyRulesRefs)
+                        await $_getPrefetchedData<
+                          Loan,
+                          $LoansTable,
+                          CounterpartyRule
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LoansTableReferences
+                              ._counterpartyRulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LoansTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).counterpartyRulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.loanId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -9721,7 +10524,10 @@ typedef $$LoansTableProcessedTableManager =
       $$LoansTableUpdateCompanionBuilder,
       (Loan, $$LoansTableReferences),
       Loan,
-      PrefetchHooks Function({bool transactionsRefs})
+      PrefetchHooks Function({
+        bool transactionsRefs,
+        bool counterpartyRulesRefs,
+      })
     >;
 typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
   required String id,
@@ -10906,6 +11712,7 @@ typedef $$SuggestedTransactionsTableCreateCompanionBuilder =
       Value<String?> transactionId,
       Value<String?> rawText,
       Value<String?> fingerprint,
+      Value<String?> captureMeta,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -10924,6 +11731,7 @@ typedef $$SuggestedTransactionsTableUpdateCompanionBuilder =
       Value<String?> transactionId,
       Value<String?> rawText,
       Value<String?> fingerprint,
+      Value<String?> captureMeta,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -11043,6 +11851,11 @@ class $$SuggestedTransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get captureMeta => $composableBuilder(
+    column: $table.captureMeta,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -11159,6 +11972,11 @@ class $$SuggestedTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get captureMeta => $composableBuilder(
+    column: $table.captureMeta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11254,6 +12072,11 @@ class $$SuggestedTransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get fingerprint => $composableBuilder(
     column: $table.fingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get captureMeta => $composableBuilder(
+    column: $table.captureMeta,
     builder: (column) => column,
   );
 
@@ -11359,6 +12182,7 @@ class $$SuggestedTransactionsTableTableManager
                 Value<String?> transactionId = const Value.absent(),
                 Value<String?> rawText = const Value.absent(),
                 Value<String?> fingerprint = const Value.absent(),
+                Value<String?> captureMeta = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SuggestedTransactionsCompanion(
@@ -11375,6 +12199,7 @@ class $$SuggestedTransactionsTableTableManager
                 transactionId: transactionId,
                 rawText: rawText,
                 fingerprint: fingerprint,
+                captureMeta: captureMeta,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -11393,6 +12218,7 @@ class $$SuggestedTransactionsTableTableManager
                 Value<String?> transactionId = const Value.absent(),
                 Value<String?> rawText = const Value.absent(),
                 Value<String?> fingerprint = const Value.absent(),
+                Value<String?> captureMeta = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => SuggestedTransactionsCompanion.insert(
@@ -11409,6 +12235,7 @@ class $$SuggestedTransactionsTableTableManager
                 transactionId: transactionId,
                 rawText: rawText,
                 fingerprint: fingerprint,
+                captureMeta: captureMeta,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -15058,6 +15885,478 @@ typedef $$EntryShortcutsTableProcessedTableManager =
       EntryShortcut,
       PrefetchHooks Function({bool categoryId})
     >;
+typedef $$CounterpartyRulesTableCreateCompanionBuilder =
+    CounterpartyRulesCompanion Function({
+      required String id,
+      required String nameKey,
+      required TransferDirection direction,
+      required CounterpartyAction action,
+      Value<String?> categoryId,
+      Value<String?> loanId,
+      Value<bool> autoApply,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$CounterpartyRulesTableUpdateCompanionBuilder =
+    CounterpartyRulesCompanion Function({
+      Value<String> id,
+      Value<String> nameKey,
+      Value<TransferDirection> direction,
+      Value<CounterpartyAction> action,
+      Value<String?> categoryId,
+      Value<String?> loanId,
+      Value<bool> autoApply,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$CounterpartyRulesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CounterpartyRulesTable,
+          CounterpartyRule
+        > {
+  $$CounterpartyRulesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) => db.categories
+      .createAlias('counterparty_rules__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoansTable _loanIdTable(_$AppDatabase db) =>
+      db.loans.createAlias('counterparty_rules__loan_id__loans__id');
+
+  $$LoansTableProcessedTableManager? get loanId {
+    final $_column = $_itemColumn<String>('loan_id');
+    if ($_column == null) return null;
+    final manager = $$LoansTableTableManager(
+      $_db,
+      $_db.loans,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_loanIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CounterpartyRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $CounterpartyRulesTable> {
+  $$CounterpartyRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameKey => $composableBuilder(
+    column: $table.nameKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<TransferDirection, TransferDirection, String>
+  get direction => $composableBuilder(
+    column: $table.direction,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<CounterpartyAction, CounterpartyAction, String>
+  get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<bool> get autoApply => $composableBuilder(
+    column: $table.autoApply,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoansTableFilterComposer get loanId {
+    final $$LoansTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loanId,
+      referencedTable: $db.loans,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoansTableFilterComposer(
+            $db: $db,
+            $table: $db.loans,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CounterpartyRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CounterpartyRulesTable> {
+  $$CounterpartyRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameKey => $composableBuilder(
+    column: $table.nameKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get direction => $composableBuilder(
+    column: $table.direction,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get autoApply => $composableBuilder(
+    column: $table.autoApply,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoansTableOrderingComposer get loanId {
+    final $$LoansTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loanId,
+      referencedTable: $db.loans,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoansTableOrderingComposer(
+            $db: $db,
+            $table: $db.loans,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CounterpartyRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CounterpartyRulesTable> {
+  $$CounterpartyRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nameKey =>
+      $composableBuilder(column: $table.nameKey, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<TransferDirection, String> get direction =>
+      $composableBuilder(column: $table.direction, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CounterpartyAction, String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoApply =>
+      $composableBuilder(column: $table.autoApply, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoansTableAnnotationComposer get loanId {
+    final $$LoansTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loanId,
+      referencedTable: $db.loans,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoansTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loans,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CounterpartyRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CounterpartyRulesTable,
+          CounterpartyRule,
+          $$CounterpartyRulesTableFilterComposer,
+          $$CounterpartyRulesTableOrderingComposer,
+          $$CounterpartyRulesTableAnnotationComposer,
+          $$CounterpartyRulesTableCreateCompanionBuilder,
+          $$CounterpartyRulesTableUpdateCompanionBuilder,
+          (CounterpartyRule, $$CounterpartyRulesTableReferences),
+          CounterpartyRule,
+          PrefetchHooks Function({bool categoryId, bool loanId})
+        > {
+  $$CounterpartyRulesTableTableManager(
+    _$AppDatabase db,
+    $CounterpartyRulesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CounterpartyRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CounterpartyRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CounterpartyRulesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> nameKey = const Value.absent(),
+                Value<TransferDirection> direction = const Value.absent(),
+                Value<CounterpartyAction> action = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> loanId = const Value.absent(),
+                Value<bool> autoApply = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CounterpartyRulesCompanion(
+                id: id,
+                nameKey: nameKey,
+                direction: direction,
+                action: action,
+                categoryId: categoryId,
+                loanId: loanId,
+                autoApply: autoApply,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String nameKey,
+                required TransferDirection direction,
+                required CounterpartyAction action,
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> loanId = const Value.absent(),
+                Value<bool> autoApply = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CounterpartyRulesCompanion.insert(
+                id: id,
+                nameKey: nameKey,
+                direction: direction,
+                action: action,
+                categoryId: categoryId,
+                loanId: loanId,
+                autoApply: autoApply,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CounterpartyRulesTable, CounterpartyRule>(table),
+                  $$CounterpartyRulesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({categoryId = false, loanId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.categoryId,
+                        referencedTable: $$CounterpartyRulesTableReferences
+                            ._categoryIdTable(db),
+                        referencedColumn: $$CounterpartyRulesTableReferences
+                            ._categoryIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (loanId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.loanId,
+                        referencedTable: $$CounterpartyRulesTableReferences
+                            ._loanIdTable(db),
+                        referencedColumn: $$CounterpartyRulesTableReferences
+                            ._loanIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CounterpartyRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CounterpartyRulesTable,
+      CounterpartyRule,
+      $$CounterpartyRulesTableFilterComposer,
+      $$CounterpartyRulesTableOrderingComposer,
+      $$CounterpartyRulesTableAnnotationComposer,
+      $$CounterpartyRulesTableCreateCompanionBuilder,
+      $$CounterpartyRulesTableUpdateCompanionBuilder,
+      (CounterpartyRule, $$CounterpartyRulesTableReferences),
+      CounterpartyRule,
+      PrefetchHooks Function({bool categoryId, bool loanId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15094,4 +16393,6 @@ class $AppDatabaseManager {
       $$GoalContributionsTableTableManager(_db, _db.goalContributions);
   $$EntryShortcutsTableTableManager get entryShortcuts =>
       $$EntryShortcutsTableTableManager(_db, _db.entryShortcuts);
+  $$CounterpartyRulesTableTableManager get counterpartyRules =>
+      $$CounterpartyRulesTableTableManager(_db, _db.counterpartyRules);
 }

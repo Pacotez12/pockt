@@ -57,6 +57,14 @@ abstract class SettingsKeys {
   static const captureSince = 'capture.since';
   static const captureLastSmsAt = 'capture.lastSmsAt';
   static const captureUnrecognizedCount = 'capture.unrecognizedCount';
+
+  // Captura automática de correos (Plan 9 / spec §5)
+  static const captureEmailEnabled = 'capture.emailEnabled';
+  static const captureEmailSince = 'capture.emailSince';
+  static const captureEmailLastAt = 'capture.emailLastAt';
+  static const captureEmailOwnerName = 'capture.emailOwnerName';
+  static const captureEmailUnrecognized = 'capture.emailUnrecognized';
+  static const captureEmailNeedsReconnect = 'capture.emailNeedsReconnect';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
@@ -317,3 +325,48 @@ final captureUnrecognizedCountProvider = StreamProvider<int>((ref) {
       .watch(SettingsKeys.captureUnrecognizedCount)
       .map((val) => int.tryParse(val ?? '') ?? 0);
 });
+
+final captureEmailEnabledProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureEmailEnabled)
+      .map((val) => val == 'true');
+});
+
+final captureEmailSinceProvider = StreamProvider<DateTime>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.captureEmailSince).map((val) {
+    final parsed = val != null ? DateTime.tryParse(val) : null;
+    if (parsed != null) {
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    }
+    return DateTime(2026, 10, 15);
+  });
+});
+
+final captureEmailLastAtProvider = StreamProvider<DateTime?>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureEmailLastAt)
+      .map((val) => val != null ? DateTime.tryParse(val) : null);
+});
+
+final captureEmailOwnerNameProvider = StreamProvider<String?>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo.watch(SettingsKeys.captureEmailOwnerName);
+});
+
+final captureEmailUnrecognizedCountProvider = StreamProvider<int>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureEmailUnrecognized)
+      .map((val) => int.tryParse(val ?? '') ?? 0);
+});
+
+final captureEmailNeedsReconnectProvider = StreamProvider<bool>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return repo
+      .watch(SettingsKeys.captureEmailNeedsReconnect)
+      .map((val) => val == 'true');
+});
+
