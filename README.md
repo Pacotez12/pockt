@@ -14,7 +14,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/versión-0.5-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-1.0-FF8A3D)](#estado)
 
 <br>
 
@@ -143,7 +143,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 7** | Captura por SMS de Itaú: bandeja, duplicados y comercios que se confirman solos | ✅ |
 | **Plan 8** | Inicio "Arco de hoy" y refactor de pantallas grandes | ✅ |
 | **Plan 9** | Captura por correo (Gmail): transferencias enviadas y recibidas, pagos de servicios, personas recordadas | ✅ |
-| **Plan 10** | Inicio con el arco del mes por categoría, franja de Podés gastar hoy, calendario a la vista y Préstamos y Metas en la barra de arriba | ✅ |
+| **Plan 10** | Inicio con el arco del mes por categoría, franja de Podés gastar hoy, calendario a la vista y Préstamos y Metas en la barra de arriba | ✅ v1.0 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
 ## Desarrollo
