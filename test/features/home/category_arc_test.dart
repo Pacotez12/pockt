@@ -165,8 +165,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Centro
-      expect(find.text('Gastado en octubre'), findsOneWidget);
+      expect(find.textContaining('Gastado en octubre'), findsOneWidget);
       expect(find.text('Gs. 400.000'), findsOneWidget);
+
+      // Expandir chips al tocar el arco/título
+      await tester.tap(find.textContaining('Gastado en octubre'));
+      await tester.pumpAndSettle();
 
       // Chips de categoría: nombre y %, sin montos
       expect(find.text('Comida'), findsOneWidget);
@@ -211,21 +215,23 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
+      // Expandir chips al tocar el título
+      await tester.tap(find.textContaining('Gastado en octubre'));
+      await tester.pumpAndSettle();
+
       // Tocar chip "Comida" -> muestra monto de Comida en el centro
       await tester.tap(find.text('Comida'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Comida en octubre'), findsOneWidget);
+      expect(find.textContaining('Comida en octubre'), findsOneWidget);
       expect(find.text('Gs. 300.000'), findsOneWidget);
       expect(find.text('75 % de lo gastado'), findsOneWidget);
 
       // Tocar de nuevo "Comida" -> vuelve al total del mes
       await tester.tap(find.text('Comida'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Gastado en octubre'), findsOneWidget);
+      expect(find.textContaining('Gastado en octubre'), findsOneWidget);
       expect(find.text('Gs. 400.000'), findsOneWidget);
       expect(find.text('Gs. 300.000'), findsNothing);
     });
@@ -417,7 +423,7 @@ void main() {
         expect(clearanceFromBottom, greaterThanOrEqualTo(24.0));
 
         // Verificar que las 4 esquinas del título y monto no tocan el arco
-        for (final textFinder in [find.text('Gastado en octubre'), find.text('Gs. 500.000')]) {
+        for (final textFinder in [find.textContaining('Gastado en octubre'), find.text('Gs. 500.000')]) {
           final rect = tester.getRect(textFinder);
           final corners = [
             rect.topLeft,
@@ -431,18 +437,21 @@ void main() {
           }
         }
 
+        // Expandir chips al tocar el título
+        await tester.tap(find.textContaining('Gastado en octubre'));
+        await tester.pumpAndSettle();
+
         // Tocar chip de categoría para mostrar la subetiqueta (ej. "70 % de lo gastado")
         await tester.tap(find.text('Comida'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pumpAndSettle();
 
-        expect(find.text('Comida en octubre'), findsOneWidget);
+        expect(find.textContaining('Comida en octubre'), findsOneWidget);
         expect(find.text('Gs. 350.000'), findsOneWidget);
         expect(find.text('70 % de lo gastado'), findsOneWidget);
 
         // Verificar que con subetiqueta ningún texto toca los tramos del arco
         for (final textFinder in [
-          find.text('Comida en octubre'),
+          find.textContaining('Comida en octubre'),
           find.text('Gs. 350.000'),
           find.text('70 % de lo gastado'),
         ]) {
@@ -535,6 +544,9 @@ void main() {
       expect(paydayRight, equals(allowanceRight));
 
       // 2. El primer chip (Comida) comparte el borde izquierdo con el contenido de la tarjeta
+      await tester.tap(find.textContaining('Gastado en octubre'));
+      await tester.pumpAndSettle();
+
       final firstChip = find.ancestor(
         of: find.text('Comida'),
         matching: find.byType(Pressable),

@@ -348,23 +348,36 @@ Con `home.headline = safeToSpend` el encabezado del Inicio es:
 - "Ocultar montos" tapa todos los montos del arco y de la tarjeta. Respeta `motion.reduce` (el arco anima su llenado solo si no está reducido).
 - Calendario de calor y el resto de las tarjetas del Inicio sin cambios.
 
-## 7d-ter. Inicio con "Arco por categoría" (decidido 2026-10-18, maquetas aprobadas)
+## 7d-ter. Inicio con "Arco por categoría" y accesos superiores (decidido 2026-10-18, maquetas aprobadas)
 
-Con `home.headline = monthSpent` (nuevo valor por defecto del Inicio):
-- **Arco por categoría (`CategoryArc`):** semicírculo interactivo que representa el total gastado en el mes dividido en tramos proporcionales por categoría, de mayor a menor empezando por la izquierda con el color de cada categoría (`colorDark` / `colorLight` según tema).
-  - Máximo 5 tramos: las 4 categorías con más gasto + "Otros" agrupando el resto. Si hay 5 o menos categorías, se muestran todas sin "Otros".
-  - Tramos con separación (0.05 rad), extremos exteriores redondeados en las puntas del arco y tramos internos con corte recto (`StrokeCap.butt`).
-  - Mes sin gastos: pista vacía con texto centrado "Todavía no gastaste en {mes}".
-  - Centro del arco: "Gastado en {mes}", monto grande del mes (respeta privacidad `••••`), y debajo "quedan Gs. X de lo que entró" del período actual (se omite si no hay esquema de cobro).
-  - Al pie del arco: lista de filas con cuadradito de color, nombre, % (calculado con el método del mayor resto para sumar exactamente 100 %) y monto en Gs. con cifras tabulares.
-  - Interacción: tocar un tramo o una fila resalta esa categoría (las demás atenúan su opacidad a 0.40/0.22 y el tramo seleccionado engrosa de 12 a 14 px) y el centro conmuta a "{Categoría} en {mes}", su monto y "{N} % de lo gastado". Tocar de nuevo o tocar el fondo restaura el total.
-- **Tarjeta compacta "Podés gastar hoy" (`CompactSafeToSpendCard`):**
-  - Reemplaza la tarjeta expandida cuando el encabezado es el arco por categoría.
-  - Título y monto en una sola línea ("Podés gastar hoy" y "Gs. X").
-  - Barrita de progreso con gradiente de marca (`brandStart` a `brandEnd`).
-  - Subtexto: "gastaste hoy Gs. X · cobrás en N días" (o invitación a configurar cobro si no hay esquema).
-- El modo `home.headline = safeToSpend` ("Arco de hoy" con límite diario, §7d-bis) se mantiene intacto y configurable desde Ajustes > Pantalla de inicio.
-- Accesibilidad: nodo `Semantics` en el arco con el resumen del total y desglose de porcentajes. Respeta `motion.reduce`.
+Con `home.headline = monthSpent` (valor por defecto del Inicio):
+- **Barra superior (`HomeTopBar`):**
+  - Selector de mes a la izquierda; a la derecha, antes de Ajustes, botones píldora para Préstamos (`hand-coins` + cantidad activa en peligro/rojo) y Metas (`target` + cantidad activa en acento/naranja). Solo se muestran si hay elementos activos.
+  - Al abrir la app, las píldoras se expanden mostrando nombre ("Préstamos 2", "Metas 3") y el mes se abrevia ("Oct ▾"); a los ~3 s se achican con animación suave (solo ícono + número) y el mes vuelve a su nombre completo.
+  - Al cambiar la cantidad activa: pulso suave y reexpansión del nombre durante ~3 s.
+  - Mantener apretado (long-press): globito flotante con resumen esencial ("Préstamos · 2 activos / Debés Gs. X · tocá para ver").
+  - Tocar abre la hoja inferior respectiva (`HomeLoansSheet` / `HomeGoalsSheet`) con la misma transición Hero (`SpringRectTween`, `sheetSurface`, radio 32) que el detalle del día.
+- **Hojas de Préstamos y Metas:**
+  - Préstamos: total que debés y activos, lista de cuotas/préstamos con próximo vencimiento y avance, sección "Te deben" si aplica, "Ver todo ›" (lleva a `LoansScreen`) y acción principal "Registrar pago". Tocar un préstamo abre su detalle.
+  - Metas: total ahorrado y activas, lista de metas con avance, % y ritmo ("a tiempo" / "N meses tarde"), "Ver todo ›" (lleva a `GoalsScreen`) y acción principal "Aportar". Tocar una meta abre su detalle.
+  - Deslizar hacia abajo o tocar scrim cierra la hoja y se encoge hacia el botón superior.
+- **Arco por categoría (`CategoryArc`):**
+  - Semicírculo interactivo que representa el total gastado en el mes dividido en tramos proporcionales por categoría (máximo 5 tramos: 4 principales + "Otros").
+  - En reposo: sin línea ni chips de categorías debajo. Flechita ▾ junto a "Gastado en {mes}" indica que se puede tocar.
+  - Tocar el arco despliega los chips de categorías con animación de tamaño y fade (~250 ms, respeta `motion.reduce`).
+  - Tocar un tramo o chip resalta esa categoría y el centro conmuta a su monto y "{N} % de lo gastado".
+  - Tocar el centro del arco o afuera de los chips restaura el total y colapsa los chips (la flechita rota de vuelta).
+- **Franja "Podés gastar hoy" (`CompactSafeToSpendCard`):**
+  - Franja entre dos líneas finas (`colors.glassBorder`), sin tarjeta de vidrio exterior.
+  - Fila 1: "Podés gastar hoy" y monto.
+  - Fila 2: `HomePeriodLine` existente (`period-line`, cobro, etc.).
+  - Barrita de progreso y texto "gastaste hoy" solo aparecen si `spentToday > 0`.
+- **Orden de tarjetas del Inicio:**
+  - Inmediatamente debajo de la franja se ubica la tarjeta grande del calendario de calor `Tus días · {mes}` (única tarjeta grande visible inicialmente).
+  - Luego el resto de tarjetas (sugerencias, recientes).
+  - Las tarjetas 'loans' y 'goals' se eliminan del cuerpo del Inicio y de la pantalla de configuración de tarjetas (las configuraciones previas guardadas ignoran dichos IDs de forma segura).
+- El modo `home.headline = safeToSpend` ("Arco de hoy", §7d-bis) se mantiene intacto, también usando los botones superiores y prescindiendo de las tarjetas 'loans' y 'goals'.
+- Accesibilidad: etiquetas `Semantics` completas en botones, arco y hojas. Respeta `motion.reduce`.
 
 ## 7e. Saldo arrastrado entre períodos (decidido 2026-10-15, opción C)
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
@@ -33,8 +32,15 @@ class CompactSafeToSpendCard extends ConsumerWidget {
     final periodSummary = ref.watch(homePeriodSummaryProvider(nowLocal));
 
     if (safe == null || !safe.hasIncomeSchedule) {
-      return GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      return Container(
+        margin: const EdgeInsets.only(top: 14),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: colors.glassBorder, width: 1.0),
+            bottom: BorderSide(color: colors.glassBorder, width: 1.0),
+          ),
+        ),
         child: Pressable(
           key: const ValueKey('home-setup-payday'),
           semanticLabel: 'Configurá cuándo cobrás',
@@ -84,8 +90,15 @@ class CompactSafeToSpendCard extends ConsumerWidget {
       payDayText = '';
     }
 
-    return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: colors.glassBorder, width: 1.0),
+          bottom: BorderSide(color: colors.glassBorder, width: 1.0),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

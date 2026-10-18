@@ -1,9 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/format/money.dart';
+import 'package:pockt/core/settings/amounts_privacy.dart';
+import 'package:pockt/features/goals/data/goals_repository.dart';
+import 'package:pockt/features/home/ui/home_goals_sheet.dart';
+import 'package:pockt/features/home/ui/home_loans_sheet.dart';
+import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
 
 const List<String> kMonthNames = [
@@ -21,8 +30,24 @@ const List<String> kMonthNames = [
   'Diciembre',
 ];
 
-/// Barra superior de Inicio: selector desplegable de mes y acceso a Ajustes.
-class HomeTopBar extends ConsumerWidget {
+const List<String> kMonthShortNames = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
+
+/// Barra superior de Inicio: selector desplegable de mes, accesos rápidos a
+/// Préstamos y Metas como píldoras colapsables con Hero, y botón de Ajustes.
+class HomeTopBar extends ConsumerStatefulWidget {
   final int month;
   final ValueChanged<int> onMonthSelected;
 
@@ -33,19 +58,212 @@ class HomeTopBar extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeTopBar> createState() => _HomeTopBarState();
+}
+
+class _HomeTopBarState extends ConsumerState<HomeTopBar>
+    with TickerProviderStateMixin {
+  late final AnimationController _pulseLoansController;
+  late final AnimationController _pulseGoalsController;
+  late final Animation<double> _pulseLoansAnimation;
+  late final Animation<double> _pulseGoalsAnimation;
+
+  Timer? _collapseTimer;
+  bool _isExpanded = true;
+  bool _initializedMotion = false;
+  OverlayEntry? _tooltipOverlay;
+
+  final GlobalKey _loansKey = GlobalKey();
+  final GlobalKey _goalsKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseLoansController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _pulseGoalsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _pulseLoansAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.05).chain(
+          CurveTween(curve: Curves.easeOut),
+        ),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.05, end: 1.0).chain(
+          CurveTween(curve: Curves.easeIn),
+        ),
+        weight: 50,
+      ),
+    ]).animate(_pulseLoansController);
+
+    _pulseGoalsAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.05).chain(
+          CurveTween(curve: Curves.easeOut),
+        ),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.05, end: 1.0).chain(
+          CurveTween(curve: Curves.easeIn),
+        ),
+        weight: 50,
+      ),
+    ]).animate(_pulseGoalsController);
+
+    _startCollapseTimer();
+  }
+
+  void _startCollapseTimer() {
+    _collapseTimer?.cancel();
+    _collapseTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isExpanded = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedMotion) {
+      _initializedMotion = true;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _isExpanded = false;
+        _collapseTimer?.cancel();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _collapseTimer?.cancel();
+    _pulseLoansController.dispose();
+    _pulseGoalsController.dispose();
+    _removeTooltip();
+    super.dispose();
+  }
+
+  void _onCountChanged({required bool isLoan}) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (!reduceMotion) {
+      if (isLoan) {
+        _pulseLoansController.forward(from: 0.0);
+      } else {
+        _pulseGoalsController.forward(from: 0.0);
+      }
+      setState(() {
+        _isExpanded = true;
+      });
+      _startCollapseTimer();
+    }
+  }
+
+  void _removeTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
+  }
+
+  void _showTooltip(
+    BuildContext context, {
+    required GlobalKey pillKey,
+    required String title,
+    required String subtitle,
+  }) {
+    _removeTooltip();
+    final renderBox = pillKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final targetOffset = renderBox.localToGlobal(Offset.zero);
+    final targetSize = renderBox.size;
+
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(
+      builder: (_) => _BalloonTooltip(
+        title: title,
+        subtitle: subtitle,
+        targetOffset: targetOffset,
+        targetSize: targetSize,
+      ),
+    );
+    overlay.insert(entry);
+    _tooltipOverlay = entry;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.pockt;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final obscure = ref.watch(shouldObscureAmountsProvider);
+
+    final loansAsync = ref.watch(activeLoansWithProgressProvider);
+    final goalsAsync = ref.watch(activeGoalsWithProgressProvider);
+
+    final loans = loansAsync.value ?? const [];
+    final goals = goalsAsync.value ?? const [];
+
+    final loansCount = loans.length;
+    final goalsCount = goals.length;
+
+    ref.listen<AsyncValue<List<LoanWithProgress>>>(
+      activeLoansWithProgressProvider,
+      (prev, next) {
+        final prevCount = prev?.value?.length;
+        final nextCount = next.value?.length ?? 0;
+        if (prevCount != null && prevCount != nextCount && nextCount > 0) {
+          _onCountChanged(isLoan: true);
+        }
+      },
+    );
+
+    ref.listen<AsyncValue<List<GoalWithProgress>>>(
+      activeGoalsWithProgressProvider,
+      (prev, next) {
+        final prevCount = prev?.value?.length;
+        final nextCount = next.value?.length ?? 0;
+        if (prevCount != null && prevCount != nextCount && nextCount > 0) {
+          _onCountChanged(isLoan: false);
+        }
+      },
+    );
+
+    int totalOwe = 0;
+    for (final l in loans) {
+      if (l.loan.direction == LoanDirection.owe) {
+        totalOwe += l.progress.balance.round();
+      }
+    }
+
+    int totalSaved = 0;
+    for (final g in goals) {
+      totalSaved += g.progress.saved.round();
+    }
+
+    final hasActivePills = loansCount > 0 || goalsCount > 0;
+    final showShortMonth = _isExpanded && hasActivePills;
+    final monthLabel = showShortMonth
+        ? '${kMonthShortNames[widget.month - 1]} ▾'
+        : '${kMonthNames[widget.month - 1]} ▾';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         PopupMenuButton<int>(
-          initialValue: month,
+          initialValue: widget.month,
           tooltip: 'Elegir mes',
           onSelected: (m) {
-            if (m != month) {
+            if (m != widget.month) {
               Haptics.tick();
-              onMonthSelected(m);
+              widget.onMonthSelected(m);
             }
           },
           itemBuilder: (context) => [
@@ -56,7 +274,8 @@ class HomeTopBar extends ConsumerWidget {
                   kMonthNames[m - 1],
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontWeight: m == month ? FontWeight.w700 : FontWeight.w400,
+                    fontWeight:
+                        m == widget.month ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),
               ),
@@ -68,40 +287,270 @@ class HomeTopBar extends ConsumerWidget {
               color: colors.glassFill,
               border: Border.all(color: colors.glassBorder),
             ),
-            child: Text(
-              '${kMonthNames[month - 1]} ▾',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
+            child: AnimatedSwitcher(
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 250),
+              child: Text(
+                monthLabel,
+                key: ValueKey(monthLabel),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
               ),
             ),
           ),
         ),
-        Pressable(
-          semanticLabel: 'Ajustes',
-          key: const ValueKey('home-settings-button'),
-          onTap: () {
-            Haptics.tick();
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          },
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.glassFill,
-              border: Border.all(color: colors.glassBorder),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (loansCount > 0) ...[
+              _buildPill(
+                key: const ValueKey('home-pill-loans'),
+                pillGlobalKey: _loansKey,
+                label: 'Préstamos',
+                count: loansCount,
+                icon: uiIcon('hand-coins'),
+                color: colors.danger,
+                heroTag: 'home-pill-loans',
+                pulseAnimation: _pulseLoansAnimation,
+                onTap: () {
+                  Haptics.tick();
+                  showHomeLoansSheet(context);
+                },
+                title:
+                    'Préstamos · $loansCount ${loansCount == 1 ? "activo" : "activos"}',
+                subtitle:
+                    'Debés ${obscure ? "••••" : formatGs(totalOwe)} · tocá para ver',
+                colors: colors,
+                reduceMotion: reduceMotion,
+              ),
+              const SizedBox(width: 6),
+            ],
+            if (goalsCount > 0) ...[
+              _buildPill(
+                key: const ValueKey('home-pill-goals'),
+                pillGlobalKey: _goalsKey,
+                label: 'Metas',
+                count: goalsCount,
+                icon: uiIcon('target'),
+                color: colors.brandStart,
+                heroTag: 'home-pill-goals',
+                pulseAnimation: _pulseGoalsAnimation,
+                onTap: () {
+                  Haptics.tick();
+                  showHomeGoalsSheet(context);
+                },
+                title:
+                    'Metas · $goalsCount ${goalsCount == 1 ? "activa" : "activas"}',
+                subtitle:
+                    'Ahorrado ${obscure ? "••••" : formatGs(totalSaved)} · tocá para ver',
+                colors: colors,
+                reduceMotion: reduceMotion,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Pressable(
+              semanticLabel: 'Ajustes',
+              key: const ValueKey('home-settings-button'),
+              onTap: () {
+                Haptics.tick();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.glassFill,
+                  border: Border.all(color: colors.glassBorder),
+                ),
+                child: Center(
+                  child: Icon(
+                    uiIcon('gear'),
+                    size: 16,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
             ),
-            child: Center(
-              child: Icon(uiIcon('gear'), size: 16, color: colors.textPrimary),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPill({
+    required Key key,
+    required GlobalKey pillGlobalKey,
+    required String label,
+    required int count,
+    required IconData icon,
+    required Color color,
+    required String heroTag,
+    required Animation<double> pulseAnimation,
+    required VoidCallback onTap,
+    required String title,
+    required String subtitle,
+    required PocktColors colors,
+    required bool reduceMotion,
+  }) {
+    final pillWidget = GestureDetector(
+      key: pillGlobalKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      onLongPressStart: (_) {
+        Haptics.tick();
+        _showTooltip(
+          context,
+          pillKey: pillGlobalKey,
+          title: title,
+          subtitle: subtitle,
+        );
+      },
+      onLongPressEnd: (_) => _removeTooltip(),
+      onLongPressCancel: () => _removeTooltip(),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: colors.glassFill,
+            border: Border.all(color: colors.glassBorder),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              if (_isExpanded) ...[
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 5),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return KeyedSubtree(
+      key: key,
+      child: ScaleTransition(
+        scale: reduceMotion
+            ? const AlwaysStoppedAnimation(1.0)
+            : pulseAnimation,
+        child: HeroMode(
+          enabled: !reduceMotion,
+          child: Hero(
+            tag: heroTag,
+            child: Material(
+              color: Colors.transparent,
+              child: pillWidget,
             ),
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _BalloonTooltip extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Offset targetOffset;
+  final Size targetSize;
+
+  const _BalloonTooltip({
+    required this.title,
+    required this.subtitle,
+    required this.targetOffset,
+    required this.targetSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final top = targetOffset.dy + targetSize.height + 8;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final right = (screenWidth - (targetOffset.dx + targetSize.width))
+        .clamp(16.0, screenWidth - 100);
+
+    return Positioned(
+      top: top,
+      right: right,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: colors.sheetSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.10),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.40),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: colors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -226,9 +226,8 @@ class _HomeScreenContent extends ConsumerWidget {
           arcHome: true,
         );
       case 'loans':
-        return const HomeLoansCard();
       case 'goals':
-        return const HomeGoalsCard();
+        return null;
       case 'suggestions':
         return const HomePendingSuggestionsCard();
       case 'calendar':

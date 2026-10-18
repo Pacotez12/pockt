@@ -45,11 +45,9 @@ class HomeCardItem {
   }
 
   static List<HomeCardItem> defaultCards() => const [
-    HomeCardItem(id: 'period', label: 'Quincena y cobros', visible: true),
-    HomeCardItem(id: 'loans', label: 'Préstamos y cuotas', visible: true),
-    HomeCardItem(id: 'goals', label: 'Metas', visible: true),
-    HomeCardItem(id: 'suggestions', label: 'Sugerencias', visible: true),
     HomeCardItem(id: 'calendar', label: 'Calendario de calor', visible: true),
+    HomeCardItem(id: 'period', label: 'Quincena y cobros', visible: true),
+    HomeCardItem(id: 'suggestions', label: 'Sugerencias', visible: true),
     HomeCardItem(id: 'recent', label: 'Últimos movimientos', visible: true),
   ];
 
@@ -62,6 +60,7 @@ class HomeCardItem {
       final list = jsonDecode(raw) as List;
       final parsed = list
           .map((e) => HomeCardItem.fromJson(e as Map<String, dynamic>))
+          .where((e) => e.id != 'loans' && e.id != 'goals')
           .toList();
       final existingIds = parsed.map((e) => e.id).toSet();
       for (final def in defaultCards()) {

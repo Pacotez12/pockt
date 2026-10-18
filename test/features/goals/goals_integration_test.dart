@@ -53,9 +53,9 @@ void main() {
   });
 
   testWidgets(
-    'Inicio muestra tarjeta de Metas si hay metas y se oculta si no hay',
+    'Inicio muestra píldora de Metas si hay metas y se oculta si no hay',
     (tester) async {
-      // 1. Sin metas: tarjeta oculta
+      // 1. Sin metas: píldora oculta
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -67,9 +67,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const ValueKey('home-goals-card')), findsNothing);
+      expect(find.byKey(const ValueKey('home-pill-goals')), findsNothing);
 
-      // 2. Con meta: tarjeta visible
+      // 2. Con meta: píldora visible y al tocar abre la hoja
       await repo.createGoal(
         name: 'Viaje a Bariloche',
         icon: 'airplane-tilt',
@@ -79,7 +79,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byKey(const ValueKey('home-goals-card')), findsOneWidget);
+      expect(find.byKey(const ValueKey('home-pill-goals')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('home-pill-goals')));
+      await tester.pumpAndSettle();
       expect(find.text('Viaje a Bariloche'), findsOneWidget);
     },
   );

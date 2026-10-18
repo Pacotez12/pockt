@@ -53,7 +53,7 @@ void main() {
     );
   }
 
-  group('Tarjeta Préstamos en HomeScreen', () {
+  group('Píldora Préstamos en HomeScreen', () {
     testWidgets('no aparece si no hay préstamos activos', (tester) async {
       await tester.pumpWidget(
         createTestWidget(
@@ -66,11 +66,11 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byKey(const ValueKey('home-loans-card')), findsNothing);
+      expect(find.byKey(const ValueKey('home-pill-loans')), findsNothing);
     });
 
     testWidgets(
-      'aparece con préstamos activos y muestra resumen y hasta 3 vencimientos',
+      'aparece con préstamos activos y muestra resumen en hoja inferior',
       (tester) async {
         // Crear 4 préstamos activos
         await loansRepo.createLoan(
@@ -124,28 +124,24 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        expect(find.byKey(const ValueKey('home-loans-card')), findsOneWidget);
-        // El Arco de hoy la empuja abajo: asegurar visibilidad para ver el contenido
-        await tester.ensureVisible(
-          find.byKey(const ValueKey('home-loans-card')),
-        );
-        await tester.pump();
+        expect(find.byKey(const ValueKey('home-pill-loans')), findsOneWidget);
 
-        expect(find.text('Préstamos y cuotas'), findsOneWidget);
-        expect(find.text('Debés'), findsOneWidget);
-        expect(find.text('Te deben'), findsOneWidget);
+        // Al tocar la píldora abre la hoja
+        await tester.tap(find.byKey(const ValueKey('home-pill-loans')));
+        await tester.pumpAndSettle();
 
-        // Muestra los 3 vencimientos más próximos
+        expect(find.text('Préstamos'), findsOneWidget);
+        expect(find.text('DEBÉS'), findsOneWidget);
+        expect(find.text('TE DEBEN'), findsOneWidget);
+
         expect(find.text('Préstamo Auto'), findsOneWidget);
         expect(find.text('Celular Cuotas'), findsOneWidget);
         expect(find.text('Préstamo a Juan'), findsOneWidget);
-        // El 4to no debe aparecer en los 3 primeros
-        expect(find.text('Deuda extra'), findsNothing);
 
-        // Al tocar la tarjeta navega a LoansScreen
-        await tester.tap(find.byKey(const ValueKey('home-loans-card')));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+        // Tocar Ver todo › navega a LoansScreen
+        expect(find.text('Ver todo ›'), findsOneWidget);
+        await tester.tap(find.text('Ver todo ›'));
+        await tester.pumpAndSettle();
         expect(find.byType(LoansScreen), findsOneWidget);
       },
     );

@@ -36,10 +36,12 @@ class CategoryArc extends ConsumerStatefulWidget {
 
 class _CategoryArcState extends ConsumerState<CategoryArc> {
   String? _selectedSegmentId;
+  bool _isExpanded = false;
 
   void _toggleSegment(String id) {
     Haptics.tick();
     setState(() {
+      _isExpanded = true;
       if (_selectedSegmentId == id) {
         _selectedSegmentId = null;
       } else {
@@ -48,12 +50,22 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
     });
   }
 
-  void _clearSelection() {
-    if (_selectedSegmentId != null) {
+  void _collapseAndReset() {
+    if (_isExpanded || _selectedSegmentId != null) {
       Haptics.tick();
       setState(() {
+        _isExpanded = false;
         _selectedSegmentId = null;
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(CategoryArc oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.year != widget.year || oldWidget.month != widget.month) {
+      _isExpanded = false;
+      _selectedSegmentId = null;
     }
   }
 
@@ -162,10 +174,19 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            if (_selectedSegmentId != null) {
-                              _clearSelection();
-                            } else {
+                            if (obscure) {
+                              Haptics.tick();
                               ref.read(amountsRevealedProvider.notifier).toggle();
+                              return;
+                            }
+                            if (isEmpty) return;
+                            if (_isExpanded || _selectedSegmentId != null) {
+                              _collapseAndReset();
+                            } else {
+                              Haptics.tick();
+                              setState(() {
+                                _isExpanded = true;
+                              });
                             }
                           },
                           child: ConstrainedBox(
@@ -188,13 +209,39 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                                     ),
                                   ),
                                 ] else if (selectedSegment != null) ...[
-                                  Text(
-                                    '${selectedSegment.name} en $monthNameLower',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12.5,
-                                      color: colors.textSecondary,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          '${selectedSegment.name} en $monthNameLower',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12.5,
+                                            color: colors.textSecondary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        AnimatedRotation(
+                                          turns: _isExpanded ? 0.5 : 0.0,
+                                          duration: reduceMotion
+                                              ? Duration.zero
+                                              : const Duration(milliseconds: 200),
+                                          curve: Curves.easeOutCubic,
+                                          child: Text(
+                                            '▾',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 11,
+                                              color: colors.textSecondary
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -228,13 +275,39 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                                     ),
                                   ),
                                 ] else ...[
-                                  Text(
-                                    'Gastado en $monthNameLower',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12.5,
-                                      color: colors.textSecondary,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Gastado en $monthNameLower',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12.5,
+                                            color: colors.textSecondary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        AnimatedRotation(
+                                          turns: _isExpanded ? 0.5 : 0.0,
+                                          duration: reduceMotion
+                                              ? Duration.zero
+                                              : const Duration(milliseconds: 200),
+                                          curve: Curves.easeOutCubic,
+                                          child: Text(
+                                            '▾',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 11,
+                                              color: colors.textSecondary
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -268,30 +341,53 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
             },
           ),
 
-          // Chips de categorías (solo si hay gastos)
-          if (!isEmpty) ...[
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 17),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.start,
-                children: [
-                  for (final seg in segments)
-                    _buildCategoryChip(
-                      context,
-                      segment: seg,
-                      isSelected: _selectedSegmentId == seg.id,
-                      isDimmed: _selectedSegmentId != null &&
-                          _selectedSegmentId != seg.id,
-                      isDark: isDark,
-                      onTap: () => _toggleSegment(seg.id),
-                    ),
-                ],
+          // Chips de categorías desplegables (solo si hay gastos)
+          AnimatedSwitcher(
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => SizeTransition(
+              sizeFactor: animation,
+              alignment: Alignment.topCenter,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
               ),
             ),
-          ],
+            child: (!isEmpty && _isExpanded)
+                ? Padding(
+                    key: const ValueKey('category-arc-chips-expanded'),
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.start,
+                          children: [
+                            for (final seg in segments)
+                              _buildCategoryChip(
+                                context,
+                                segment: seg,
+                                isSelected: _selectedSegmentId == seg.id,
+                                isDimmed: _selectedSegmentId != null &&
+                                    _selectedSegmentId != seg.id,
+                                isDark: isDark,
+                                onTap: () => _toggleSegment(seg.id),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(
+                    key: ValueKey('category-arc-chips-collapsed'),
+                  ),
+          ),
         ],
       ),
     );
@@ -312,9 +408,9 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
     final dy = localPosition.dy - cy;
     final dist = math.sqrt(dx * dx + dy * dy);
 
-    // Si toca dentro del centro, limpiar selección
+    // Si toca dentro del centro, colapsar y volver al total
     if (dist < radius - 20) {
-      _clearSelection();
+      _collapseAndReset();
       return;
     }
 
@@ -334,14 +430,29 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
 
         if (normalized <= currentStart + gap / 2 &&
             normalized >= segmentEnd - gap / 2) {
-          _toggleSegment(seg.id);
+          Haptics.tick();
+          setState(() {
+            _isExpanded = true;
+            if (_selectedSegmentId == seg.id) {
+              _selectedSegmentId = null;
+            } else {
+              _selectedSegmentId = seg.id;
+            }
+          });
           return;
         }
         currentStart = segmentEnd - gap;
       }
     }
 
-    _clearSelection();
+    // Tocar el arco fuera de los tramos específicos alterna la expansión
+    Haptics.tick();
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (!_isExpanded) {
+        _selectedSegmentId = null;
+      }
+    });
   }
 
   Widget _buildCategoryChip(
