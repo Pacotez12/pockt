@@ -18,9 +18,9 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 
 <br>
 
-<img src="docs/brand/readme/carga-v2.gif" alt="Cargar un gasto en Pockt: elegir categoría, escribir el monto y guardar" width="300">
+<img src="docs/brand/readme/inicio.gif" alt="Inicio de Pockt: el arco del mes por categoría, tocar para ver cada categoría y abrir Préstamos desde la barra de arriba" width="300">&nbsp;&nbsp;&nbsp;<img src="docs/brand/readme/carga-v2.gif" alt="Cargar un gasto en Pockt: elegir categoría, escribir el monto y guardar" width="300">
 
-<sub><i>Cargar un gasto: categoría, monto, listo.</i></sub>
+<sub><i>El mes de un vistazo, y cargar un gasto: categoría, monto, listo.</i></sub>
 
 </div>
 
@@ -28,7 +28,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/brand/readme/gallery-light.png">
-  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con el arco de hoy, detalle de una meta, ¿Lo compro? y bandeja por confirmar" width="100%">
+  <img src="docs/brand/readme/gallery-dark.png" alt="Pantallas de Pockt: inicio con el arco del mes por categoría, el arco tocado mostrando Comida, la hoja de Préstamos y la hoja de Metas" width="100%">
 </picture>
 
 <p align="center"><img src="docs/brand/readme/gallery-reports.png" alt="Reportes de Pockt: por categoría, comparación con el mes anterior y gastos hormiga" width="100%"></p>
@@ -48,15 +48,17 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Widget y acceso rápido**: tus 4 categorías más usadas en la pantalla de inicio y un tile en el panel de ajustes rápidos para anotar sin abrir la app.
 - **Sueldo mensual con reparto**: por ejemplo 30 % el 15 y 70 % a fin de mes; cada cobro se sugiere con su monto.
 - **Reportes**: mes por categoría, evolución, comparación con el mes anterior a la misma altura, ranking por comercio y **gastos hormiga** (lo chico y frecuente, con lo que suma en un año).
-- **Podés gastar hoy**: el número grande del inicio es cuánto podés gastar por día hasta el próximo cobro, ya descontados los gastos por confirmar, las recurrentes que vienen y lo que tus metas necesitan. Si preferís, se cambia por "Gastado en el mes".
+- **El mes de un vistazo**: el inicio es un arco con todo lo gastado en el mes, partido por categoría. Tocás el arco y aparecen las categorías con su porcentaje; tocás una y ves cuánto se fue ahí.
+- **Podés gastar hoy**: justo debajo, cuánto podés gastar por día hasta el próximo cobro, ya descontados los gastos por confirmar, las recurrentes que vienen y lo que tus metas necesitan, junto con lo que queda de la quincena. Si preferís, se cambia a la versión anterior con este número como protagonista.
 - **Saldo arrastrado**: si te pasaste en la quincena, la siguiente lo descuenta; si te sobró, Pockt te ofrece pasarlo a una meta o sumarlo.
 - **Metas de ahorro**: objetivo, fecha, ritmo necesario y proyección a tu ritmo real ("a tiempo" o "N meses tarde"). Los aportes se apartan de lo que te queda y aparecen en Movimientos sin contar como gasto.
 - **¿Lo compro?**: mantené apretado el **＋** y mirá el antes y el después de una compra: cuánto podrías gastar hoy, cómo queda el presupuesto y cuántos días se atrasan tus metas. Con tono suave, normal o picante.
-- **Préstamos y cuotas**: lo que debés, lo que prestaste y las compras en cuotas, con avance, pagos extra y aviso de vencimiento.
+- **Préstamos y cuotas**: lo que debés, lo que prestaste y las compras en cuotas, con avance, pagos extra y aviso de vencimiento. Préstamos y Metas tienen su botón en la barra de arriba del inicio y se abren en una hoja con todo a mano.
 - **Sueldo con descuentos**: bruto, descuentos fijos o en porcentaje, y el neto de cada cobro.
 - **Atajos de carga**: tus gastos repetidos (el almuerzo, el Bolt) a un toque.
 - **Eventos**: agrupá los gastos de un viaje o una fiesta y mirá cuánto costó.
 - **Resumen semanal** opcional el domingo.
+- **Captura automática** (opcional): lee los avisos de Itaú por SMS y, si conectás Gmail, los correos de transferencias y pagos de servicios. Todo llega a la bandeja para confirmar, sin duplicar lo que llega por los dos lados, y Pockt recuerda a quién le transferís o quién te transfiere.
 
 ## Diseño
 
@@ -141,6 +143,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 7** | Captura por SMS de Itaú: bandeja, duplicados y comercios que se confirman solos | ✅ |
 | **Plan 8** | Inicio "Arco de hoy" y refactor de pantallas grandes | ✅ |
 | **Plan 9** | Captura por correo (Gmail): transferencias enviadas y recibidas, pagos de servicios, personas recordadas | ✅ |
+| **Plan 10** | Inicio con el arco del mes por categoría, franja de Podés gastar hoy, calendario a la vista y Préstamos y Metas en la barra de arriba | ✅ |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
 ## Desarrollo
