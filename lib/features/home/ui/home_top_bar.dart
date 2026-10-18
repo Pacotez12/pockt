@@ -90,30 +90,34 @@ class _HomeTopBarState extends ConsumerState<HomeTopBar>
 
     _pulseLoansAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.05).chain(
-          CurveTween(curve: Curves.easeOut),
-        ),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.05,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.05, end: 1.0).chain(
-          CurveTween(curve: Curves.easeIn),
-        ),
+        tween: Tween<double>(
+          begin: 1.05,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 50,
       ),
     ]).animate(_pulseLoansController);
 
     _pulseGoalsAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.05).chain(
-          CurveTween(curve: Curves.easeOut),
-        ),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.05,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.05, end: 1.0).chain(
-          CurveTween(curve: Curves.easeIn),
-        ),
+        tween: Tween<double>(
+          begin: 1.05,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 50,
       ),
     ]).animate(_pulseGoalsController);
@@ -274,8 +278,9 @@ class _HomeTopBarState extends ConsumerState<HomeTopBar>
                   kMonthNames[m - 1],
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontWeight:
-                        m == widget.month ? FontWeight.w700 : FontWeight.w400,
+                    fontWeight: m == widget.month
+                        ? FontWeight.w700
+                        : FontWeight.w400,
                   ),
                 ),
               ),
@@ -287,18 +292,33 @@ class _HomeTopBarState extends ConsumerState<HomeTopBar>
               color: colors.glassFill,
               border: Border.all(color: colors.glassBorder),
             ),
-            child: AnimatedSwitcher(
+            // El ancho del chip acompaña el cambio "Oct" ↔ "Octubre".
+            child: AnimatedSize(
               duration: reduceMotion
                   ? Duration.zero
-                  : const Duration(milliseconds: 250),
-              child: Text(
-                monthLabel,
-                key: ValueKey(monthLabel),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
+                  : const Duration(milliseconds: 380),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.centerLeft,
+              child: AnimatedSwitcher(
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 250),
+                // El texto que sale se va enseguida y el nuevo aparece mientras el
+                // chip cambia de ancho: así "Oct" y "Octubre" no se superponen.
+                switchOutCurve: const Threshold(1.0),
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [...previous, ?current],
+                ),
+                child: Text(
+                  monthLabel,
+                  key: ValueKey(monthLabel),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
             ),
@@ -430,18 +450,36 @@ class _HomeTopBarState extends ConsumerState<HomeTopBar>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 15, color: color),
-              if (_isExpanded) ...[
-                const SizedBox(width: 5),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textPrimary,
+              // El nombre se desliza y se desvanece al achicarse (no de golpe).
+              TweenAnimationBuilder<double>(
+                tween: Tween(end: _isExpanded ? 1.0 : 0.0),
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                builder: (context, t, child) {
+                  if (t == 0) return const SizedBox.shrink();
+                  return ClipRect(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: t,
+                      child: Opacity(opacity: t, child: child),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 5),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
-              ],
+              ),
               const SizedBox(width: 5),
               Text(
                 '$count',
@@ -468,10 +506,7 @@ class _HomeTopBarState extends ConsumerState<HomeTopBar>
           enabled: !reduceMotion,
           child: Hero(
             tag: heroTag,
-            child: Material(
-              color: Colors.transparent,
-              child: pillWidget,
-            ),
+            child: Material(color: Colors.transparent, child: pillWidget),
           ),
         ),
       ),
@@ -499,8 +534,10 @@ class _BalloonTooltip extends StatelessWidget {
 
     final top = targetOffset.dy + targetSize.height + 8;
     final screenWidth = MediaQuery.of(context).size.width;
-    final right = (screenWidth - (targetOffset.dx + targetSize.width))
-        .clamp(16.0, screenWidth - 100);
+    final right = (screenWidth - (targetOffset.dx + targetSize.width)).clamp(
+      16.0,
+      screenWidth - 100,
+    );
 
     return Positioned(
       top: top,

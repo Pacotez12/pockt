@@ -140,9 +140,16 @@ void main() {
       expect(find.byKey(const ValueKey('home-pill-goals')), findsOneWidget);
       expect(find.text('Metas'), findsOneWidget);
 
-      // A los ~3s se achican y el mes vuelve a su nombre completo
-      await tester.pump(const Duration(seconds: 4));
+      // A los ~3s se achican con animación (no de golpe): a mitad de camino
+      // la píldora es más angosta que al inicio pero más ancha que al final.
+      final wideLoans = tester.getSize(find.byKey(const ValueKey('home-pill-loans'))).width;
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 120));
+      final midLoans = tester.getSize(find.byKey(const ValueKey('home-pill-loans'))).width;
       await tester.pumpAndSettle();
+      final narrowLoans = tester.getSize(find.byKey(const ValueKey('home-pill-loans'))).width;
+      expect(midLoans, lessThan(wideLoans));
+      expect(midLoans, greaterThan(narrowLoans));
 
       expect(find.text('Octubre ▾'), findsOneWidget);
       expect(find.text('Préstamos'), findsNothing);
