@@ -311,4 +311,249 @@ void main() {
 
     expect(find.byIcon(uiIcon('envelope-simple')), findsOneWidget);
   });
+
+  testWidgets('tarjeta de correo de transferencia NO muestra Confirmar siempre este comercio, servicio sí lo muestra', (tester) async {
+    final now = DateTime(2026, 10, 16, 16, 0);
+
+    // 1. Transferencia enviada por correo (gasto a comercio/persona)
+    await db.into(db.suggestedTransactions).insert(
+      SuggestedTransactionsCompanion.insert(
+        id: 'sug-email-out',
+        type: TxType.expense,
+        amount: 50000,
+        merchant: const Value('FERNANDO GOMEZ'),
+        occurredAt: now,
+        source: TxSource.capture,
+        status: 'pending',
+        rawText: const Value('Transferencia enviada Gs. 50.000'),
+        fingerprint: const Value('email:msg-tf-out'),
+        captureMeta: Value(jsonEncode({
+          'channel': 'email',
+          'kind': 'transferOut',
+          'counterparty': 'FERNANDO GOMEZ',
+        })),
+        createdAt: now,
+      ),
+    );
+
+    // 2. Pago de servicio por correo (gasto)
+    await db.into(db.suggestedTransactions).insert(
+      SuggestedTransactionsCompanion.insert(
+        id: 'sug-email-service',
+        type: TxType.expense,
+        amount: 85000,
+        merchant: const Value('ANDE'),
+        occurredAt: now,
+        source: TxSource.capture,
+        status: 'pending',
+        rawText: const Value('Pago de servicios ANDE Gs. 85.000'),
+        fingerprint: const Value('email:msg-srv'),
+        captureMeta: Value(jsonEncode({
+          'channel': 'email',
+          'kind': 'servicePayment',
+          'biller': 'ANDE',
+        })),
+        createdAt: now,
+      ),
+    );
+
+    final rowTransfer = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals('sug-email-out'))).getSingle();
+    final rowService = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals('sug-email-service'))).getSingle();
+
+    // Probar tarjeta de transferencia
+    await tester.pumpWidget(
+      createTestApp(
+        db: db,
+        child: SuggestionCard(item: SuggestionView(suggestion: rowTransfer)),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Confirmar siempre este comercio'), findsNothing);
+
+    // Probar tarjeta de servicio
+    await tester.pumpWidget(
+      createTestApp(
+        db: db,
+        child: SuggestionCard(item: SuggestionView(suggestion: rowService)),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Confirmar siempre este comercio'), findsOneWidget);
+  });
+
+  testWidgets('sin regla ni categoryId, transfer_confirm_sheet muestra Elegí una categoría y Confirmar está deshabilitado', (tester) async {
+    final now = DateTime(2026, 10, 16, 17, 0);
+    const sugId = 'sug-no-cat';
+
+    await db.into(db.suggestedTransactions).insert(
+      SuggestedTransactionsCompanion.insert(
+        id: sugId,
+        type: TxType.income,
+        amount: 100000,
+        merchant: const Value('CARLOS BOGADO'),
+        occurredAt: now,
+        source: TxSource.capture,
+        status: 'pending',
+        rawText: const Value('Transferencia recibida Gs. 100.000'),
+        fingerprint: const Value('email:msg-no-cat'),
+        captureMeta: Value(jsonEncode({
+          'channel': 'email',
+          'kind': 'transferIn',
+          'counterparty': 'CARLOS BOGADO',
+        })),
+        createdAt: now,
+      ),
+    );
+
+    final sug = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals(sugId))).getSingle();
+
+    await tester.pumpWidget(
+      createTestApp(
+        db: db,
+        child: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showTransferConfirmSheet(context, sug),
+            child: const Text('Abrir'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+
+    // Muestra 'Elegí una categoría' en vez de precargar una cualquiera
+    expect(find.text('Elegí una categoría'), findsOneWidget);
+
+    // Botón Confirmar deshabilitado (onPressed == null)
+    final confirmBtn = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtn.onPressed, isNull);
+
+    // Cambiar a 'No contar' (no requiere categoría)
+    await tester.tap(find.text('No contar'));
+    await tester.pumpAndSettle();
+
+    final confirmBtnAfterIgnore = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtnAfterIgnore.onPressed, isNotNull);
+
+    // Volver a 'Ingreso' -> vuelve a estar deshabilitado
+    await tester.tap(find.text('Ingreso'));
+    await tester.pumpAndSettle();
+
+    final confirmBtnAfterBack = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtnAfterBack.onPressed, isNull);
+  });
+
+  testWidgets('con regla recordada de esa persona, precarga su categoría y acción', (tester) async {
+    final now = DateTime(2026, 10, 16, 18, 0);
+    const sugId = 'sug-with-rule';
+
+    // Regla guardada para ALICE GOMEZ
+    await rulesRepo.upsert(
+      nameKey: 'ALICE GOMEZ',
+      direction: TransferDirection.incoming,
+      action: CounterpartyAction.income,
+      categoryId: catSueldoId,
+      autoApply: false,
+    );
+
+    await db.into(db.suggestedTransactions).insert(
+      SuggestedTransactionsCompanion.insert(
+        id: sugId,
+        type: TxType.income,
+        amount: 200000,
+        merchant: const Value('ALICE GOMEZ'),
+        occurredAt: now,
+        source: TxSource.capture,
+        status: 'pending',
+        rawText: const Value('Transferencia recibida Gs. 200.000'),
+        fingerprint: const Value('email:msg-with-rule'),
+        captureMeta: Value(jsonEncode({
+          'channel': 'email',
+          'kind': 'transferIn',
+          'counterparty': 'ALICE GOMEZ',
+        })),
+        createdAt: now,
+      ),
+    );
+
+    final sug = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals(sugId))).getSingle();
+
+    await tester.pumpWidget(
+      createTestApp(
+        db: db,
+        child: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showTransferConfirmSheet(context, sug),
+            child: const Text('Abrir'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+
+    // Precarga la categoría 'Sueldo' de la regla y Confirmar está habilitado
+    expect(find.text('Sueldo'), findsOneWidget);
+    final confirmBtn = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtn.onPressed, isNotNull);
+  });
+
+  testWidgets('enviada sin regla ni categoryId muestra Elegí una categoría y Confirmar deshabilitado', (tester) async {
+    final now = DateTime(2026, 10, 16, 19, 0);
+    const sugId = 'sug-out-no-cat';
+
+    await db.into(db.suggestedTransactions).insert(
+      SuggestedTransactionsCompanion.insert(
+        id: sugId,
+        type: TxType.expense,
+        amount: 80000,
+        merchant: const Value('LUCAS SILVA'),
+        occurredAt: now,
+        source: TxSource.capture,
+        status: 'pending',
+        rawText: const Value('Transferencia enviada a LUCAS SILVA Gs. 80.000'),
+        fingerprint: const Value('email:msg-out-no-cat'),
+        captureMeta: Value(jsonEncode({
+          'channel': 'email',
+          'kind': 'transferOut',
+          'counterparty': 'LUCAS SILVA',
+        })),
+        createdAt: now,
+      ),
+    );
+
+    final sug = await (db.select(db.suggestedTransactions)..where((t) => t.id.equals(sugId))).getSingle();
+
+    await tester.pumpWidget(
+      createTestApp(
+        db: db,
+        child: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showTransferConfirmSheet(context, sug),
+            child: const Text('Abrir'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Elegí una categoría'), findsOneWidget);
+    final confirmBtn = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtn.onPressed, isNull);
+
+    // Cambiar a "Le presté a alguien" -> se habilita porque no necesita categoría
+    await tester.tap(find.text('Le presté a alguien'));
+    await tester.pumpAndSettle();
+
+    final confirmBtnAfterLent = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Confirmar'));
+    expect(confirmBtnAfterLent.onPressed, isNotNull);
+  });
 }

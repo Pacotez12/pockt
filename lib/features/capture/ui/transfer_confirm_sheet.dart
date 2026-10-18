@@ -90,6 +90,7 @@ class _TransferConfirmSheetState extends ConsumerState<TransferConfirmSheet> {
 
   Future<void> _loadData() async {
     final db = ref.read(databaseProvider);
+    final rulesRepo = ref.read(counterpartyRulesRepositoryProvider);
 
     final catKind = _isTransferIn ? CategoryKind.income : CategoryKind.expense;
     final cats = await (db.select(db.categories)
@@ -106,14 +107,58 @@ class _TransferConfirmSheetState extends ConsumerState<TransferConfirmSheet> {
           ]))
         .get();
 
+    final dir = _isTransferIn
+        ? TransferDirection.incoming
+        : TransferDirection.outgoing;
+    final rule = await rulesRepo.find(normalizePersonKey(_person), dir);
+
     if (mounted) {
       setState(() {
         _availableCategories = cats;
         _availableLoans = loans;
-        if (_selectedCategoryId == null && cats.isNotEmpty) {
-          _selectedCategoryId = cats.first.id;
+
+        if (rule != null) {
+          if (_selectedCategoryId == null && rule.categoryId != null) {
+            _selectedCategoryId = rule.categoryId;
+          }
+          if (_selectedLoanId == null && rule.loanId != null) {
+            _selectedLoanId = rule.loanId;
+          }
+          if (_isTransferIn) {
+            switch (rule.action) {
+              case CounterpartyAction.income:
+                _inOption = _InOption.income;
+                break;
+              case CounterpartyAction.loanRepayment:
+                _inOption = _InOption.loanRepayment;
+                break;
+              case CounterpartyAction.ignore:
+                _inOption = _InOption.ignore;
+                break;
+              default:
+                break;
+            }
+          } else {
+            switch (rule.action) {
+              case CounterpartyAction.expense:
+                _outOption = _OutOption.expense;
+                break;
+              case CounterpartyAction.loanLent:
+                _outOption = _OutOption.loanLent;
+                break;
+              case CounterpartyAction.loanPayment:
+                _outOption = _OutOption.loanPayment;
+                break;
+              case CounterpartyAction.ignore:
+                _outOption = _OutOption.ignore;
+                break;
+              default:
+                break;
+            }
+          }
         }
-        if (loans.isNotEmpty) {
+
+        if (loans.isNotEmpty && _selectedLoanId == null) {
           _selectedLoanId = loans.first.id;
         }
         _loading = false;
@@ -360,10 +405,15 @@ class _TransferConfirmSheetState extends ConsumerState<TransferConfirmSheet> {
                     _buildOptionCard(
                       title: 'Ingreso',
                       selected: _inOption == _InOption.income,
-                      onTap: () => setState(() => _inOption = _InOption.income),
-                      subtitle: selectedCat?.name,
+                      onTap: () {
+                        setState(() => _inOption = _InOption.income);
+                        if (_selectedCategoryId == null) _pickCategory();
+                      },
+                      subtitle: selectedCat?.name ?? 'Elegí una categoría',
                       onActionTap: _pickCategory,
-                      actionLabel: 'Cambiar categoría',
+                      actionLabel: selectedCat != null
+                          ? 'Cambiar categoría'
+                          : 'Elegir categoría',
                     ),
                     const SizedBox(height: 8),
                     _buildOptionCard(
@@ -384,10 +434,15 @@ class _TransferConfirmSheetState extends ConsumerState<TransferConfirmSheet> {
                     _buildOptionCard(
                       title: 'Gasto',
                       selected: _outOption == _OutOption.expense,
-                      onTap: () => setState(() => _outOption = _OutOption.expense),
-                      subtitle: selectedCat?.name,
+                      onTap: () {
+                        setState(() => _outOption = _OutOption.expense);
+                        if (_selectedCategoryId == null) _pickCategory();
+                      },
+                      subtitle: selectedCat?.name ?? 'Elegí una categoría',
                       onActionTap: _pickCategory,
-                      actionLabel: 'Cambiar categoría',
+                      actionLabel: selectedCat != null
+                          ? 'Cambiar categoría'
+                          : 'Elegir categoría',
                     ),
                     const SizedBox(height: 8),
                     _buildOptionCard(
@@ -413,25 +468,37 @@ class _TransferConfirmSheetState extends ConsumerState<TransferConfirmSheet> {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _confirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.brandStart,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(PocktRadii.l),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Confirmar',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final canConfirm = (_isTransferIn && _inOption == _InOption.income) ||
+                              (!_isTransferIn && _outOption == _OutOption.expense)
+                          ? _selectedCategoryId != null
+                          : true;
+                      return ElevatedButton(
+                        onPressed: canConfirm ? _confirm : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.brandStart,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              colors.brandStart.withValues(alpha: 0.35),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.5),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(PocktRadii.l),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Confirmar',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,12 +35,24 @@ class SuggestionCardState extends ConsumerState<SuggestionCard> {
 
   SuggestionView get item => widget.item;
 
+  bool _isEmailTransfer() {
+    if (item.suggestion.source != TxSource.capture) return false;
+    final metaStr = item.suggestion.captureMeta;
+    if (metaStr == null || metaStr.isEmpty) return false;
+    try {
+      final decoded = jsonDecode(metaStr);
+      if (decoded is Map) {
+        final channel = decoded['channel'];
+        final kind = decoded['kind'];
+        return channel == 'email' &&
+            (kind == 'transferIn' || kind == 'transferOut');
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<void> _confirm(BuildContext context) async {
-    final meta = item.suggestion.captureMeta;
-    final isEmailTransfer = item.suggestion.source == TxSource.capture &&
-        meta != null &&
-        (meta.contains('"transferIn"') || meta.contains('"transferOut"'));
-    if (isEmailTransfer) {
+    if (_isEmailTransfer()) {
       final confirmed = await showTransferConfirmSheet(context, item.suggestion);
       if (confirmed == true) {
         ref.read(consecutiveConfirmationsProvider.notifier).recordConfirmation();
@@ -157,6 +171,7 @@ class SuggestionCardState extends ConsumerState<SuggestionCard> {
         item.suggestion.rawText!.trim().isNotEmpty;
     final showAutoConfirmOption =
         isCapture &&
+        !_isEmailTransfer() &&
         item.suggestion.type == TxType.expense &&
         (item.suggestion.merchant?.trim().isNotEmpty ?? false);
 
