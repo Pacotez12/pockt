@@ -83,8 +83,6 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
         ).value ??
         0;
 
-    final periodSummary = ref.watch(homePeriodSummaryProvider(widget.nowLocal));
-
     final segments = buildCategoryArcSegments(
       categoryTotals: categoryTotals,
     );
@@ -228,20 +226,6 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                                 color: colors.textPrimary,
                               ),
                             ),
-                            if (periodSummary.periodLine != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                obscure
-                                    ? 'quedan •••• de lo que entró'
-                                    : 'quedan ${formatGs(periodSummary.periodLine!.remaining)} de lo que entró',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  color: colors.textTertiary,
-                                ),
-                              ),
-                            ],
                           ],
                         ],
                       ),
@@ -456,7 +440,7 @@ class _CategoryArcPainter extends CustomPainter {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         math.pi,
-        -math.pi,
+        math.pi,
         false,
         trackPaint,
       );
@@ -478,14 +462,15 @@ class _CategoryArcPainter extends CustomPainter {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         math.pi,
-        -math.pi,
+        math.pi,
         false,
         paint,
       );
       return;
     }
 
-    // Múltiples tramos
+    // Múltiples tramos. En el canvas el ángulo crece en sentido horario:
+    // de π (izquierda) a 2π (derecha) pasando por 3π/2 recorre la mitad de arriba.
     const double gapAngle = 0.05;
     final double totalGaps = (segments.length - 1) * gapAngle;
     final double availableAngle = math.pi - totalGaps;
@@ -511,7 +496,7 @@ class _CategoryArcPainter extends CustomPainter {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         currentStart,
-        -sweep,
+        sweep,
         false,
         paint,
       );
@@ -540,7 +525,7 @@ class _CategoryArcPainter extends CustomPainter {
         );
       }
 
-      currentStart = currentStart - sweep - gapAngle;
+      currentStart = currentStart + sweep + gapAngle;
     }
   }
 

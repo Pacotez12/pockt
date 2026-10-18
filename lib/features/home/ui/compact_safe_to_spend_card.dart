@@ -13,7 +13,7 @@ import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 /// Tarjeta compacta "Podés gastar hoy" para la portada con Arco por categoría:
 /// - Título y monto en la misma fila.
 /// - Barrita de lo gastado hoy vs el permitido del día con degradé de marca.
-/// - Fila chica: "gastaste hoy Gs. X · cobrás en N días".
+/// - Fila chica: "gastaste hoy Gs. X" (y "cobrás en N días" solo si no hay línea del período).
 /// - Sin esquema de cobro: invitación a configurarlo ("Configurá cuándo cobrás…").
 class CompactSafeToSpendCard extends ConsumerWidget {
   final DateTime nowLocal;
@@ -71,8 +71,9 @@ class CompactSafeToSpendCard extends ConsumerWidget {
     }
 
     final String payDayText;
+    // Con línea del período, el cobro ya se muestra ahí: no repetirlo.
     if (periodSummary.periodLine != null) {
-      payDayText = periodSummary.periodLine!.payDayText;
+      payDayText = '';
     } else if (safe.daysUntilPay > 0) {
       payDayText = 'cobrás en ${safe.daysUntilPay} días';
     } else {
