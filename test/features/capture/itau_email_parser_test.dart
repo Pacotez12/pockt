@@ -10,6 +10,42 @@ void main() {
   });
 
   group('parseItauEmail', () {
+    // Así llega el texto real desde Android: Html.fromHtml junta todo en una línea.
+    test('cuerpo en una sola línea (formato real del teléfono)', () {
+      const body =
+          '| | Tipo de cuenta: | Ahorro a la Vista Guaraníes | Nombre del cliente: | JUAN PEREZ | '
+          'Concepto del servicio | Claro - Pago de factura con CI | Referencia del servicio: | 0000000 | '
+          'Monto del pago: | 95,000 | Fecha y hora de operación: | 15/10/2026 | Nro. de operación: | 0000000 |';
+      final r = parseItauEmail(
+        messageId: 'm1',
+        subject: 'AVISO DE PAGO DE SERVICIOS',
+        bodyText: body,
+        receivedAt: DateTime(2026, 10, 15, 14, 36),
+      );
+      expect(r.kind, EmailCaptureKind.servicePayment);
+      expect(r.amount, 95000);
+      expect(r.concept, 'Claro - Pago de factura con CI');
+      expect(r.operationId, '0000000');
+    });
+
+    test('transferencia recibida en una sola línea', () {
+      const body =
+          'Transferencia recibida | A continuación el detalle de la operación: | | '
+          'Nro. de operación: | ABCDPYPA000000000000000000 | Fecha y hora de operación: | 10/10/2026 12:47:20 | '
+          'Cliente Pagador: | MARIA LOPEZ | Nro. de cuenta del pagador: | ****XXXX | Entidad pagadora: | BANCO EJEMPLO S.A. | '
+          'Moneda y Monto: | PYG 30,000 | Nro. de cuenta crédito: | ****XXXX | Concepto de la Transferencia: | /BNF/ |';
+      final r = parseItauEmail(
+        messageId: 'm2',
+        subject: 'Aviso de transferencia recibida',
+        bodyText: body,
+        receivedAt: DateTime(2026, 10, 10, 12, 48),
+      );
+      expect(r.kind, EmailCaptureKind.transferIn);
+      expect(r.amount, 30000);
+      expect(r.counterparty, 'MARIA LOPEZ');
+      expect(r.occurredAt, DateTime(2026, 10, 10, 12, 47, 20));
+    });
+
     const sentTransferBody = '''
 Nro. de operación: | 000000000000000 |
 Fecha y hora de operación: | 10/10/2026 12:47 |

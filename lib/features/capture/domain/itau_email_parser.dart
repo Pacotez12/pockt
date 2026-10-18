@@ -93,7 +93,8 @@ EmailCapture parseItauEmail({
 
   String? extract(String label) {
     final pattern = RegExp(
-      r'(?:^|\n)\s*' + RegExp.escape(label) + r'[:\s]*\|\s*(.*?)\s*\|',
+      // El campo empieza al inicio, tras un salto o tras un "|": en el teléfono todo llega en una línea.
+      r'(?:^|\n|\|)\s*' + RegExp.escape(label) + r'[:\s]*\|\s*(.*?)\s*\|',
       caseSensitive: false,
     );
     final match = pattern.firstMatch(cleanBody);

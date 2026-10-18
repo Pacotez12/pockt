@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'package:pockt/core/db/app_database.dart';
@@ -82,7 +83,11 @@ class EmailCaptureService {
   Future<int> sync({bool notify = true}) {
     final current = _inFlightSync;
     if (current != null) return current;
-    final future = _syncOnce(notify: notify).whenComplete(() {
+    final future = _syncOnce(notify: notify).catchError((Object e) {
+      // Los llamadores silencian el error; queda en logcat para diagnosticar (sin datos del correo).
+      debugPrint('Captura por correo falló: $e');
+      throw e;
+    }).whenComplete(() {
       _inFlightSync = null;
     });
     _inFlightSync = future;
