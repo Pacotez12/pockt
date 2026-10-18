@@ -212,4 +212,87 @@ void main() {
       }
     }
   });
+
+  testWidgets('título muestra "Tus días · mes" para el año actual y "Tus días · mes año" para otro año', (t) async {
+    // Caso A: Año actual (2026) -> 'Tus días · octubre'
+    await t.pumpWidget(
+      MaterialApp(
+        theme: buildDarkTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: HeatCalendar(
+              year: 2026,
+              month: 10,
+              levels: const {},
+              todayLocal: DateTime(2026, 10, 8),
+              onDayTap: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    final textWidget = t.widget<Text>(find.byKey(const ValueKey('heat-calendar-title')));
+    expect(textWidget.textSpan, isNotNull);
+    final span = textWidget.textSpan as TextSpan;
+    expect(span.text, equals('Tus días'));
+    final monthSpan = span.children!.first as TextSpan;
+    expect(monthSpan.text, equals(' · octubre'));
+    expect(monthSpan.style?.color, equals(PocktColors.dark.textSecondary));
+    expect(monthSpan.style?.fontSize, equals(14));
+
+    // Caso B: Otro año (2025) -> 'Tus días · octubre 2025'
+    await t.pumpWidget(
+      MaterialApp(
+        theme: buildDarkTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: HeatCalendar(
+              year: 2025,
+              month: 10,
+              levels: const {},
+              todayLocal: DateTime(2026, 10, 8),
+              onDayTap: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    final textWidget2025 = t.widget<Text>(find.byKey(const ValueKey('heat-calendar-title')));
+    final span2025 = textWidget2025.textSpan as TextSpan;
+    final monthSpan2025 = span2025.children!.first as TextSpan;
+    expect(monthSpan2025.text, equals(' · octubre 2025'));
+  });
+
+  testWidgets('en ancho reducido no hay desborde y la leyenda se achica', (t) async {
+    t.view.physicalSize = const Size(390, 800);
+    t.view.devicePixelRatio = 1.0;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+
+    await t.pumpWidget(
+      MaterialApp(
+        theme: buildDarkTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: HeatCalendar(
+              year: 2025,
+              month: 10,
+              levels: const {},
+              todayLocal: DateTime(2026, 10, 8),
+              onDayTap: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('heat-calendar-title')), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
 }
+

@@ -5,6 +5,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/home/ui/day_detail_sheet.dart';
+import 'package:pockt/features/home/ui/home_top_bar.dart';
 
 /// Calendario de calor mensual ("Tus días").
 /// Grilla lunes→domingo o domingo→sábado con niveles de intensidad 0..4 según gasto.
@@ -37,6 +38,8 @@ class HeatCalendar extends StatelessWidget {
         : (firstDayOfMonth.weekday % 7);
 
     final totalCells = leadingEmptyCount + daysInMonth;
+    final monthName = kMonthNames[month - 1].toLowerCase();
+    final monthLabel = year == todayLocal.year ? monthName : '$monthName $year';
 
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -48,58 +51,78 @@ class HeatCalendar extends StatelessWidget {
           // Header: "Tus días" + leyenda menos -> más
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Tus días',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'menos',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: colors.textTertiary,
-                    ),
+              Text.rich(
+                key: const ValueKey('heat-calendar-title'),
+                TextSpan(
+                  text: 'Tus días',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
                   ),
-                  const SizedBox(width: 4),
-                  for (var i = 0; i <= 4; i++) ...[
-                    Container(
-                      width: 9,
-                      height: 9,
-                      margin: const EdgeInsets.symmetric(horizontal: 1),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        color: colors.heat[i],
-                        gradient: i == 4
-                            ? LinearGradient(
-                                colors: [colors.brandStart, colors.brandEnd],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
+                  children: [
+                    TextSpan(
+                      text: ' · $monthLabel',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
-                  const SizedBox(width: 4),
-                  Text(
-                    'más',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: colors.textTertiary,
-                    ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'menos',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      for (var i = 0; i <= 4; i++) ...[
+                        Container(
+                          width: 9,
+                          height: 9,
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            color: colors.heat[i],
+                            gradient: i == 4
+                                ? LinearGradient(
+                                    colors: [colors.brandStart, colors.brandEnd],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 4),
+                      Text(
+                        'más',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
