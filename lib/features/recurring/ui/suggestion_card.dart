@@ -9,6 +9,7 @@ import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/capture/ui/transfer_confirm_sheet.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/duplicate_warning_box.dart';
@@ -33,6 +34,18 @@ class SuggestionCardState extends ConsumerState<SuggestionCard> {
   SuggestionView get item => widget.item;
 
   Future<void> _confirm(BuildContext context) async {
+    final meta = item.suggestion.captureMeta;
+    final isEmailTransfer = item.suggestion.source == TxSource.capture &&
+        meta != null &&
+        (meta.contains('"transferIn"') || meta.contains('"transferOut"'));
+    if (isEmailTransfer) {
+      final confirmed = await showTransferConfirmSheet(context, item.suggestion);
+      if (confirmed == true) {
+        ref.read(consecutiveConfirmationsProvider.notifier).recordConfirmation();
+      }
+      return;
+    }
+
     if (item.category == null &&
         item.suggestion.type != TxType.transfer &&
         item.suggestion.source == TxSource.capture &&

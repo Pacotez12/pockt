@@ -86,10 +86,20 @@ class SuggestionHeaderRow extends StatelessWidget {
               Row(
                 children: [
                   if (isCapture) ...[
-                    Icon(
-                      uiIcon('chat-text'),
-                      size: 13,
-                      color: colors.textSecondary,
+                    Builder(
+                      builder: (context) {
+                        final meta = item.suggestion.captureMeta;
+                        final isEmail =
+                            (meta != null &&
+                                meta.contains('"channel":"email"')) ||
+                            (item.suggestion.fingerprint?.startsWith('email:') ??
+                                false);
+                        return Icon(
+                          uiIcon(isEmail ? 'envelope-simple' : 'chat-text'),
+                          size: 13,
+                          color: colors.textSecondary,
+                        );
+                      },
                     ),
                     const SizedBox(width: 5),
                   ],
