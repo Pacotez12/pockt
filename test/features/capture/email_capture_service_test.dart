@@ -111,6 +111,33 @@ Moneda y Monto: | PYG 50,000 |
     expect(emailSource.fetchCalls, 0);
   });
 
+  test('elegir una fecha anterior vuelve a leer desde ahí', () async {
+    RawEmail rec(String id, DateTime at) => RawEmail(
+      id: id,
+      receivedAt: at,
+      subject: 'Aviso de transferencia recibida',
+      bodyText:
+          'Nro. de operación: | $id | Fecha y hora de operación: | '
+          '${at.day.toString().padLeft(2, '0')}/10/2026 10:00:00 | '
+          'Cliente Pagador: | MARIA LOPEZ | Moneda y Monto: | PYG 30,000 |',
+    );
+    emailSource.inbox = [
+      rec('viejo', DateTime(2026, 10, 10, 10)),
+      rec('nuevo', DateTime(2026, 10, 16, 10)),
+    ];
+
+    await emailService.connect(since: DateTime(2026, 10, 15));
+    await emailService.sync();
+    expect((await suggestionsRepo.watchPending().first).length, 1);
+
+    await emailService.setSince(DateTime(2026, 10, 9));
+    await emailService.sync();
+    final fps = (await suggestionsRepo.watchPending().first)
+        .map((p) => p.suggestion.fingerprint)
+        .toSet();
+    expect(fps, {'email:viejo', 'email:nuevo'});
+  });
+
   test('mismo correo dos veces solo crea 1 sugerencia', () async {
     await settingsRepo.set(SettingsKeys.captureEmailEnabled, 'true');
     await settingsRepo.set(SettingsKeys.captureEmailSince, '2026-10-01T00:00:00.000');

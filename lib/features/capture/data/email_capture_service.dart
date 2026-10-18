@@ -75,9 +75,26 @@ class EmailCaptureService {
     return true;
   }
 
+  /// Cambia la fecha desde la que se lee y olvida el último leído, así una fecha
+  /// anterior vuelve a buscar; los ya procesados se saltan por su `fingerprint`.
+  Future<void> setSince(DateTime since) async {
+    await _settingsRepo.set(
+      SettingsKeys.captureEmailSince,
+      since.toIso8601String(),
+    );
+    final lastAt = DateTime.tryParse(
+      await _settingsRepo.get(SettingsKeys.captureEmailLastAt) ?? '',
+    );
+    if (lastAt != null && since.isBefore(lastAt)) {
+      await _settingsRepo.set(SettingsKeys.captureEmailLastAt, '');
+    }
+  }
+
   Future<void> disconnect() async {
     await _source.disconnect();
     await _settingsRepo.set(SettingsKeys.captureEmailEnabled, 'false');
+    // Al reconectar se lee desde la fecha elegida; lo ya procesado se salta por `fingerprint`.
+    await _settingsRepo.set(SettingsKeys.captureEmailLastAt, '');
   }
 
   Future<int> sync({bool notify = true}) {

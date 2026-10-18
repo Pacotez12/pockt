@@ -46,10 +46,7 @@ class EmailCaptureSection extends ConsumerWidget {
       lastDate: DateTime(2030, 12, 31),
     );
     if (picked == null) return;
-    final formatted = DateFormat('yyyy-MM-dd').format(picked);
-    await ref
-        .read(settingsRepositoryProvider)
-        .set(SettingsKeys.captureEmailSince, formatted);
+    await ref.read(emailCaptureServiceProvider).setSince(picked);
   }
 
   String _formatAction(CounterpartyAction action) {
