@@ -8,9 +8,8 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Html
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.ClearTokenRequest
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.Scope
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -277,15 +276,45 @@ class PocktGmailPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Activit
             }
     }
 
+    // Revoca el permiso en Google (no solo en el teléfono) y borra el token cacheado,
+    // así "Desconectar Gmail" saca a Pockt de la lista de apps con acceso de la cuenta.
     private fun handleDisconnect(result: MethodChannel.Result) {
         val currentContext = context ?: activity
-        if (currentContext != null) {
-            try {
-                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
-                GoogleSignIn.getClient(currentContext, gso).revokeAccess()
-            } catch (_: Exception) {}
+        if (currentContext == null) {
+            result.success(null)
+            return
         }
-        result.success(null)
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(GMAIL_READONLY_SCOPE)))
+            .build()
+        val authClient = Identity.getAuthorizationClient(currentContext)
+        authClient.authorize(request)
+            .addOnSuccessListener { authResult ->
+                val token = authResult.accessToken
+                if (authResult.hasResolution() || token.isNullOrEmpty()) {
+                    // Sin permiso vigente: no hay nada que revocar.
+                    result.success(null)
+                    return@addOnSuccessListener
+                }
+                authClient.clearToken(ClearTokenRequest.builder().setToken(token).build())
+                executor.execute {
+                    try {
+                        val conn = (URL("https://oauth2.googleapis.com/revoke").openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            doOutput = true
+                            connectTimeout = 15000
+                            readTimeout = 15000
+                            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                        }
+                        conn.outputStream.use { it.write(("token=" + URLEncoder.encode(token, "UTF-8")).toByteArray()) }
+                        conn.responseCode
+                    } catch (_: Exception) {
+                        // Sin red: Pockt igual deja de leer; el permiso se puede quitar desde la cuenta de Google.
+                    }
+                    mainHandler.post { result.success(null) }
+                }
+            }
+            .addOnFailureListener { result.success(null) }
     }
 
     private fun extractBody(payload: JSONObject?): String {
