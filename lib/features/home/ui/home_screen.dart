@@ -223,7 +223,7 @@ class _HomeScreenContent extends ConsumerWidget {
           periodLine: periodSummary.periodLine,
           payPeriodStart: periodSummary.payPeriodStart,
           schedule: periodSummary.schedule,
-          arcHome: arcHome,
+          arcHome: true,
         );
       case 'loans':
         return const HomeLoansCard();

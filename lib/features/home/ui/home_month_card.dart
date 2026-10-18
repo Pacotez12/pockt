@@ -221,11 +221,13 @@ class CategorySegmentedBar extends ConsumerWidget {
 class HomePeriodLine extends ConsumerWidget {
   final PeriodLine line;
   final String? scheduleMode;
+  final EdgeInsetsGeometry padding;
 
   const HomePeriodLine({
     super.key,
     required this.line,
     this.scheduleMode,
+    this.padding = const EdgeInsets.symmetric(horizontal: 6),
   });
 
   @override
@@ -244,7 +246,7 @@ class HomePeriodLine extends ConsumerWidget {
       semanticLabel: 'Línea del período',
       onTap: () => ref.read(amountsRevealedProvider.notifier).toggle(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: padding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

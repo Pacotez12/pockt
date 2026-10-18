@@ -114,7 +114,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 650));
 
     // En calendar: el total de octubre incluye el gasto del 30/10 (50.000) y no el del 30/09
-    expect(find.text('Gs. 50.000'), findsNWidgets(2));
+    expect(find.text('Gs. 50.000'), findsOneWidget);
     expect(find.text('Gs. 100.000'), findsNothing);
 
     // Caso B: cambiamos el ajuste a 'payday'
@@ -124,7 +124,7 @@ void main() {
 
     // En payday: el período de 05/10 es 30/09–29/10:
     // incluye el gasto del 30/09 (100.000) y excluye el del 30/10 (que empieza el ciclo siguiente)
-    expect(find.text('Gs. 100.000'), findsNWidgets(2));
+    expect(find.text('Gs. 100.000'), findsOneWidget);
     expect(find.text('Gs. 50.000'), findsNothing);
   });
 

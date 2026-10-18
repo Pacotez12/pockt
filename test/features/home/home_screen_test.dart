@@ -375,6 +375,9 @@ void main() {
       );
       expect(find.text('2 por confirmar · Netflix, ANDE'), findsOneWidget);
 
+      await t.ensureVisible(
+        find.byKey(const ValueKey('pending-suggestions-card')),
+      );
       await t.tap(find.byKey(const ValueKey('pending-suggestions-card')));
       await t.pumpAndSettle();
 

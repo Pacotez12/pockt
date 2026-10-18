@@ -112,148 +112,173 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Área del arco y textos centrales
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (details) {
-              if (isEmpty) return;
-              _handleArcTap(details.localPosition, segments, monthTotal);
-            },
-            child: SizedBox(
-              height: 164,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: _CategoryArcPainter(
-                          segments: segments,
-                          totalAmount: monthTotal,
-                          selectedSegmentId: _selectedSegmentId,
-                          isDark: isDark,
-                          trackColor: colors.glassBorder.withValues(
-                            alpha: isDark ? 0.20 : 0.12,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : 360.0;
+              final radius = (width / 2) - 24;
+              final cy = radius + 14;
+              final arcHeight = cy + 10;
+
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (details) {
+                  if (isEmpty) return;
+                  _handleArcTap(
+                    details.localPosition,
+                    segments,
+                    monthTotal,
+                    width,
+                    radius,
+                    cy,
+                  );
+                },
+                child: SizedBox(
+                  height: arcHeight,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _CategoryArcPainter(
+                              segments: segments,
+                              totalAmount: monthTotal,
+                              selectedSegmentId: _selectedSegmentId,
+                              isDark: isDark,
+                              trackColor: colors.glassBorder.withValues(
+                                alpha: isDark ? 0.20 : 0.12,
+                              ),
+                              reduceMotion: reduceMotion,
+                              radius: radius,
+                              cy: cy,
+                            ),
                           ),
-                          reduceMotion: reduceMotion,
                         ),
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    // Más abajo y angosto: el monto queda en la parte ancha del arco.
-                    top: 70,
-                    left: 36,
-                    right: 36,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        if (_selectedSegmentId != null) {
-                          _clearSelection();
-                        } else {
-                          ref.read(amountsRevealedProvider.notifier).toggle();
-                        }
-                      },
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isEmpty) ...[
-                            const SizedBox(height: 16),
-                            Text(
-                              'Todavía no gastaste en $monthNameLower',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                          ] else if (selectedSegment != null) ...[
-                            Text(
-                              '${selectedSegment.name} en $monthNameLower',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.5,
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              obscure ? '••••' : formatGs(selectedSegment.amount),
-                              key: obscure
-                                  ? const ValueKey('spending-total-obscured')
-                                  : null,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -1.0,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${selectedSegment.percentage} % de lo gastado',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12,
-                                color: colors.textTertiary,
-                              ),
-                            ),
-                          ] else ...[
-                            Text(
-                              'Gastado en $monthNameLower',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.5,
-                                color: colors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              obscure ? '••••' : formatGs(monthTotal),
-                              key: obscure
-                                  ? const ValueKey('spending-total-obscured')
-                                  : null,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -1.0,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ],
+                      Positioned(
+                        bottom: 10,
+                        left: 24,
+                        right: 24,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (_selectedSegmentId != null) {
+                              _clearSelection();
+                            } else {
+                              ref.read(amountsRevealedProvider.notifier).toggle();
+                            }
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isEmpty) ...[
+                                Text(
+                                  'Todavía no gastaste en $monthNameLower',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ] else if (selectedSegment != null) ...[
+                                Text(
+                                  '${selectedSegment.name} en $monthNameLower',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12.5,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  obscure
+                                      ? '••••'
+                                      : formatGs(selectedSegment.amount),
+                                  key: obscure
+                                      ? const ValueKey('spending-total-obscured')
+                                      : null,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -1.0,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${selectedSegment.percentage} % de lo gastado',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12,
+                                    color: colors.textTertiary,
+                                  ),
+                                ),
+                              ] else ...[
+                                Text(
+                                  'Gastado en $monthNameLower',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12.5,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  obscure ? '••••' : formatGs(monthTotal),
+                                  key: obscure
+                                      ? const ValueKey('spending-total-obscured')
+                                      : null,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -1.0,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
 
-          // Lista de tramos (solo si hay gastos)
+          // Chips de categorías (solo si hay gastos)
           if (!isEmpty) ...[
-            const SizedBox(height: 12),
-            Column(
-              children: [
-                for (final seg in segments)
-                  _buildCategoryRow(
-                    context,
-                    segment: seg,
-                    isSelected: _selectedSegmentId == seg.id,
-                    isDimmed:
-                        _selectedSegmentId != null && _selectedSegmentId != seg.id,
-                    isDark: isDark,
-                    obscure: obscure,
-                    onTap: () => _toggleSegment(seg.id),
-                  ),
-              ],
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 17),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                children: [
+                  for (final seg in segments)
+                    _buildCategoryChip(
+                      context,
+                      segment: seg,
+                      isSelected: _selectedSegmentId == seg.id,
+                      isDimmed: _selectedSegmentId != null &&
+                          _selectedSegmentId != seg.id,
+                      isDark: isDark,
+                      onTap: () => _toggleSegment(seg.id),
+                    ),
+                ],
+              ),
             ),
           ],
         ],
@@ -265,31 +290,29 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
     Offset localPosition,
     List<CategoryArcSegment> segments,
     int totalAmount,
+    double width,
+    double radius,
+    double cy,
   ) {
     if (segments.isEmpty || totalAmount <= 0) return;
 
-    const double width = 284.0;
-    const double height = 164.0;
-    const double cx = width / 2;
-    const double cy = height - 14;
-    const double radius = 122.0;
-
+    final cx = width / 2;
     final dx = localPosition.dx - cx;
     final dy = localPosition.dy - cy;
     final dist = math.sqrt(dx * dx + dy * dy);
 
     // Si toca dentro del centro, limpiar selección
-    if (dist < radius - 24) {
+    if (dist < radius - 20) {
       _clearSelection();
       return;
     }
 
     // Toco sobre el arco (margen +- 20px)
-    if (dy <= 0 && (dist - radius).abs() <= 24) {
+    if (dy <= 0 && (dist - radius).abs() <= 20) {
       final angle = math.atan2(dy, dx); // [-pi, 0]
       final normalized = -angle; // [pi (izq) .. 0 (der)]
 
-      const gap = 0.05;
+      const gap = 0.04;
       final totalGaps = (segments.length - 1) * gap;
       final available = math.pi - totalGaps;
 
@@ -310,95 +333,75 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
     _clearSelection();
   }
 
-  Widget _buildCategoryRow(
+  Widget _buildCategoryChip(
     BuildContext context, {
     required CategoryArcSegment segment,
     required bool isSelected,
     required bool isDimmed,
     required bool isDark,
-    required bool obscure,
     required VoidCallback onTap,
   }) {
     final colors = context.pockt;
     final color = Color(isDark ? segment.colorDark : segment.colorLight);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Pressable(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
+    return Pressable(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.08))
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.03)),
+          borderRadius: BorderRadius.circular(PocktRadii.s),
+          border: Border.all(
             color: isSelected
-                ? (isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.05))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(PocktRadii.m),
+                ? color.withValues(alpha: 0.6)
+                : colors.glassBorder.withValues(alpha: isDark ? 0.15 : 0.08),
+            width: 1,
           ),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 180),
-            opacity: isDimmed ? 0.40 : 1.0,
-            child: Row(
-              children: [
-                // Cuadradito de color
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
+        ),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          opacity: isDimmed ? 0.40 : 1.0,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 10),
-                // Nombre
-                Expanded(
-                  child: Text(
-                    segment.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color: colors.textPrimary,
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                segment.name,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: colors.textPrimary,
                 ),
-                // Porcentaje
-                SizedBox(
-                  width: 44,
-                  child: Text(
-                    '${segment.percentage} %',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.5,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                      color: colors.textTertiary,
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${segment.percentage} %',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w400,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  color: colors.textTertiary,
                 ),
-                const SizedBox(width: 12),
-                // Monto en Gs.
-                SizedBox(
-                  width: 104,
-                  child: Text(
-                    obscure ? '••••' : formatGs(segment.amount),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -413,6 +416,8 @@ class _CategoryArcPainter extends CustomPainter {
   final bool isDark;
   final Color trackColor;
   final bool reduceMotion;
+  final double radius;
+  final double cy;
 
   const _CategoryArcPainter({
     required this.segments,
@@ -421,13 +426,13 @@ class _CategoryArcPainter extends CustomPainter {
     required this.isDark,
     required this.trackColor,
     required this.reduceMotion,
+    required this.radius,
+    required this.cy,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const double radius = 122.0;
     final double cx = size.width / 2;
-    final double cy = size.height - 14;
     final center = Offset(cx, cy);
 
     // Estado vacío: pista de fondo
@@ -435,7 +440,7 @@ class _CategoryArcPainter extends CustomPainter {
       final trackPaint = Paint()
         ..color = trackColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 12.0
+        ..strokeWidth = 10.0
         ..strokeCap = StrokeCap.round;
 
       canvas.drawArc(
@@ -451,7 +456,7 @@ class _CategoryArcPainter extends CustomPainter {
     if (segments.length == 1) {
       final seg = segments.first;
       final isSelected = selectedSegmentId == seg.id;
-      final strokeWidth = isSelected ? 14.0 : 12.0;
+      final strokeWidth = isSelected ? 12.0 : 10.0;
       final color = Color(isDark ? seg.colorDark : seg.colorLight);
 
       final paint = Paint()
@@ -472,7 +477,7 @@ class _CategoryArcPainter extends CustomPainter {
 
     // Múltiples tramos. En el canvas el ángulo crece en sentido horario:
     // de π (izquierda) a 2π (derecha) pasando por 3π/2 recorre la mitad de arriba.
-    const double gapAngle = 0.05;
+    const double gapAngle = 0.04;
     final double totalGaps = (segments.length - 1) * gapAngle;
     final double availableAngle = math.pi - totalGaps;
 
@@ -482,7 +487,7 @@ class _CategoryArcPainter extends CustomPainter {
       final seg = segments[i];
       final isSelected = selectedSegmentId == seg.id;
       final isDimmed = selectedSegmentId != null && !isSelected;
-      final strokeWidth = isSelected ? 14.0 : 12.0;
+      final strokeWidth = isSelected ? 12.0 : 10.0;
       final baseColor = Color(isDark ? seg.colorDark : seg.colorLight);
       final color = baseColor.withValues(alpha: isDimmed ? 0.22 : 1.0);
 
@@ -536,6 +541,8 @@ class _CategoryArcPainter extends CustomPainter {
         oldDelegate.totalAmount != totalAmount ||
         oldDelegate.selectedSegmentId != selectedSegmentId ||
         oldDelegate.isDark != isDark ||
-        oldDelegate.trackColor != trackColor;
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.radius != radius ||
+        oldDelegate.cy != cy;
   }
 }
