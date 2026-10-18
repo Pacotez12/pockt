@@ -14,6 +14,10 @@ import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/capture/data/capture_service.dart';
+import 'package:pockt/features/capture/data/counterparty_rules_repository.dart';
+import 'package:pockt/features/capture/data/email_capture_service.dart';
+import 'package:pockt/features/capture/data/email_source.dart';
+import 'package:pockt/features/capture/ui/capture_settings_screen.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/recurring/ui/inbox_screen.dart';
 import 'package:pockt/features/settings/ui/settings_screen.dart';
@@ -24,6 +28,7 @@ void main() {
   late AppDatabase testDb;
   late FakeNotifier notifier;
   late FakeSmsSource fakeSms;
+  late FakeEmailSource fakeEmail;
   late SuggestionsRepository sugRepo;
 
   const comidaId = '018f0000-0000-7000-8000-000000000001';
@@ -46,6 +51,7 @@ void main() {
     );
     notifier = FakeNotifier();
     fakeSms = FakeSmsSource(permissionsGranted: true);
+    fakeEmail = FakeEmailSource(connected: true);
     sugRepo = SuggestionsRepository(testDb);
   });
 
@@ -424,6 +430,153 @@ void main() {
       expect(txs!.length, 1);
       expect(txs.first.type, TxType.transfer);
       expect(txs.first.amount, 1200000);
+    },
+  );
+
+  testWidgets(
+    'Ajustes -> Captura -> Correo: apagado por defecto, conectar guarda enabled y since, cancelar deja apagado, quitar persona la borra y needsReconnect muestra aviso',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      fakeEmail.connected = true;
+
+      // 1. Apagado por defecto
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(testDb),
+            notifierProvider.overrideWithValue(notifier),
+            smsSourceProvider.overrideWithValue(fakeSms),
+            emailSourceProvider.overrideWithValue(fakeEmail),
+            counterpartyRulesRepositoryProvider.overrideWithValue(
+              CounterpartyRulesRepository(testDb),
+            ),
+          ],
+          child: MaterialApp(
+            theme: buildDarkTheme(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const CaptureSettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.ensureVisible(find.byKey(const ValueKey('capture-email-switch')));
+      expect(find.byKey(const ValueKey('capture-email-switch')), findsOneWidget);
+      final emailSwitch = tester.widget<Switch>(find.byKey(const ValueKey('capture-email-switch')));
+      expect(emailSwitch.value, isFalse);
+
+      // 2. Cancelar la ventana de explicación deja apagado
+      await tester.tap(find.byKey(const ValueKey('capture-email-switch')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Solo se leen los correos de info@itau.com.py, en modo lectura. Todo queda en tu teléfono.'), findsOneWidget);
+      expect(find.text('Cancelar'), findsOneWidget);
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      final enabledAfterCancel = await tester.runAsync(
+        () => SettingsRepository(testDb).get(SettingsKeys.captureEmailEnabled),
+      );
+      expect(enabledAfterCancel, isNot('true'));
+
+      // 3. Activar con FakeEmailSource(connected: true) guarda enabled y since
+      await tester.ensureVisible(find.byKey(const ValueKey('capture-email-switch')));
+      await tester.tap(find.byKey(const ValueKey('capture-email-switch')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Conectar'), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Conectar'));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final enabledAfterConnect = await tester.runAsync(
+        () => SettingsRepository(testDb).get(SettingsKeys.captureEmailEnabled),
+      );
+      expect(enabledAfterConnect, 'true');
+
+      final sinceAfterConnect = await tester.runAsync(
+        () => SettingsRepository(testDb).get(SettingsKeys.captureEmailSince),
+      );
+      expect(sinceAfterConnect, isNotNull);
+
+      // 4. Estado de correo visible
+      expect(find.text('Último correo leído'), findsOneWidget);
+      expect(find.text('No reconocidos'), findsNWidgets(2));
+
+      // 5. Quitar persona la borra
+      const ruleId = 'rule-juan';
+      await tester.runAsync(() async {
+        await testDb.into(testDb.counterpartyRules).insert(
+          CounterpartyRulesCompanion.insert(
+            id: ruleId,
+            nameKey: 'JUAN PEREZ',
+            direction: TransferDirection.incoming,
+            action: CounterpartyAction.income,
+            autoApply: const Value(true),
+            updatedAt: DateTime(2026, 10, 15),
+          ),
+        );
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.ensureVisible(find.text('JUAN PEREZ'));
+      expect(find.text('JUAN PEREZ'), findsOneWidget);
+      expect(find.text('Ingreso'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const ValueKey('remove-rule-rule-juan')));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('JUAN PEREZ'), findsNothing);
+      final remainingRules = await tester.runAsync(
+        () => testDb.select(testDb.counterpartyRules).get(),
+      );
+      expect(remainingRules, isEmpty);
+
+      // 6. needsReconnect muestra aviso
+      await tester.runAsync(() async {
+        await SettingsRepository(testDb).set(
+          SettingsKeys.captureEmailNeedsReconnect,
+          'true',
+        );
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.ensureVisible(find.byKey(const ValueKey('email-reconnect-banner')));
+      expect(find.byKey(const ValueKey('email-reconnect-banner')), findsOneWidget);
+      expect(find.text('Volver a conectar'), findsOneWidget);
+
+      // 7. Desconectar Gmail apaga
+      await tester.ensureVisible(find.byKey(const ValueKey('disconnect-gmail-button')));
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const ValueKey('disconnect-gmail-button')));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final enabledAfterDisconnect = await tester.runAsync(
+        () => SettingsRepository(testDb).get(SettingsKeys.captureEmailEnabled),
+      );
+      expect(enabledAfterDisconnect, 'false');
     },
   );
 }

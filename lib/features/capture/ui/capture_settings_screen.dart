@@ -13,10 +13,8 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
-import 'package:flutter/foundation.dart';
 import 'package:pockt/features/capture/data/capture_service.dart';
-import 'package:pockt/features/capture/data/email_source.dart';
-import 'package:workmanager/workmanager.dart';
+import 'package:pockt/features/capture/ui/email_capture_section.dart';
 
 /// Pantalla de configuración de Captura automática de SMS de Itaú (spec §4.6).
 class CaptureSettingsScreen extends ConsumerWidget {
@@ -431,90 +429,8 @@ class CaptureSettingsScreen extends ConsumerWidget {
                             ],
                           ),
                   ),
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 8),
-                      child: Text(
-                        'DEBUG',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.6,
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                    ),
-                    GlassCard(
-                      padding: EdgeInsets.zero,
-                      child: Pressable(
-                        key: const ValueKey('gmail-probe-tile'),
-                        semanticLabel: 'Gmail: probar',
-                        onTap: () async {
-                          final scaffold = ScaffoldMessenger.of(context);
-                          final source = const AndroidEmailSource();
-                          try {
-                            final connected = await source.authorize();
-                            if (!connected) {
-                              scaffold.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Gmail: cancelado'),
-                                ),
-                              );
-                              return;
-                            }
-                            final now = DateTime.now();
-                            final emails = await source.fetchSince(
-                              now.subtract(const Duration(days: 7)),
-                            );
-                            scaffold.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Gmail probe: ${emails.length} correos',
-                                ),
-                              ),
-                            );
-                            await Workmanager().registerOneOffTask(
-                              'pockt-email-probe',
-                              'pockt-email-probe',
-                              initialDelay: const Duration(minutes: 1),
-                            );
-                          } on GmailReconnectRequired {
-                            scaffold.showSnackBar(
-                              const SnackBar(
-                                content: Text('Gmail: necesita reconectar'),
-                              ),
-                            );
-                          } catch (e) {
-                            scaffold.showSnackBar(
-                              SnackBar(content: Text('Gmail probe error: $e')),
-                            );
-                          }
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Gmail: probar',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 28),
+                  const EmailCaptureSection(),
                 ],
               ),
             ),
