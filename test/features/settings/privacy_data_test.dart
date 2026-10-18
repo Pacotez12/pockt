@@ -183,7 +183,7 @@ void main() {
         findsNothing,
       );
       expect(find.text('••••'), findsNothing);
-      expect(find.text('Gs. 85.000'), findsOneWidget);
+      expect(find.text('Gs. 85.000'), findsNWidgets(2));
     });
 
     test('el bloqueo respeta el tiempo elegido', () async {

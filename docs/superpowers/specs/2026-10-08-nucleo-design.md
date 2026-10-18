@@ -348,6 +348,24 @@ Con `home.headline = safeToSpend` el encabezado del Inicio es:
 - "Ocultar montos" tapa todos los montos del arco y de la tarjeta. Respeta `motion.reduce` (el arco anima su llenado solo si no está reducido).
 - Calendario de calor y el resto de las tarjetas del Inicio sin cambios.
 
+## 7d-ter. Inicio con "Arco por categoría" (decidido 2026-10-18, maquetas aprobadas)
+
+Con `home.headline = monthSpent` (nuevo valor por defecto del Inicio):
+- **Arco por categoría (`CategoryArc`):** semicírculo interactivo que representa el total gastado en el mes dividido en tramos proporcionales por categoría, de mayor a menor empezando por la izquierda con el color de cada categoría (`colorDark` / `colorLight` según tema).
+  - Máximo 5 tramos: las 4 categorías con más gasto + "Otros" agrupando el resto. Si hay 5 o menos categorías, se muestran todas sin "Otros".
+  - Tramos con separación (0.05 rad), extremos exteriores redondeados en las puntas del arco y tramos internos con corte recto (`StrokeCap.butt`).
+  - Mes sin gastos: pista vacía con texto centrado "Todavía no gastaste en {mes}".
+  - Centro del arco: "Gastado en {mes}", monto grande del mes (respeta privacidad `••••`), y debajo "quedan Gs. X de lo que entró" del período actual (se omite si no hay esquema de cobro).
+  - Al pie del arco: lista de filas con cuadradito de color, nombre, % (calculado con el método del mayor resto para sumar exactamente 100 %) y monto en Gs. con cifras tabulares.
+  - Interacción: tocar un tramo o una fila resalta esa categoría (las demás atenúan su opacidad a 0.40/0.22 y el tramo seleccionado engrosa de 12 a 14 px) y el centro conmuta a "{Categoría} en {mes}", su monto y "{N} % de lo gastado". Tocar de nuevo o tocar el fondo restaura el total.
+- **Tarjeta compacta "Podés gastar hoy" (`CompactSafeToSpendCard`):**
+  - Reemplaza la tarjeta expandida cuando el encabezado es el arco por categoría.
+  - Título y monto en una sola línea ("Podés gastar hoy" y "Gs. X").
+  - Barrita de progreso con gradiente de marca (`brandStart` a `brandEnd`).
+  - Subtexto: "gastaste hoy Gs. X · cobrás en N días" (o invitación a configurar cobro si no hay esquema).
+- El modo `home.headline = safeToSpend` ("Arco de hoy" con límite diario, §7d-bis) se mantiene intacto y configurable desde Ajustes > Pantalla de inicio.
+- Accesibilidad: nodo `Semantics` en el arco con el resumen del total y desglose de porcentajes. Respeta `motion.reduce`.
+
 ## 7e. Saldo arrastrado entre períodos (decidido 2026-10-15, opción C)
 
 "Quedan" del período actual suma el **saldo arrastrado**: ingresos − gastos − aportes a metas desde el `effectiveFrom` del primer esquema de cobro hasta el día anterior al inicio del período. Aplica también al estimado (cobro aún no confirmado) y, por lo tanto, a "Podés gastar hoy".

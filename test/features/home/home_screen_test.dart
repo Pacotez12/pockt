@@ -97,10 +97,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('mes vacío: Gs. 0, sin crash, glow de marca', (t) async {
+  testWidgets('mes vacío: sin crash, glow de marca', (t) async {
     await pumpHomeScreen(t);
 
-    expect(find.text('Gs. 0'), findsOneWidget);
+    expect(find.text('Todavía no gastaste en octubre'), findsOneWidget);
     final glow = t.widget<MonthGlow>(find.byType(MonthGlow));
     expect(glow.color, equals(PocktColors.dark.brandStart));
   });
@@ -163,6 +163,11 @@ void main() {
 
     await pumpHomeScreen(t);
 
+    await t.scrollUntilVisible(
+      find.text('5'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     await t.tap(find.text('5'));
     await t.pumpAndSettle();
 
@@ -203,6 +208,11 @@ void main() {
       await pumpHomeScreen(t);
 
       // 1. Abrir detalle del día 5 y verificar a mitad de vuelo
+      await t.scrollUntilVisible(
+        find.text('5'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await t.tap(find.text('5'));
       await t.pump(); // Inicia el push
       await t.pump(
@@ -286,6 +296,11 @@ void main() {
 
       await pumpHomeScreen(t);
 
+      await t.scrollUntilVisible(
+        find.text('5'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await t.tap(find.text('5'));
       await t.pump();
       await t.pump(const Duration(milliseconds: 100));
@@ -419,8 +434,20 @@ void main() {
 
       expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
       expect(find.textContaining('1ª quincena'), findsOneWidget);
-      expect(find.textContaining('Gs. 1.045.000'), findsOneWidget);
-      expect(find.textContaining('cobrás en 6 días'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('Gs. 1.045.000'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('cobrás en 6 días'),
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -472,7 +499,13 @@ void main() {
     await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 15, 14, 0));
 
     expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-    expect(find.textContaining('Gs. 3.400.000'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('period-line')),
+        matching: find.textContaining('Gs. 3.400.000'),
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('2ª quincena'), findsOneWidget);
   });
 
@@ -513,8 +546,20 @@ void main() {
 
       expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
       expect(find.textContaining('2ª quincena'), findsOneWidget);
-      expect(find.textContaining('Gs. 820.000'), findsOneWidget);
-      expect(find.textContaining('cobrás en 14 días'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('Gs. 820.000'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('cobrás en 14 días'),
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -552,7 +597,13 @@ void main() {
     await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 16, 12, 0));
 
     expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-    expect(find.textContaining('−Gs. 820.000'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('period-line')),
+        matching: find.textContaining('−Gs. 820.000'),
+      ),
+      findsOneWidget,
+    );
 
     final textWidget = t.widget<Text>(
       find.byKey(const ValueKey('period-line-remaining')),
@@ -598,7 +649,13 @@ void main() {
       await pumpHomeScreen(t, nowLocal: DateTime(2026, 10, 9, 14, 0));
 
       expect(find.byKey(const ValueKey('period-line')), findsOneWidget);
-      expect(find.textContaining('~Gs. 4.080.000'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('~Gs. 4.080.000'),
+        ),
+        findsOneWidget,
+      );
       expect(find.textContaining('(estimado)'), findsOneWidget);
 
       final textWidget = t.widget<Text>(
@@ -619,7 +676,13 @@ void main() {
 
       await t.pumpAndSettle();
 
-      expect(find.textContaining('Gs. 4.080.000'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('period-line')),
+          matching: find.textContaining('Gs. 4.080.000'),
+        ),
+        findsOneWidget,
+      );
       expect(find.textContaining('~'), findsNothing);
       expect(find.textContaining('(estimado)'), findsNothing);
     },

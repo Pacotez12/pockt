@@ -9,6 +9,7 @@ import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/home/ui/category_arc.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
 import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -57,12 +58,15 @@ void main() {
   );
 
   testWidgets(
-    'modo safeToSpend por defecto: Arco de hoy y tarjeta del mes',
+    'modo safeToSpend explícito: Arco de hoy y tarjeta del mes',
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
+            homeHeadlineProvider.overrideWith(
+              (ref) => Stream.value(HomeHeadline.safeToSpend),
+            ),
             safeToSpendProvider.overrideWith(
               (ref) => Stream.value(testSafeToSpend),
             ),
@@ -99,6 +103,9 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(db),
+          homeHeadlineProvider.overrideWith(
+            (ref) => Stream.value(HomeHeadline.safeToSpend),
+          ),
           safeToSpendProvider.overrideWith(
             (ref) => Stream.value(testNegativeSafeToSpend),
           ),
@@ -126,15 +133,12 @@ void main() {
   });
 
   testWidgets(
-    'modo monthSpent: muestra "Gastado en octubre" y total tradicional',
+    'modo monthSpent por defecto: CategoryArc y tarjeta compacta',
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
-            homeHeadlineProvider.overrideWith(
-              (ref) => Stream.value(HomeHeadline.monthSpent),
-            ),
             safeToSpendProvider.overrideWith(
               (ref) => Stream.value(testSafeToSpend),
             ),
@@ -152,12 +156,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Gastado en octubre'), findsOneWidget);
-      expect(find.text('Podés gastar hoy'), findsNothing);
-      expect(
-        find.byKey(const ValueKey('safe-to-spend-subtitle')),
-        findsNothing,
-      );
+      expect(find.byType(CategoryArc), findsOneWidget);
+      expect(find.text('Todavía no gastaste en octubre'), findsOneWidget);
+      expect(find.byType(CompactSafeToSpendCard), findsOneWidget);
     },
   );
 
@@ -168,6 +169,9 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(db),
+          homeHeadlineProvider.overrideWith(
+            (ref) => Stream.value(HomeHeadline.safeToSpend),
+          ),
           privacyHideAmountsProvider.overrideWith((ref) => Stream.value(true)),
           safeToSpendProvider.overrideWith(
             (ref) => Stream.value(testSafeToSpend),

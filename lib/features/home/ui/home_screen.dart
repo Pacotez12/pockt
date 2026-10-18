@@ -8,6 +8,7 @@ import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/home/data/home_providers.dart';
 import 'package:pockt/features/home/domain/home_cards_config.dart';
 import 'package:pockt/features/home/domain/home_period_summary.dart';
+import 'package:pockt/features/home/ui/compact_safe_to_spend_card.dart';
 import 'package:pockt/features/home/ui/home_cards.dart';
 import 'package:pockt/features/home/ui/home_month_card.dart';
 import 'package:pockt/features/home/ui/home_spending_header.dart';
@@ -15,6 +16,7 @@ import 'package:pockt/features/home/ui/home_top_bar.dart';
 
 export 'package:pockt/features/home/data/home_providers.dart';
 export 'package:pockt/features/home/domain/home_period_summary.dart';
+export 'package:pockt/features/home/ui/compact_safe_to_spend_card.dart';
 export 'package:pockt/features/home/ui/home_cards.dart';
 export 'package:pockt/features/home/ui/home_month_card.dart';
 export 'package:pockt/features/home/ui/home_spending_header.dart';
@@ -128,7 +130,7 @@ class _HomeScreenContent extends ConsumerWidget {
     final cardsConfig =
         ref.watch(homeCardsConfigProvider).value ?? defaultHomeCards;
     final headline =
-        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend;
+        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.monthSpent;
     final arcHome = headline == HomeHeadline.safeToSpend;
 
     final periodSummary = ref.watch(homePeriodSummaryProvider(nowLocal));
@@ -169,10 +171,8 @@ class _HomeScreenContent extends ConsumerWidget {
                       schedule: periodSummary.schedule,
                     ),
                   ] else ...[
-                    const SizedBox(height: 16),
-                    CategorySegmentedBar(
-                      year: year,
-                      month: month,
+                    const SizedBox(height: 12),
+                    CompactSafeToSpendCard(
                       nowLocal: nowLocal,
                     ),
                   ],

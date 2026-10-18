@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/motion.dart';
-import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
-import 'package:pockt/features/home/data/home_providers.dart';
-import 'package:pockt/features/home/ui/home_top_bar.dart';
+import 'package:pockt/features/home/ui/category_arc.dart';
 import 'package:pockt/features/home/ui/today_arc.dart';
 import 'package:pockt/features/safe_to_spend/domain/safe_to_spend.dart';
 
 /// Encabezado principal de gasto en Inicio:
+/// - Modo `monthSpent` (default): CategoryArc interactivo por categoría.
 /// - Modo `safeToSpend`: Arco de hoy interactivo (Podés gastar hoy).
-/// - Modo `monthSpent`: "Gastado en {mes}" con total animado mediante [TweenAnimationBuilder].
 class HomeSpendingHeader extends ConsumerWidget {
   final int year;
   final int month;
@@ -27,76 +25,18 @@ class HomeSpendingHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.pockt;
-    final monthNameLower = kMonthNames[month - 1].toLowerCase();
-    final obscure = ref.watch(shouldObscureAmountsProvider);
     final headline =
-        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend;
+        ref.watch(homeHeadlineProvider).value ?? HomeHeadline.monthSpent;
 
     if (headline == HomeHeadline.monthSpent) {
-      final monthTotal =
-          ref
-              .watch(
-                homeMonthTotalProvider((
-                  year: year,
-                  month: month,
-                  nowLocal: nowLocal,
-                )),
-              )
-              .value ??
-          0;
-
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            ref.read(amountsRevealedProvider.notifier).toggle();
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Gastado en $monthNameLower',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              RepaintBoundary(
-                child: obscure
-                    ? Text(
-                        '••••',
-                        key: const ValueKey('spending-total-obscured'),
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 42,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -1.5,
-                          color: colors.textPrimary,
-                        ),
-                      )
-                    : _AnimatedMonthTotal(
-                        total: monthTotal,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 42,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -1.5,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-              ),
-            ],
-          ),
-        ),
+      return CategoryArc(
+        year: year,
+        month: month,
+        nowLocal: nowLocal,
       );
     }
 
-    // Default: HomeHeadline.safeToSpend → Arco de hoy (spec §7d-bis).
+    final obscure = ref.watch(shouldObscureAmountsProvider);
     final safe = ref.watch(safeToSpendProvider).value;
     return Pressable(
       semanticLabel: 'Alternar ocultar montos',

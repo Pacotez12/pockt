@@ -272,8 +272,8 @@ enum HomeHeadline {
   monthSpent;
 
   static HomeHeadline parse(String? raw) {
-    if (raw == 'monthSpent') return HomeHeadline.monthSpent;
-    return HomeHeadline.safeToSpend;
+    if (raw == 'safeToSpend') return HomeHeadline.safeToSpend;
+    return HomeHeadline.monthSpent;
   }
 }
 

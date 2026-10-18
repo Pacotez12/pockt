@@ -54,7 +54,7 @@ List<Widget> homeSettingsItems(BuildContext context, WidgetRef ref) {
       subtitle: 'Información destacada en la portada',
       iconColor: colors.brandAt(2),
       selectedValue:
-          ref.watch(homeHeadlineProvider).value ?? HomeHeadline.safeToSpend,
+          ref.watch(homeHeadlineProvider).value ?? HomeHeadline.monthSpent,
       options: const [
         (value: HomeHeadline.safeToSpend, label: 'Podés gastar hoy'),
         (value: HomeHeadline.monthSpent, label: 'Gastado en el mes'),
