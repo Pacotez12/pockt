@@ -67,6 +67,7 @@ Identidad propia, **"Profundidad y luz"**: negro puro para pantallas AMOLED (y m
 - **Local-first**: tus datos viven en tu teléfono (SQLite).
 - **Copia de seguridad cifrada** (AES-256-GCM) automática cada 48 horas en `Documentos/Pockt` del teléfono, que sobrevive a desinstalar la app. La clave sale de una contraseña que solo vos conocés. Podés exportar una copia y compartirla donde quieras, y restaurar desde cualquier archivo `.pockt`.
 - **Bloqueo opcional** con huella o PIN y opción de **ocultar montos** hasta tocar el total.
+- **Captura automática opcional** (apagada por defecto): lee los SMS de Itaú en el teléfono y, si conectás Gmail, solo los correos de `info@itau.com.py` en modo lectura. Los correos van directo de Google al teléfono; no se guardan tokens, números de cuenta ni correos completos. Es el único uso de internet de la app.
 - **Sin servidor, sin analíticas, sin publicidad.**
 
 ## Stack
@@ -136,8 +137,10 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 4b** | Ajustes por secciones y descuentos del sueldo | ✅ |
 | **Plan 4c** | Préstamos y compras en cuotas: avance, pagos y vencimientos | ✅ |
 | **Plan 5** | Metas, Podés gastar hoy, ¿Lo compro?, saldo arrastrado, gastos hormiga, atajos, resumen semanal y eventos | ✅ v0.5 |
-| **Plan 6** | Pulido visual de las pantallas nuevas | 🔨 |
-| **Después** | Motor de captura: leer notificaciones de bancos, SMS y correos | 💡 |
+| **Plan 6** | Pulido visual de las pantallas nuevas | ✅ |
+| **Plan 7** | Captura por SMS de Itaú: bandeja, duplicados y comercios que se confirman solos | ✅ |
+| **Plan 8** | Inicio "Arco de hoy" y refactor de pantallas grandes | ✅ |
+| **Plan 9** | Captura por correo (Gmail): transferencias enviadas y recibidas, pagos de servicios, personas recordadas | ✅ |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
 ## Desarrollo
