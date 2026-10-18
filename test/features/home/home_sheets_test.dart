@@ -15,6 +15,7 @@ import 'package:pockt/features/home/ui/home_goals_sheet.dart';
 import 'package:pockt/features/home/ui/home_loans_sheet.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/domain/loan_progress.dart';
+import 'package:pockt/features/loans/ui/loan_payment_sheet.dart';
 import 'package:pockt/features/loans/ui/loans_screen.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -37,6 +38,74 @@ void main() {
 
   tearDown(() async {
     await db.close();
+  });
+
+  Loan owe(String id, String name, int dueDay) => Loan(
+        id: id,
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: name,
+        totalAmount: 3600000,
+        installmentAmount: 300000,
+        installmentsTotal: 12,
+        dueDay: dueDay,
+        startDate: DateTime(2026, 1, 1),
+        reminderDays: 2,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+  const prog = LoanProgress(
+    paid: 1500000,
+    balance: 2100000,
+    percent: 0.42,
+    installmentsPaid: 5,
+    isClosed: false,
+    daysUntilNextDue: 5,
+  );
+  Future<void> pumpLoans(WidgetTester tester, List<Loan> loans) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          activeLoansWithProgressProvider.overrideWith(
+            (ref) => Stream.value([
+              for (final l in loans) LoanWithProgress(loan: l, progress: prog),
+            ]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: buildDarkTheme(),
+          home: Scaffold(body: HomeLoansSheet(routeAnimation: null)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  group('Altura y selector de préstamo', () {
+    testWidgets('con un solo préstamo la hoja se ajusta al contenido (sin hueco)', (tester) async {
+      await pumpLoans(tester, [owe('l-1', 'Celular en cuotas', 10)]);
+      final screenH = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final sheetH = tester.getSize(find.byKey(const ValueKey('home-loans-sheet-surface'))).height;
+      expect(sheetH, lessThan(screenH * 0.6));
+    });
+
+    testWidgets('con varios préstamos, Registrar pago abre el selector con el mismo estilo y elegir abre el pago', (tester) async {
+      await pumpLoans(tester, [
+        owe('l-1', 'Celular en cuotas', 10),
+        owe('l-2', 'Préstamo auto', 25),
+      ]);
+      await tester.tap(find.text('Registrar pago'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Qué préstamo pagás?'), findsOneWidget);
+      final picker = find.byKey(const ValueKey('home-loans-picker'));
+      expect(picker, findsOneWidget);
+      expect(find.descendant(of: picker, matching: find.text('Préstamo auto')), findsOneWidget);
+      expect(find.descendant(of: picker, matching: find.text('Día 25')), findsOneWidget);
+      await tester.tap(find.descendant(of: picker, matching: find.text('Préstamo auto')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoanPaymentSheet), findsOneWidget);
+    });
   });
 
   group('HomeLoansSheet y HomeGoalsSheet', () {
@@ -163,6 +232,13 @@ void main() {
 
       // Botón principal
       expect(find.text('Aportar'), findsOneWidget);
+
+      // Con pocas metas la hoja se ajusta al contenido (sin hueco)
+      final screenH = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(
+        tester.getSize(find.byKey(const ValueKey('home-goals-sheet-surface'))).height,
+        lessThan(screenH * 0.6),
+      );
 
       // Tocar "Ver todo ›" abre GoalsScreen
       await tester.tap(find.text('Ver todo ›'));

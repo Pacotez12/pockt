@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,7 +79,8 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final sheetHeight = min(MediaQuery.of(context).size.height * 0.85, 540.0);
+    // La hoja crece con el contenido hasta el 85 % de la pantalla; después, scroll.
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.85;
 
     final loansAsync = ref.watch(activeLoansWithProgressProvider);
 
@@ -133,7 +133,8 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
-                    height: sheetHeight,
+                    key: const ValueKey('home-loans-sheet-surface'),
+                    constraints: BoxConstraints(maxHeight: maxSheetHeight),
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: colors.sheetSurface.withValues(
@@ -193,6 +194,7 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Indicador de arrastre superior
@@ -254,7 +256,7 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
           ),
         ),
         // Cuerpo desplazable
-        Expanded(
+        Flexible(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -383,6 +385,7 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
     required PocktColors colors,
     required bool isDark,
     required bool obscure,
+    VoidCallback? onTap,
   }) {
     final loan = item.loan;
     final progress = item.progress;
@@ -396,14 +399,15 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
         : 'Saldo ${obscure ? "••••" : formatGs(progress.balance)}';
 
     return Pressable(
-      onTap: () {
-        Haptics.tick();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => LoanDetailScreen(loanId: loan.id),
-          ),
-        );
-      },
+      onTap: onTap ??
+          () {
+            Haptics.tick();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => LoanDetailScreen(loanId: loan.id),
+              ),
+            );
+          },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -562,48 +566,102 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
     required List<LoanWithProgress> oweLoans,
     required PocktColors colors,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final obscure = ref.read(shouldObscureAmountsProvider);
+    void openPayment(LoanWithProgress item) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => LoanPaymentSheet(
+          loan: item.loan,
+          progress: item.progress,
+          isExtra: false,
+        ),
+      );
+    }
+
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: colors.sheetSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Elegí el préstamo para registrar el pago',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        key: const ValueKey('home-loans-picker'),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: colors.sheetSurface.withValues(alpha: isDark ? 0.96 : 0.98),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Center(
+                  child: Container(
+                    width: 38,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.22)
+                          : Colors.black.withValues(alpha: 0.20),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            for (final item in oweLoans)
-              ListTile(
-                title: Text(item.loan.name),
-                subtitle: Text('Saldo: ${formatGs(item.progress.balance)}'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => LoanPaymentSheet(
-                      loan: item.loan,
-                      progress: item.progress,
-                      isExtra: false,
-                    ),
-                  );
-                },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  '¿Qué préstamo pagás?',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
               ),
-          ],
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final item in oweLoans) ...[
+                        _buildOweItem(
+                          ctx,
+                          item: item,
+                          colors: colors,
+                          isDark: isDark,
+                          obscure: obscure,
+                          onTap: () {
+                            Haptics.tick();
+                            Navigator.of(ctx).pop();
+                            openPayment(item);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

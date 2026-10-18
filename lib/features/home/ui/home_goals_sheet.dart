@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,7 +79,8 @@ class _HomeGoalsSheetState extends ConsumerState<HomeGoalsSheet> {
     final colors = context.pockt;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final sheetHeight = min(MediaQuery.of(context).size.height * 0.85, 540.0);
+    // La hoja crece con el contenido hasta el 85 % de la pantalla; después, scroll.
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.85;
 
     final goalsAsync = ref.watch(activeGoalsWithProgressProvider);
 
@@ -133,7 +133,8 @@ class _HomeGoalsSheetState extends ConsumerState<HomeGoalsSheet> {
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
-                    height: sheetHeight,
+                    key: const ValueKey('home-goals-sheet-surface'),
+                    constraints: BoxConstraints(maxHeight: maxSheetHeight),
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: colors.sheetSurface.withValues(
@@ -183,6 +184,7 @@ class _HomeGoalsSheetState extends ConsumerState<HomeGoalsSheet> {
     );
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Indicador de arrastre superior
@@ -244,7 +246,7 @@ class _HomeGoalsSheetState extends ConsumerState<HomeGoalsSheet> {
           ),
         ),
         // Cuerpo desplazable
-        Expanded(
+        Flexible(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
