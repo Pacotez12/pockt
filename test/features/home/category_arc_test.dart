@@ -362,7 +362,7 @@ void main() {
       expect(find.textContaining('Gs. 1.500.000'), findsOneWidget);
     });
 
-    testWidgets('CategoryArc en anchos 360 dp y 412 dp se dibuja sin desbordes y bloque central centrado', (tester) async {
+    testWidgets('CategoryArc en anchos 360 dp y 412 dp: bloque central elevado 16-20 dp sin tocar tramos ni con subetiqueta', (tester) async {
       final now = DateTime(2026, 10, 15, 12, 0);
       final cats = (await tester.runAsync(() => catRepo.watchActive(CategoryKind.expense).first))!;
       final comida = cats.firstWhere((c) => c.name == 'Comida');
@@ -393,6 +393,7 @@ void main() {
           createTestHost(
             child: SingleChildScrollView(
               child: CategoryArc(
+                key: ValueKey('arc-$width'),
                 year: 2026,
                 month: 10,
                 nowLocal: now,
@@ -402,9 +403,61 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Gastado en octubre'), findsOneWidget);
-        expect(find.text('Gs. 500.000'), findsOneWidget);
-        expect(tester.takeException(), isNull);
+        final arcPaint = find.byType(CustomPaint).first;
+        final arcRect = tester.getRect(arcPaint);
+        final radius = (width / 2) - 24;
+        final cy = arcRect.top + radius + 14;
+        final cx = arcRect.left + width / 2;
+        final center = Offset(cx, cy);
+        final innerRadius = radius - 6.0;
+
+        // Estado normal: bloque elevado unos 16-20 dp respecto al fondo (bottom: 28 vs 10)
+        final amountBottom = tester.getBottomLeft(find.text('Gs. 500.000')).dy;
+        final clearanceFromBottom = arcRect.bottom - amountBottom;
+        expect(clearanceFromBottom, greaterThanOrEqualTo(24.0));
+
+        // Verificar que las 4 esquinas del título y monto no tocan el arco
+        for (final textFinder in [find.text('Gastado en octubre'), find.text('Gs. 500.000')]) {
+          final rect = tester.getRect(textFinder);
+          final corners = [
+            rect.topLeft,
+            rect.topRight,
+            rect.bottomLeft,
+            rect.bottomRight,
+          ];
+          for (final corner in corners) {
+            final dist = (corner - center).distance;
+            expect(dist, lessThan(innerRadius - 8.0));
+          }
+        }
+
+        // Tocar chip de categoría para mostrar la subetiqueta (ej. "70 % de lo gastado")
+        await tester.tap(find.text('Comida'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Comida en octubre'), findsOneWidget);
+        expect(find.text('Gs. 350.000'), findsOneWidget);
+        expect(find.text('70 % de lo gastado'), findsOneWidget);
+
+        // Verificar que con subetiqueta ningún texto toca los tramos del arco
+        for (final textFinder in [
+          find.text('Comida en octubre'),
+          find.text('Gs. 350.000'),
+          find.text('70 % de lo gastado'),
+        ]) {
+          final rect = tester.getRect(textFinder);
+          final corners = [
+            rect.topLeft,
+            rect.topRight,
+            rect.bottomLeft,
+            rect.bottomRight,
+          ];
+          for (final corner in corners) {
+            final dist = (corner - center).distance;
+            expect(dist, lessThan(innerRadius - 8.0));
+          }
+        }
       }
     });
 

@@ -158,9 +158,7 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                         ),
                       ),
                       Positioned(
-                        bottom: 10,
-                        left: 24,
-                        right: 24,
+                        top: cy - 74,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -170,83 +168,96 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                               ref.read(amountsRevealedProvider.notifier).toggle();
                             }
                           },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isEmpty) ...[
-                                Text(
-                                  'Todavía no gastaste en $monthNameLower',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 13,
-                                    color: colors.textSecondary,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: ((radius - 6 > 90
+                                          ? math.sqrt((radius - 6) * (radius - 6) - 76 * 76)
+                                          : (radius - 6) * 0.7) - 12) * 2,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isEmpty) ...[
+                                  Text(
+                                    'Todavía no gastaste en $monthNameLower',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      color: colors.textSecondary,
+                                    ),
                                   ),
-                                ),
-                              ] else if (selectedSegment != null) ...[
-                                Text(
-                                  '${selectedSegment.name} en $monthNameLower',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 12.5,
-                                    color: colors.textSecondary,
+                                ] else if (selectedSegment != null) ...[
+                                  Text(
+                                    '${selectedSegment.name} en $monthNameLower',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12.5,
+                                      color: colors.textSecondary,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  obscure
-                                      ? '••••'
-                                      : formatGs(selectedSegment.amount),
-                                  key: obscure
-                                      ? const ValueKey('spending-total-obscured')
-                                      : null,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -1.0,
-                                    color: colors.textPrimary,
+                                  const SizedBox(height: 4),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      obscure
+                                          ? '••••'
+                                          : formatGs(selectedSegment.amount),
+                                      key: obscure
+                                          ? const ValueKey('spending-total-obscured')
+                                          : null,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -1.0,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${selectedSegment.percentage} % de lo gastado',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 12,
-                                    color: colors.textTertiary,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${selectedSegment.percentage} % de lo gastado',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      color: colors.textTertiary,
+                                    ),
                                   ),
-                                ),
-                              ] else ...[
-                                Text(
-                                  'Gastado en $monthNameLower',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 12.5,
-                                    color: colors.textSecondary,
+                                ] else ...[
+                                  Text(
+                                    'Gastado en $monthNameLower',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12.5,
+                                      color: colors.textSecondary,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  obscure ? '••••' : formatGs(monthTotal),
-                                  key: obscure
-                                      ? const ValueKey('spending-total-obscured')
-                                      : null,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -1.0,
-                                    color: colors.textPrimary,
+                                  const SizedBox(height: 4),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      obscure ? '••••' : formatGs(monthTotal),
+                                      key: obscure
+                                          ? const ValueKey('spending-total-obscured')
+                                          : null,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -1.0,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),
