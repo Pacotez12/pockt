@@ -8,6 +8,7 @@ import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/capture/data/capture_service.dart';
+import 'package:pockt/features/capture/data/email_capture_service.dart';
 import 'package:pockt/features/onboarding/domain/onboarding_check.dart';
 import 'package:pockt/features/onboarding/ui/onboarding_flow.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
@@ -41,6 +42,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runSuggestionGenerator();
       _runSmsCaptureSync();
+      _runEmailCaptureSync();
       _runBackupIfDue();
     });
   }
@@ -61,6 +63,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
       ref.read(amountsRevealedProvider.notifier).reset();
       _runSuggestionGenerator();
       _runSmsCaptureSync();
+      _runEmailCaptureSync();
       _runBackupIfDue();
     }
   }
@@ -79,6 +82,12 @@ class _PocktAppState extends ConsumerState<PocktApp>
   void _runSmsCaptureSync() {
     unawaited(
       ref.read(captureServiceProvider).syncInbox().catchError((_) => 0),
+    );
+  }
+
+  void _runEmailCaptureSync() {
+    unawaited(
+      ref.read(emailCaptureServiceProvider).sync().catchError((_) => 0),
     );
   }
 

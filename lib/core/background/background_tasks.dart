@@ -3,15 +3,66 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/capture/data/email_capture_service.dart';
+import 'package:pockt/features/capture/data/email_source.dart';
 import 'package:pockt/features/loans/domain/loan_reminders.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:pockt/features/widget/home_widget_bridge.dart';
-import 'package:pockt/features/capture/data/email_source.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:workmanager/workmanager.dart';
+
+class BackgroundDeps {
+  final AppDatabase db;
+  final SettingsRepository settingsRepo;
+  final Notifier notifier;
+  final TransactionsRepository txRepo;
+  final DayMarksRepository marksRepo;
+  final ReminderScheduler scheduler;
+  final SuggestionGenerator generator;
+  final EmailCaptureService? emailService;
+  final DateTime now;
+
+  BackgroundDeps({
+    required this.db,
+    required this.settingsRepo,
+    required this.notifier,
+    required this.txRepo,
+    required this.marksRepo,
+    required this.scheduler,
+    required this.generator,
+    this.emailService,
+    required this.now,
+  });
+}
+
+Future<bool> runBackgroundTask(String task, BackgroundDeps deps) async {
+  if (task == 'pockt-email') {
+    if (deps.emailService != null) {
+      await deps.emailService!.sync();
+    }
+    return true;
+  }
+
+  // 1. Generar sugerencias pendientes de cobro y recurrentes
+  await deps.generator.run();
+
+  // 2. Reprogramar recordatorios según el estado actual
+  await deps.scheduler.reschedule(nowLocal: deps.now);
+  await rescheduleLoanReminders(
+    db: deps.db,
+    notifier: deps.notifier,
+    settingsRepo: deps.settingsRepo,
+    nowLocal: deps.now,
+  );
+
+  // 3. Actualizar widget de pantalla de inicio
+  await HomeWidgetBridge.update(db: deps.db, nowLocal: deps.now);
+
+  return true;
+}
 
 /// Punto de entrada top-level ejecutado en segundo plano por Workmanager.
 @pragma('vm:entry-point')
@@ -30,50 +81,28 @@ void callbackDispatcher() {
       final scheduler =
           ReminderScheduler(notifier, txRepo, marksRepo, settingsRepo);
       final now = DateTime.now();
-
-      if (task == 'pockt-email-probe') {
-        final emailSource = const AndroidEmailSource();
-        try {
-          final emails = await emailSource.fetchSince(
-            now.subtract(const Duration(days: 7)),
-          );
-          await notifier.show(
-            'Gmail en segundo plano',
-            '${emails.length} correos',
-          );
-        } on GmailReconnectRequired {
-          await notifier.show(
-            'Gmail en segundo plano',
-            'necesita reconectar',
-          );
-        } catch (e) {
-          await notifier.show(
-            'Gmail en segundo plano',
-            'error: $e',
-          );
-        }
-        await db.close();
-        return true;
-      }
-
-      // 1. Generar sugerencias pendientes de cobro y recurrentes
       final generator = SuggestionGenerator(db, notifier, clock: () => now);
-      await generator.run();
-
-      // 2. Reprogramar recordatorios según el estado actual
-      await scheduler.reschedule(nowLocal: now);
-      await rescheduleLoanReminders(
+      final emailService = EmailCaptureService(
         db: db,
         notifier: notifier,
-        settingsRepo: settingsRepo,
-        nowLocal: now,
+        source: const AndroidEmailSource(),
       );
 
-      // 3. Actualizar widget de pantalla de inicio
-      await HomeWidgetBridge.update(db: db, nowLocal: now);
+      final deps = BackgroundDeps(
+        db: db,
+        settingsRepo: settingsRepo,
+        notifier: notifier,
+        txRepo: txRepo,
+        marksRepo: marksRepo,
+        scheduler: scheduler,
+        generator: generator,
+        emailService: emailService,
+        now: now,
+      );
 
+      final ok = await runBackgroundTask(task, deps);
       await db.close();
-      return true;
+      return ok;
     } catch (e) {
       debugPrint('Error en callbackDispatcher de Workmanager: $e');
       return false;
@@ -83,8 +112,7 @@ void callbackDispatcher() {
 
 /// Inicializa Workmanager y registra las tareas periódicas:
 /// - `pockt-daily` cada 12 horas (recurrentes, recordatorios y widget).
-/// El backup ya no corre en segundo plano (se hace al abrir la app, spec §7):
-/// se cancela la tarea `pockt-backup` que versiones anteriores registraron.
+/// - `pockt-email` cada 15 minutos (lectura de correos con conexión a internet).
 Future<void> initBackgroundTasks() async {
   try {
     await Workmanager().initialize(callbackDispatcher);
@@ -97,7 +125,17 @@ Future<void> initBackgroundTasks() async {
         networkType: NetworkType.notRequired,
       ),
     );
+    await Workmanager().registerPeriodicTask(
+      'pockt-email',
+      'pockt-email',
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+      ),
+    );
     await Workmanager().cancelByUniqueName('pockt-backup');
+    await Workmanager().cancelByUniqueName('pockt-email-probe');
   } catch (e) {
     debugPrint('Workmanager no pudo inicializarse: $e');
   }
