@@ -140,9 +140,10 @@ class _CategoryArcState extends ConsumerState<CategoryArc> {
                     ),
                   ),
                   Positioned(
-                    top: 54,
-                    left: 20,
-                    right: 20,
+                    // Más abajo y angosto: el monto queda en la parte ancha del arco.
+                    top: 70,
+                    left: 36,
+                    right: 36,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
