@@ -31,41 +31,51 @@ void main() {
   // Captura todos los frames reales (no solo los de cada pump).
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
+  // --dart-define=PERF_ONLY=detalle_dia corre solo ese escenario (para aislar regresiones).
+  const only = String.fromEnvironment('PERF_ONLY');
+  bool runs(String key) => only.isEmpty || only.split(',').contains(key);
+
   testWidgets('medicion de rendimiento por escenario', (tester) async {
     // Base en memoria: la medición corre en el teléfono real y no debe
     // escribir datos de prueba en la base real del usuario.
     tz.initializeTimeZones();
     await initLocalZone();
     final db = AppDatabase.forTesting(
-      DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true),
+      DatabaseConnection(
+        NativeDatabase.memory(),
+        closeStreamsSynchronously: true,
+      ),
     );
 
     // Base vacía: sin esto aparece el primer uso en vez del Inicio.
     await SettingsRepository(db).set(SettingsKeys.onboardingDone, 'true');
 
     // Warm-up inicial previo para compilar shaders y pipelines de Vulkan/Impeller
-    await tester.pumpWidget(ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db)],
-      child: const PocktApp(),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: const PocktApp(),
+      ),
+    );
     await settle(tester, const Duration(milliseconds: 1200));
 
     // 1. Escenario: apertura (arranque con la animación del orbe y logotipo)
     PocktSplash.resetForTesting();
-    await binding.traceAction(
-      () async {
-        await tester.pumpWidget(ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: PocktApp(key: UniqueKey()),
-        ));
+    if (runs('apertura')) {
+      await binding.traceAction(() async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [databaseProvider.overrideWithValue(db)],
+            child: PocktApp(key: UniqueKey()),
+          ),
+        );
         await settle(tester, const Duration(milliseconds: 1200));
-      },
-      reportKey: 'apertura',
-    );
+      }, reportKey: 'apertura');
+    }
 
     // 2. Escenario: carga (＋ → categoría → teclado → guardar)
-    await binding.traceAction(
-      () async {
+    if (runs('carga')) {
+      await binding.traceAction(() async {
         final plusButton = find.byKey(const ValueKey('shell-plus-button'));
         await tester.tap(plusButton);
         await settle(tester, const Duration(milliseconds: 400));
@@ -84,13 +94,12 @@ void main() {
         final saveButton = find.text('Guardar');
         await tester.tap(saveButton);
         await settle(tester, const Duration(milliseconds: 600));
-      },
-      reportKey: 'carga',
-    );
+      }, reportKey: 'carga');
+    }
 
     // 3. Escenario: detalle_dia (tocar día y cerrar)
-    await binding.traceAction(
-      () async {
+    if (runs('detalle_dia')) {
+      await binding.traceAction(() async {
         final dayCell = find.text('1');
         await tester.tap(dayCell);
         await settle(tester, const Duration(milliseconds: 400));
@@ -98,25 +107,23 @@ void main() {
         // Cerrar la hoja de detalle tocando el fondo exterior
         await tester.tapAt(const Offset(20, 20));
         await settle(tester, const Duration(milliseconds: 400));
-      },
-      reportKey: 'detalle_dia',
-    );
+      }, reportKey: 'detalle_dia');
+    }
 
     // 4. Escenario: cambio_mes (deslizar 3 meses)
-    await binding.traceAction(
-      () async {
+    if (runs('cambio_mes')) {
+      await binding.traceAction(() async {
         final calendarArea = find.byType(HeatCalendar);
         for (var i = 0; i < 3; i++) {
           await tester.drag(calendarArea, const Offset(-300, 0));
           await settle(tester, const Duration(milliseconds: 400));
         }
-      },
-      reportKey: 'cambio_mes',
-    );
+      }, reportKey: 'cambio_mes');
+    }
 
     // 5. Escenario: reportes (abrir Reportes y deslizar las 4 vistas)
-    await binding.traceAction(
-      () async {
+    if (runs('reportes')) {
+      await binding.traceAction(() async {
         final reportesTab = find.text('Reportes');
         await tester.tap(reportesTab);
         await settle(tester, const Duration(milliseconds: 400));
@@ -131,20 +138,18 @@ void main() {
         final inicioTab = find.text('Inicio');
         await tester.tap(inicioTab);
         await settle(tester, const Duration(milliseconds: 400));
-      },
-      reportKey: 'reportes',
-    );
+      }, reportKey: 'reportes');
+    }
 
     // 6. Escenario: scroll_inicio (scroll del Inicio con la barra de vidrio encima)
-    await binding.traceAction(
-      () async {
+    if (runs('scroll_inicio')) {
+      await binding.traceAction(() async {
         final scrollable = find.byType(SingleChildScrollView);
         await tester.drag(scrollable, const Offset(0, -350));
         await settle(tester, const Duration(milliseconds: 600));
         await tester.drag(scrollable, const Offset(0, 350));
         await settle(tester, const Duration(milliseconds: 600));
-      },
-      reportKey: 'scroll_inicio',
-    );
+      }, reportKey: 'scroll_inicio');
+    }
   });
 }
