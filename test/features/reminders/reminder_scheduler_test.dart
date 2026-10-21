@@ -6,6 +6,7 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/time/local_time.dart';
+import 'package:pockt/features/loans/domain/loan_reminders.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
@@ -114,5 +115,33 @@ void main() {
         .toList();
     expect(todayInsistent.length, 4);
     expect(todayInsistent.map((r) => r.atLocal.hour).toList(), [12, 15, 18, 21]);
+  });
+
+  test('reschedule conserva los avisos de préstamos activos', () async {
+    // Crear un préstamo activo con vencimiento el 15/10 (aviso 2 días antes: 13/10)
+    final loan = Loan(
+      id: 'loan-test-1',
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo Auto',
+      totalAmount: 12000000,
+      installmentAmount: 1000000,
+      installmentsTotal: 12,
+      dueDay: 15,
+      reminderDays: 2,
+      startDate: DateTime(2026, 10, 1),
+      createdAt: nowLocal,
+      updatedAt: nowLocal,
+    );
+    await db.into(db.loans).insert(loan);
+
+    // Ejecutar reschedule de recordatorios
+    await scheduler.reschedule(nowLocal: nowLocal);
+
+    // Debe contener el aviso del préstamo (id: loanNotificationId('loan-test-1'))
+    final loanReminder = fakeNotifier.scheduled.where(
+      (r) => r.notificationId == loanNotificationId('loan-test-1'),
+    );
+    expect(loanReminder, isNotEmpty);
   });
 }

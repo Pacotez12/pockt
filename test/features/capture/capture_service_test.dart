@@ -11,26 +11,7 @@ import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
-class _SpyNotifier implements Notifier {
-  final List<({String title, String body, String? payload})> shown = [];
-
-  @override
-  Future<bool> ensurePermission() async => true;
-
-  @override
-  Future<void> show(String title, String body, {String? payload}) async {
-    shown.add((title: title, body: body, payload: payload));
-  }
-
-  @override
-  Future<void> schedule(dynamic r) async {}
-
-  @override
-  Future<void> cancel(int id) async {}
-
-  @override
-  Future<void> cancelAllReminders() async {}
-}
+class _SpyNotifier extends FakeNotifier {}
 
 void main() {
   setUpAll(() async {

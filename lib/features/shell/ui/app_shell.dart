@@ -2,14 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 import 'package:pockt/core/design/haptics.dart';
+import 'package:pockt/core/notifications/notification_action_handler.dart';
+import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/features/budgets/ui/budgets_screen.dart';
 import 'package:pockt/features/entry/ui/entry_flow.dart';
 import 'package:pockt/features/home/ui/home_screen.dart';
+import 'package:pockt/features/reminders/data/day_marks_repository.dart';
+import 'package:pockt/features/reminders/data/reminder_scheduler.dart';
 import 'package:pockt/features/reports/ui/reports_screen.dart';
 import 'package:pockt/features/safe_to_spend/ui/buy_simulator_sheet.dart';
 import 'package:pockt/features/transactions/ui/transactions_screen.dart';
@@ -27,12 +33,14 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _currentIndex = 0;
   StreamSubscription<Uri?>? _widgetClickSub;
+  StreamSubscription<NotificationResponse>? _notifSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initHomeWidgetLaunch();
+      _initNotificationLaunch();
     });
   }
 
@@ -54,9 +62,46 @@ class _AppShellState extends ConsumerState<AppShell> {
     } catch (_) {}
   }
 
+  Future<void> _initNotificationLaunch() async {
+    final notifier = ref.read(notifierProvider);
+    try {
+      final launchResponse = await notifier.getAppLaunchResponse();
+      if (launchResponse != null && mounted) {
+        await _processNotificationResponse(launchResponse);
+      }
+    } catch (_) {}
+
+    try {
+      _notifSub = notifier.notificationResponses.listen((response) async {
+        if (mounted) {
+          await _processNotificationResponse(response);
+        }
+      }, onError: (_) {});
+    } catch (_) {}
+  }
+
+  Future<void> _processNotificationResponse(
+    NotificationResponse response,
+  ) async {
+    await handleNotificationResponse(
+      response: response,
+      marksRepo: ref.read(dayMarksRepositoryProvider),
+      scheduler: ref.read(reminderSchedulerProvider),
+      notifier: ref.read(notifierProvider),
+      db: ref.read(databaseProvider),
+      nowLocal: DateTime.now(),
+      onOpenEntry: () {
+        if (mounted) {
+          showEntryFlow(context);
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
     _widgetClickSub?.cancel();
+    _notifSub?.cancel();
     super.dispose();
   }
 

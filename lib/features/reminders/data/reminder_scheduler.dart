@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
+import 'package:pockt/features/loans/domain/loan_reminders.dart';
 import 'package:pockt/features/reminders/data/day_marks_repository.dart';
 import 'package:pockt/features/reminders/domain/reminder_plan.dart';
 import 'package:pockt/features/reports/domain/weekly_summary.dart';
@@ -83,6 +84,14 @@ class ReminderScheduler {
 
     // 7. Programar resumen semanal
     await scheduleWeeklySummary(
+      db: txRepo.db,
+      notifier: notifier,
+      settingsRepo: settingsRepo,
+      nowLocal: nowLocal,
+    );
+
+    // 8. Programar avisos de préstamos
+    await rescheduleLoanReminders(
       db: txRepo.db,
       notifier: notifier,
       settingsRepo: settingsRepo,

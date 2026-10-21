@@ -64,44 +64,49 @@ Future<bool> runBackgroundTask(String task, BackgroundDeps deps) async {
   return true;
 }
 
+/// Crea e inicializa las dependencias necesarias para tareas en segundo plano
+/// (Workmanager, handlers de notificaciones, etc.).
+Future<BackgroundDeps> createBackgroundDeps({DateTime? nowLocal}) async {
+  // El isolate de fondo no comparte la base de zonas cargada en main().
+  tz.initializeTimeZones();
+  await initLocalZone();
+  final db = AppDatabase();
+  final settingsRepo = SettingsRepository(db);
+
+  final notifier = LocalNotifier();
+  final txRepo = TransactionsRepository(db, notifier: notifier);
+  final marksRepo = DayMarksRepository(db);
+  final scheduler =
+      ReminderScheduler(notifier, txRepo, marksRepo, settingsRepo);
+  final now = nowLocal ?? DateTime.now();
+  final generator = SuggestionGenerator(db, notifier, clock: () => now);
+  final emailService = EmailCaptureService(
+    db: db,
+    notifier: notifier,
+    source: const AndroidEmailSource(),
+  );
+
+  return BackgroundDeps(
+    db: db,
+    settingsRepo: settingsRepo,
+    notifier: notifier,
+    txRepo: txRepo,
+    marksRepo: marksRepo,
+    scheduler: scheduler,
+    generator: generator,
+    emailService: emailService,
+    now: now,
+  );
+}
+
 /// Punto de entrada top-level ejecutado en segundo plano por Workmanager.
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      // El isolate de fondo no comparte la base de zonas cargada en main().
-      tz.initializeTimeZones();
-      await initLocalZone();
-      final db = AppDatabase();
-      final settingsRepo = SettingsRepository(db);
-
-      final notifier = LocalNotifier();
-      final txRepo = TransactionsRepository(db, notifier: notifier);
-      final marksRepo = DayMarksRepository(db);
-      final scheduler =
-          ReminderScheduler(notifier, txRepo, marksRepo, settingsRepo);
-      final now = DateTime.now();
-      final generator = SuggestionGenerator(db, notifier, clock: () => now);
-      final emailService = EmailCaptureService(
-        db: db,
-        notifier: notifier,
-        source: const AndroidEmailSource(),
-      );
-
-      final deps = BackgroundDeps(
-        db: db,
-        settingsRepo: settingsRepo,
-        notifier: notifier,
-        txRepo: txRepo,
-        marksRepo: marksRepo,
-        scheduler: scheduler,
-        generator: generator,
-        emailService: emailService,
-        now: now,
-      );
-
+      final deps = await createBackgroundDeps();
       final ok = await runBackgroundTask(task, deps);
-      await db.close();
+      await deps.db.close();
       return ok;
     } catch (e) {
       debugPrint('Error en callbackDispatcher de Workmanager: $e');

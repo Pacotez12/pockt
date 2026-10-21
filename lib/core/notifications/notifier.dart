@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
+import 'package:pockt/core/notifications/notification_action_handler.dart';
 import 'package:pockt/features/reminders/domain/reminder_plan.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -9,6 +12,8 @@ abstract class Notifier {
   Future<void> cancel(int id);
   Future<void> cancelAllReminders();
   Future<bool> ensurePermission();
+  Stream<NotificationResponse> get notificationResponses;
+  Future<NotificationResponse?> getAppLaunchResponse();
 }
 
 class LocalNotifier implements Notifier {
@@ -16,8 +21,25 @@ class LocalNotifier implements Notifier {
   bool _initialized = false;
   int _nextId = 0;
 
+  static final StreamController<NotificationResponse> _responseController =
+      StreamController<NotificationResponse>.broadcast();
+
   LocalNotifier({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+
+  @override
+  Stream<NotificationResponse> get notificationResponses =>
+      _responseController.stream;
+
+  @override
+  Future<NotificationResponse?> getAppLaunchResponse() async {
+    await _init();
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details != null && details.didNotificationLaunchApp) {
+      return details.notificationResponse;
+    }
+    return null;
+  }
 
   Future<void> _init() async {
     if (_initialized) return;
@@ -25,7 +47,14 @@ class LocalNotifier implements Notifier {
       'ic_launcher_monochrome',
     );
     const initSettings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        _responseController.add(response);
+      },
+      onDidReceiveBackgroundNotificationResponse:
+          notificationBackgroundResponseHandler,
+    );
     _initialized = true;
   }
 
@@ -118,6 +147,26 @@ class FakeNotifier implements Notifier {
   bool cancelledAll = false;
   bool hasPermission = true;
   int permissionRequestedCount = 0;
+
+  final StreamController<NotificationResponse> _responseController =
+      StreamController<NotificationResponse>.broadcast();
+  NotificationResponse? appLaunchResponse;
+
+  @override
+  Stream<NotificationResponse> get notificationResponses =>
+      _responseController.stream;
+
+  @override
+  Future<NotificationResponse?> getAppLaunchResponse() async =>
+      appLaunchResponse;
+
+  void emitResponse(NotificationResponse response) {
+    _responseController.add(response);
+  }
+
+  void dispose() {
+    _responseController.close();
+  }
 
   @override
   Future<void> show(String title, String body, {String? payload}) async {
