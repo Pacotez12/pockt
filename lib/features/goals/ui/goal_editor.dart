@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/haptics.dart';
@@ -44,7 +45,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
     if (goal != null && mounted) {
       setState(() {
         _nameController.text = goal.name;
-        _amountController.text = goal.targetAmount.toString();
+        _amountController.text = formatGs(goal.targetAmount, symbol: false);
         _selectedIcon = goal.icon;
         _targetDate = goal.targetDate;
         _hasTargetDate = goal.targetDate != null;
@@ -243,6 +244,7 @@ class _GoalEditorScreenState extends ConsumerState<GoalEditorScreen> {
                         key: const ValueKey('goal-amount-input'),
                         controller: _amountController,
                         keyboardType: TextInputType.number,
+                        inputFormatters: const [ThousandsInputFormatter()],
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 18,

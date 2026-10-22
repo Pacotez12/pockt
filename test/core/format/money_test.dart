@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/format/money.dart';
 
@@ -24,5 +25,18 @@ void main() {
   test('keypadValue', () {
     expect(keypadValue(''), 0);
     expect(keypadValue('28500'), 28500);
+  });
+
+  test('ThousandsInputFormatter agrega puntos de miles mientras se escribe', () {
+    const f = ThousandsInputFormatter();
+    TextEditingValue type(String t) => f.formatEditUpdate(
+          TextEditingValue.empty,
+          TextEditingValue(text: t, selection: TextSelection.collapsed(offset: t.length)),
+        );
+    expect(type('10000000').text, '10.000.000');
+    expect(type('10000000').selection.baseOffset, 10);
+    expect(type('1.0000').text, '10.000');
+    expect(type('999').text, '999');
+    expect(type('').text, '');
   });
 }
