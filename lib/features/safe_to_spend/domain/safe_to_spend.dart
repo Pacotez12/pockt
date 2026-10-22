@@ -195,7 +195,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
 
   return db
       .customSelect(
-        'SELECT 1',
+        'SELECT 1 /* safe_to_spend */',
         readsFrom: {
           db.transactions,
           db.goals,

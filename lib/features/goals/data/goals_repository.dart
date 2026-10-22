@@ -179,7 +179,10 @@ class GoalsRepository {
   Stream<List<GoalWithProgress>> watchActiveWithProgress({DateTime? now}) {
     // Escucha cambios tanto en goals como en goalContributions
     return _db
-        .customSelect('SELECT 1', readsFrom: {_db.goals, _db.goalContributions})
+        .customSelect(
+          'SELECT 1 /* goals_with_progress */',
+          readsFrom: {_db.goals, _db.goalContributions},
+        )
         .watch()
         .asyncMap((_) async {
           final active =

@@ -72,7 +72,7 @@ class IncomeScheduleRepository {
   Stream<int> watchCarryOverBefore(DateTime periodStartLocalDay) {
     return _db
         .customSelect(
-          'SELECT 1',
+          'SELECT 1 /* carry_over_before */',
           readsFrom: {
             _db.transactions,
             _db.goalContributions,
