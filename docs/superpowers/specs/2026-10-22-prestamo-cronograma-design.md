@@ -59,3 +59,29 @@ Parser (formatos válidos, errores por línea, números no consecutivos), migrac
 v14→v15, `calculateLoanProgress` con cronograma (próxima cuota, extras, cierre),
 aviso con cronograma, precarga del pago, editor (pegar, resumen, error, editar y
 reemplazar), detalle (tarjetas y "Ver las N"), borrado en cascada y wipe.
+
+## Agregado 2026-10-22: cuotas ya pagadas y arreglos de editores
+
+Boceto validado: `.superpowers/brainstorm/102422-1792671419/content/prestamo-ya-pagadas.html`.
+
+1. **Cuotas ya pagadas antes de Pockt.** Columna nueva `Loans.paidBeforeCount`
+   (int, default 0; esquema v16). Solo para préstamos en cuotas. En el editor,
+   un selector −/+ "Cuotas que ya pagaste antes de usar Pockt" con la ayuda
+   "Cuentan como pagadas (Gs. X) pero no como gasto". Esas cuotas suman a
+   `installmentsPaid` y a `paid` sin crear movimientos: con monto fijo valen
+   `paidBeforeCount × installmentAmount`; con cronograma, la suma de las primeras
+   `paidBeforeCount` cuotas. La asignación por orden empieza después de ellas.
+   El historial de pagos muestra una fila informativa "Cuotas 1–k · antes de
+   Pockt" (o "Cuota 1 · antes de Pockt") con el monto, sin fecha ni acciones.
+   No puede superar la cantidad de cuotas.
+2. **"Debo / Presté" centrados**: título corto ("Debo", "Presté") con subtítulo
+   chico ("me prestaron / cuotas", "me deben"), ambos centrados.
+3. **Cronograma**: el título aparece una sola vez (sin label duplicado en el
+   campo); "1 cuota" en singular en el resumen.
+4. **Descartar**: si el editor de préstamo tiene cambios sin guardar, atrás
+   (botón o gesto) pide "¿Descartar el préstamo?" con "Seguir editando" y
+   "Descartar".
+5. **Recurrentes: cualquier día.** La frecuencia mensual muestra una grilla
+   con los días 1–31 en lugar de los chips 1/5/10/15/20/25/28/30; ayuda
+   "29, 30 y 31: en meses más cortos se usa el último día" (verificar que el
+   cálculo de próxima fecha ya lo haga).
