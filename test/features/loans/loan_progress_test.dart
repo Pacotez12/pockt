@@ -395,5 +395,33 @@ void main() {
         'Pagado · 3 cuotas',
       );
     });
+  
+    test('cuotas ya pagadas con monto fijo: la próxima es la siguiente según la fecha de inicio', () {
+      // Caso real: 18 cuotas el 25, cuota 1 (25/10) ya pagada antes de Pockt.
+      final moto = Loan(
+        id: 'moto',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo moto',
+        totalAmount: 6390000,
+        installmentAmount: 355000,
+        installmentsTotal: 18,
+        dueDay: 25,
+        paidBeforeCount: 1,
+        startDate: DateTime(2026, 10, 22),
+        reminderDays: 2,
+        createdAt: DateTime(2026, 10, 22),
+        updatedAt: DateTime(2026, 10, 22),
+      );
+      final p = calculateLoanProgress(
+        loan: moto,
+        payments: const [],
+        now: DateTime(2026, 10, 22),
+      );
+      expect(p.installmentsPaid, 1);
+      expect(p.balance, 6035000);
+      expect(p.nextDueDate, DateTime(2026, 11, 25));
+      expect(p.estimatedEndDate, DateTime(2028, 3, 25));
+    });
   });
 }

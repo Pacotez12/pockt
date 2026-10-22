@@ -348,4 +348,30 @@ void main() {
       expect(notifier.scheduled, isEmpty);
     });
   });
+
+  test('cuotas ya pagadas con monto fijo: el aviso es de la cuota siguiente', () {
+    final moto = Loan(
+      id: 'moto',
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo moto',
+      totalAmount: 6390000,
+      installmentAmount: 355000,
+      installmentsTotal: 18,
+      dueDay: 25,
+      paidBeforeCount: 1,
+      startDate: DateTime(2026, 10, 22),
+      reminderDays: 2,
+      createdAt: DateTime(2026, 10, 22),
+      updatedAt: DateTime(2026, 10, 22),
+    );
+    final r = planLoanReminder(
+      loan: moto,
+      payments: const [],
+      nowLocal: DateTime(2026, 10, 22, 10),
+    );
+    expect(r, isNotNull);
+    expect(r!.atLocal, DateTime(2026, 11, 23, 9));
+    expect(r.title, 'Vence la cuota 2 de 18');
+  });
 }

@@ -75,6 +75,7 @@ PlannedReminder? planLoanReminder({
   if (loan.closedAt != null) return null;
   if (loan.reminderDays <= 0) return null;
 
+  schedule = effectiveSchedule(loan, schedule);
   final hasSchedule = schedule != null && schedule.isNotEmpty;
   if (!hasSchedule && loan.dueDay == null) return null;
 

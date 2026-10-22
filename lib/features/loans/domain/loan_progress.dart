@@ -38,6 +38,45 @@ class LoanProgress {
   });
 }
 
+/// Cronograma a usar en los cálculos. Un préstamo de cuota fija con cuotas
+/// ya pagadas antes de Pockt no tiene filas propias: se arma uno con la cuota
+/// fija, empezando en el primer vencimiento desde la fecha de inicio, para saber
+/// qué cuota y qué fecha siguen.
+List<LoanInstallment>? effectiveSchedule(
+  Loan loan,
+  List<LoanInstallment>? schedule,
+) {
+  if (schedule != null && schedule.isNotEmpty) return schedule;
+  final amount = loan.installmentAmount;
+  final count = loan.installmentsTotal;
+  final dueDay = loan.dueDay;
+  if (loan.paidBeforeCount <= 0 ||
+      loan.kind != LoanKind.installments ||
+      amount == null ||
+      count == null ||
+      dueDay == null) {
+    return schedule;
+  }
+  DateTime dueIn(int year, int month) =>
+      DateTime(year, month, min(dueDay, DateTime(year, month + 1, 0).day));
+  final start = DateTime(
+    loan.startDate.year,
+    loan.startDate.month,
+    loan.startDate.day,
+  );
+  var first = dueIn(start.year, start.month);
+  if (first.isBefore(start)) first = dueIn(start.year, start.month + 1);
+  return [
+    for (var i = 0; i < count; i++)
+      LoanInstallment(
+        loanId: loan.id,
+        number: i + 1,
+        dueDate: dueIn(first.year, first.month + i),
+        amount: amount,
+      ),
+  ];
+}
+
 /// Calcula el avance de un préstamo a partir de sus pagos ligados.
 LoanProgress calculateLoanProgress({
   required Loan loan,
@@ -45,6 +84,7 @@ LoanProgress calculateLoanProgress({
   List<LoanInstallment>? schedule,
   DateTime? now,
 }) {
+  schedule = effectiveSchedule(loan, schedule);
   final currentNow = now ?? DateTime.now();
 
   // Filtrar movimientos válidos (no eliminados)
