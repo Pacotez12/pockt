@@ -14,7 +14,7 @@ Una app de finanzas personales para Android, **rápida para anotar y hermosa de 
 [![Dart](https://img.shields.io/badge/Dart-3.13-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](https://www.android.com)
 [![Local-first](https://img.shields.io/badge/datos-local--first-FF3D7F)](#privacidad)
-[![Estado](https://img.shields.io/badge/versión-1.0-FF8A3D)](#estado)
+[![Estado](https://img.shields.io/badge/versión-1.1-FF8A3D)](#estado)
 
 <br>
 
@@ -53,7 +53,7 @@ Pockt nace de una idea simple: si anotar un gasto tarda, dejás de anotarlo. Por
 - **Saldo arrastrado**: si te pasaste en la quincena, la siguiente lo descuenta; si te sobró, Pockt te ofrece pasarlo a una meta o sumarlo.
 - **Metas de ahorro**: objetivo, fecha, ritmo necesario y proyección a tu ritmo real ("a tiempo" o "N meses tarde"). Los aportes se apartan de lo que te queda y aparecen en Movimientos sin contar como gasto.
 - **¿Lo compro?**: mantené apretado el **＋** y mirá el antes y el después de una compra: cuánto podrías gastar hoy, cómo queda el presupuesto y cuántos días se atrasan tus metas. Con tono suave, normal o picante.
-- **Préstamos y cuotas**: lo que debés, lo que prestaste y las compras en cuotas, con avance, pagos extra y aviso de vencimiento. Préstamos y Metas tienen su botón en la barra de arriba del inicio y se abren en una hoja con todo a mano.
+- **Préstamos y cuotas**: lo que debés, lo que prestaste y las compras en cuotas, con avance, pagos extra y aviso de vencimiento. Los préstamos de banco con cuota variable se cargan pegando el cronograma, y si ya pagaste cuotas antes de usar Pockt cuentan para el avance sin sumar como gasto. Préstamos y Metas tienen su botón en la barra de arriba del inicio y se abren en una hoja con todo a mano.
 - **Sueldo con descuentos**: bruto, descuentos fijos o en porcentaje, y el neto de cada cobro.
 - **Atajos de carga**: tus gastos repetidos (el almuerzo, el Bolt) a un toque.
 - **Eventos**: agrupá los gastos de un viaje o una fiesta y mirá cuánto costó.
@@ -144,6 +144,7 @@ El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/
 | **Plan 8** | Inicio "Arco de hoy" y refactor de pantallas grandes | ✅ |
 | **Plan 9** | Captura por correo (Gmail): transferencias enviadas y recibidas, pagos de servicios, personas recordadas | ✅ |
 | **Plan 10** | Inicio con el arco del mes por categoría, franja de Podés gastar hoy, calendario a la vista y Préstamos y Metas en la barra de arriba | ✅ v1.0 |
+| **v1.1** | Préstamos con cronograma de cuotas variables, cuotas ya pagadas antes de Pockt, acciones de la notificación de recordatorio, cualquier día del mes en recurrentes y arreglos | ✅ v1.1 |
 | **Después** | Otras monedas e idiomas (hoy: guaraníes y español) | 💡 |
 
 ## Desarrollo

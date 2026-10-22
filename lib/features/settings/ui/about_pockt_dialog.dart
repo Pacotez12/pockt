@@ -5,7 +5,7 @@ import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
 
 void showAboutPocktDialog(BuildContext context) async {
-  String version = '1.0.0';
+  String version = '1.1.0';
   try {
     final info = await PackageInfo.fromPlatform();
     version = info.version;
