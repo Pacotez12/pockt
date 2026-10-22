@@ -101,6 +101,37 @@ class RecurringRepository {
     DateTime? nextDueDate,
     bool? active,
   }) async {
+    final scheduleChanged = frequency != null ||
+        dayOfMonth != null ||
+        dayOfWeek != null ||
+        monthOfYear != null;
+    if (nextDueDate == null && scheduleChanged) {
+      // Recalcula dentro del mismo período de la próxima fecha actual, sin
+      // volver a uno ya confirmado ni ir antes de hoy.
+      final rule = await (_db.select(_db.recurringRules)
+            ..where((t) => t.id.equals(id)))
+          .getSingle();
+      final freq = frequency ??
+          RecurrenceFrequency.values.firstWhere(
+            (f) => f.name == rule.frequency,
+            orElse: () => RecurrenceFrequency.monthly,
+          );
+      final old = rule.nextDueDate;
+      final periodBase = switch (freq) {
+        RecurrenceFrequency.monthly => DateTime(old.year, old.month, 0),
+        RecurrenceFrequency.weekly => DateTime(old.year, old.month, old.day - 7),
+        RecurrenceFrequency.yearly => DateTime(old.year, 1, 0),
+      };
+      final today = _todayLocal();
+      final yesterday = DateTime(today.year, today.month, today.day - 1);
+      nextDueDate = nextOccurrence(
+        periodBase.isAfter(yesterday) ? periodBase : yesterday,
+        frequency: freq,
+        dayOfMonth: dayOfMonth ?? rule.dayOfMonth,
+        dayOfWeek: dayOfWeek ?? rule.dayOfWeek,
+        monthOfYear: monthOfYear ?? rule.monthOfYear,
+      );
+    }
     await (_db.update(_db.recurringRules)..where((t) => t.id.equals(id))).write(
       RecurringRulesCompanion(
         name: Value.absentIfNull(name),

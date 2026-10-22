@@ -110,4 +110,29 @@ void main() {
     await repo.delete(id);
     expect(await repo.watchAll().first, isEmpty);
   });
+
+  test('cambiar el día del mes recalcula la próxima fecha en el mismo período', () async {
+    // Hoy (reloj) es 15/10.
+    final id = await repo.add(
+      name: 'Suscripción IA',
+      type: TxType.expense,
+      amount: 131000,
+      categoryId: comidaId,
+      frequency: RecurrenceFrequency.monthly,
+      dayOfMonth: 20,
+    );
+    Future<DateTime> next() async =>
+        (await repo.watchAll().first).firstWhere((r) => r.id == id).nextDueDate;
+
+    expect(await next(), DateTime(2026, 10, 20));
+    await repo.update(id, dayOfMonth: 25);
+    expect(await next(), DateTime(2026, 10, 25));
+    await repo.update(id, dayOfMonth: 10); // el 10/10 ya pasó
+    expect(await next(), DateTime(2026, 11, 10));
+
+    // Octubre ya confirmado: la próxima es noviembre y sigue en noviembre.
+    await repo.update(id, nextDueDate: DateTime(2026, 11, 20), dayOfMonth: 20);
+    await repo.update(id, dayOfMonth: 21);
+    expect(await next(), DateTime(2026, 11, 21));
+  });
 }
