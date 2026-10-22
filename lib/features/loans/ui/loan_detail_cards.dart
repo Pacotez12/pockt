@@ -1,7 +1,11 @@
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pockt/core/db/app_database.dart';
+import 'package:pockt/core/design/haptics.dart';
+import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/format/money.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/design/glass.dart';
@@ -274,6 +278,317 @@ class LoanPaymentRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class LoanNextInstallmentCard extends StatelessWidget {
+  final Loan loan;
+  final LoanProgress progress;
+
+  const LoanNextInstallmentCard({
+    super.key,
+    required this.loan,
+    required this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final nextInst = progress.nextInstallment;
+    if (nextInst == null) return const SizedBox.shrink();
+
+    final k = nextInst.number;
+    final total = loan.installmentsTotal ?? k;
+    final amountFormatted = formatGs(nextInst.amount);
+    final dueFormatted =
+        '${nextInst.dueDate.day.toString().padLeft(2, '0')}/${nextInst.dueDate.month.toString().padLeft(2, '0')}';
+
+    final days = progress.daysUntilNextDue;
+    final String daysText;
+    if (days != null) {
+      if (days > 1) {
+        daysText = 'en $days días';
+      } else if (days == 1) {
+        daysText = 'mañana';
+      } else if (days == 0) {
+        daysText = 'hoy';
+      } else {
+        daysText = 'hace ${-days} días';
+      }
+    } else {
+      daysText = '';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.glassFill,
+        borderRadius: BorderRadius.circular(PocktRadii.xl),
+        border: Border.all(
+          color: colors.brandStart.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Próxima cuota · $k de $total',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textSecondary,
+                ),
+              ),
+              if (daysText.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colors.textPrimary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(PocktRadii.s),
+                  ),
+                  child: Text(
+                    daysText,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                amountFormatted,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: colors.textPrimary,
+                ),
+              ),
+              Text(
+                'vence $dueFormatted',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LoanScheduleCard extends StatefulWidget {
+  final Loan loan;
+  final LoanProgress progress;
+  final List<LoanInstallment> schedule;
+
+  const LoanScheduleCard({
+    super.key,
+    required this.loan,
+    required this.progress,
+    required this.schedule,
+  });
+
+  @override
+  State<LoanScheduleCard> createState() => _LoanScheduleCardState();
+}
+
+class _LoanScheduleCardState extends State<LoanScheduleCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final schedule = widget.schedule;
+    if (schedule.isEmpty) return const SizedBox.shrink();
+
+    final totalCount = schedule.length;
+    final currentIdx = widget.progress.installmentsPaid;
+
+    List<LoanInstallment> visibleItems;
+    if (_isExpanded || totalCount <= 5) {
+      visibleItems = schedule;
+    } else {
+      final startIndex = max(0, min(currentIdx - 2, totalCount - 5));
+      visibleItems = schedule.sublist(startIndex, startIndex + 5);
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: BorderRadius.circular(PocktRadii.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Cronograma',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                Text(
+                  '$totalCount cuotas',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: colors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: Column(
+              children: [
+                for (int i = 0; i < visibleItems.length; i++) ...[
+                  _buildInstallmentRow(visibleItems[i], colors),
+                  if (i < visibleItems.length - 1)
+                    Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: colors.glassBorder,
+                    ),
+                ],
+              ],
+            ),
+          ),
+          if (totalCount > 5) ...[
+            const SizedBox(height: 4),
+            Pressable(
+              onTap: () {
+                Haptics.tick();
+                setState(() => _isExpanded = !_isExpanded);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: Text(
+                    _isExpanded ? 'Ver menos' : 'Ver las $totalCount',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.brandStart,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstallmentRow(LoanInstallment inst, PocktColors colors) {
+    final isPaid = inst.number <= widget.progress.installmentsPaid;
+    final isNext = !widget.progress.isClosed &&
+        inst.number == widget.progress.installmentsPaid + 1;
+
+    final dateStr =
+        '${inst.dueDate.day.toString().padLeft(2, '0')}/${inst.dueDate.month.toString().padLeft(2, '0')}/${inst.dueDate.year}';
+    final amountStr = formatGs(inst.amount, symbol: false);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          // Dot indicator
+          if (isPaid)
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.positive.withValues(alpha: 0.20),
+              ),
+              child: Center(
+                child: Icon(
+                  uiIcon('check'),
+                  size: 12,
+                  color: colors.positive,
+                ),
+              ),
+            )
+          else if (isNext)
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: colors.brandStart, width: 2),
+              ),
+            )
+          else
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.textPrimary.withValues(alpha: 0.20),
+                  width: 1.2,
+                ),
+              ),
+            ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Cuota ${inst.number} · $dateStr',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.5,
+                fontWeight: isNext ? FontWeight.w600 : FontWeight.w400,
+                color: isPaid
+                    ? colors.textTertiary
+                    : (isNext ? colors.textPrimary : colors.textSecondary),
+              ),
+            ),
+          ),
+          Text(
+            amountStr,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13,
+              fontWeight: isNext ? FontWeight.w700 : FontWeight.w500,
+              decoration: isPaid ? TextDecoration.lineThrough : null,
+              decorationColor: colors.textTertiary,
+              color: isPaid
+                  ? colors.textTertiary
+                  : (isNext ? colors.textPrimary : colors.textSecondary),
+            ),
+          ),
+        ],
       ),
     );
   }

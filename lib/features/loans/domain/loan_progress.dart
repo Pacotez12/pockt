@@ -18,6 +18,7 @@ class LoanProgress {
   final DateTime? nextDueDate;
   final DateTime? estimatedEndDate;
   final int? daysUntilNextDue;
+  final LoanInstallment? nextInstallment;
 
   const LoanProgress({
     required this.paid,
@@ -29,6 +30,7 @@ class LoanProgress {
     this.nextDueDate,
     this.estimatedEndDate,
     this.daysUntilNextDue,
+    this.nextInstallment,
   });
 }
 
@@ -36,6 +38,7 @@ class LoanProgress {
 LoanProgress calculateLoanProgress({
   required Loan loan,
   required List<Transaction> payments,
+  List<LoanInstallment>? schedule,
   DateTime? now,
 }) {
   final currentNow = now ?? DateTime.now();
@@ -60,57 +63,79 @@ LoanProgress calculateLoanProgress({
   final regularPaymentsCount = relevantPayments
       .where((p) => !isLoanExtraPayment(p))
       .length;
-  final installmentsPaid = loan.installmentsTotal != null
-      ? min(loan.installmentsTotal!, regularPaymentsCount)
+  final totalCount = (schedule != null && schedule.isNotEmpty)
+      ? schedule.length
+      : loan.installmentsTotal;
+  final installmentsPaid = totalCount != null
+      ? min(totalCount, regularPaymentsCount)
       : regularPaymentsCount;
-
-  int? installmentsRemaining;
-  if (loan.installmentAmount != null && loan.installmentAmount! > 0) {
-    installmentsRemaining = (balance / loan.installmentAmount!).ceil();
-  } else if (loan.installmentsTotal != null) {
-    installmentsRemaining = max(0, loan.installmentsTotal! - installmentsPaid);
-  }
 
   final percent = loan.totalAmount > 0
       ? (paid / loan.totalAmount).clamp(0.0, 1.0)
       : 1.0;
 
+  int? installmentsRemaining;
   DateTime? nextDueDate;
   int? daysUntilNextDue;
   DateTime? estimatedEndDate;
+  LoanInstallment? nextInstallment;
 
-  if (loan.dueDay != null && !isClosed) {
-    final today = DateTime(currentNow.year, currentNow.month, currentNow.day);
-    final dueDay = loan.dueDay!;
+  final hasSchedule = schedule != null && schedule.isNotEmpty;
 
-    DateTime makeDate(int year, int month, int targetDay) {
-      final daysInMonth = DateTime(year, month + 1, 0).day;
-      final day = min(targetDay, daysInMonth);
-      return DateTime(year, month, day);
-    }
-
-    final currentMonthDue = makeDate(today.year, today.month, dueDay);
-    // Misma regla que el aviso: una cuota regular pagada este mes la cubre.
-    final paidThisMonth = relevantPayments.any(
-      (p) =>
-          !isLoanExtraPayment(p) &&
-          p.occurredAt.year == today.year &&
-          p.occurredAt.month == today.month,
-    );
-    if (!currentMonthDue.isBefore(today) && !paidThisMonth) {
-      nextDueDate = currentMonthDue;
+  if (hasSchedule) {
+    if (isClosed) {
+      installmentsRemaining = 0;
+      estimatedEndDate = schedule.last.dueDate;
     } else {
-      nextDueDate = makeDate(today.year, today.month + 1, dueDay);
+      installmentsRemaining = max(0, schedule.length - installmentsPaid);
+      if (installmentsPaid < schedule.length) {
+        nextInstallment = schedule[installmentsPaid];
+        nextDueDate = nextInstallment.dueDate;
+        final today = DateTime(currentNow.year, currentNow.month, currentNow.day);
+        daysUntilNextDue = nextDueDate.difference(today).inDays;
+      }
+      estimatedEndDate = schedule.last.dueDate;
+    }
+  } else {
+    if (loan.installmentAmount != null && loan.installmentAmount! > 0) {
+      installmentsRemaining = (balance / loan.installmentAmount!).ceil();
+    } else if (loan.installmentsTotal != null) {
+      installmentsRemaining = max(0, loan.installmentsTotal! - installmentsPaid);
     }
 
-    daysUntilNextDue = nextDueDate.difference(today).inDays;
+    if (loan.dueDay != null && !isClosed) {
+      final today = DateTime(currentNow.year, currentNow.month, currentNow.day);
+      final dueDay = loan.dueDay!;
 
-    if (installmentsRemaining != null && installmentsRemaining > 0) {
-      // Si faltan N cuotas, la última vence N-1 meses después de nextDueDate
-      final endMonth = nextDueDate.month + (installmentsRemaining - 1);
-      final endYear = nextDueDate.year + ((endMonth - 1) ~/ 12);
-      final normalizedMonth = ((endMonth - 1) % 12) + 1;
-      estimatedEndDate = makeDate(endYear, normalizedMonth, dueDay);
+      DateTime makeDate(int year, int month, int targetDay) {
+        final daysInMonth = DateTime(year, month + 1, 0).day;
+        final day = min(targetDay, daysInMonth);
+        return DateTime(year, month, day);
+      }
+
+      final currentMonthDue = makeDate(today.year, today.month, dueDay);
+      // Misma regla que el aviso: una cuota regular pagada este mes la cubre.
+      final paidThisMonth = relevantPayments.any(
+        (p) =>
+            !isLoanExtraPayment(p) &&
+            p.occurredAt.year == today.year &&
+            p.occurredAt.month == today.month,
+      );
+      if (!currentMonthDue.isBefore(today) && !paidThisMonth) {
+        nextDueDate = currentMonthDue;
+      } else {
+        nextDueDate = makeDate(today.year, today.month + 1, dueDay);
+      }
+
+      daysUntilNextDue = nextDueDate.difference(today).inDays;
+
+      if (installmentsRemaining != null && installmentsRemaining > 0) {
+        // Si faltan N cuotas, la última vence N-1 meses después de nextDueDate
+        final endMonth = nextDueDate.month + (installmentsRemaining - 1);
+        final endYear = nextDueDate.year + ((endMonth - 1) ~/ 12);
+        final normalizedMonth = ((endMonth - 1) % 12) + 1;
+        estimatedEndDate = makeDate(endYear, normalizedMonth, dueDay);
+      }
     }
   }
 
@@ -124,6 +149,7 @@ LoanProgress calculateLoanProgress({
     nextDueDate: nextDueDate,
     estimatedEndDate: estimatedEndDate,
     daysUntilNextDue: daysUntilNextDue,
+    nextInstallment: nextInstallment,
   );
 }
 

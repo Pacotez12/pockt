@@ -50,6 +50,44 @@ void main() {
       expect(reminder.body, contains('vence en 2 días'));
     });
 
+    test('aviso con cronograma: título "Vence la cuota k de N" y cuerpo con monto y día', () {
+      final now = DateTime(2026, 12, 1, 10, 0);
+      final loan = Loan(
+        id: 'loan-sched',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo Itaú',
+        totalAmount: 2415000,
+        installmentAmount: null,
+        installmentsTotal: 3,
+        dueDay: 2,
+        reminderDays: 2,
+        startDate: DateTime(2027, 1, 1),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final schedule = [
+        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+      ];
+
+      final reminder = planLoanReminder(
+        loan: loan,
+        payments: const [],
+        schedule: schedule,
+        nowLocal: now,
+        quietStart: quietStart,
+        quietEnd: quietEnd,
+      );
+
+      expect(reminder, isNotNull);
+      // 02 de enero 2027 - 2 días = 31 de diciembre 2026 a las 09:00
+      expect(reminder!.atLocal, DateTime(2026, 12, 31, 9, 0));
+      expect(reminder.title, equals('Vence la cuota 1 de 3'));
+      expect(reminder.body, equals('Préstamo Itaú · Gs. 905.000 el sábado 02/01'));
+    });
+
     test('no se programa si ya se pagó la cuota del mes', () {
       final now = DateTime(2026, 10, 5, 10, 0);
       final loan = Loan(

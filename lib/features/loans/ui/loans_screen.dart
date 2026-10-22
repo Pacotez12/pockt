@@ -369,7 +369,12 @@ class _LoanCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.pockt;
     final payments = ref.watch(loanPaymentsProvider(loan.id)).value ?? [];
-    final progress = calculateLoanProgress(loan: loan, payments: payments);
+    final schedule = ref.watch(loanInstallmentsProvider(loan.id)).value;
+    final progress = calculateLoanProgress(
+      loan: loan,
+      payments: payments,
+      schedule: schedule,
+    );
 
     // Vencimiento etiqueta (solo si está activo y faltan <= 5 días)
     Widget? dueBadge;

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/format/money.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/domain/loan_progress.dart';
 
@@ -34,14 +35,19 @@ class LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
   @override
   void initState() {
     super.initState();
-    final defaultAmount = widget.loan.installmentAmount != null
-        ? min(
-            widget.loan.installmentAmount!,
-            max(1, widget.progress.balance),
-          ).toString()
-        : (widget.progress.balance > 0
-              ? widget.progress.balance.toString()
-              : '');
+    final String defaultAmount;
+    if (!widget.isExtra && widget.progress.nextInstallment != null) {
+      defaultAmount = formatGs(widget.progress.nextInstallment!.amount, symbol: false);
+    } else if (widget.loan.installmentAmount != null) {
+      defaultAmount = min(
+        widget.loan.installmentAmount!,
+        max(1, widget.progress.balance),
+      ).toString();
+    } else if (widget.progress.balance > 0) {
+      defaultAmount = widget.progress.balance.toString();
+    } else {
+      defaultAmount = '';
+    }
 
     _amountController = TextEditingController(text: defaultAmount);
     _noteController = TextEditingController(
@@ -133,6 +139,17 @@ class LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
                 color: colors.textPrimary,
               ),
             ),
+            if (!widget.isExtra && widget.progress.nextInstallment != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${widget.loan.name} · cuota ${widget.progress.nextInstallment!.number} de ${widget.loan.installmentsTotal ?? widget.progress.nextInstallment!.number}',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _amountController,
@@ -156,6 +173,18 @@ class LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
                 ),
               ),
             ),
+            if (!widget.isExtra && widget.progress.nextInstallment != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Monto de la cuota según el cronograma · tocá para cambiarlo',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: colors.textTertiary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 14),
             TextField(
               controller: _noteController,

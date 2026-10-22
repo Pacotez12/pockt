@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
+import 'package:pockt/features/loans/domain/installment_schedule_parser.dart';
 import 'package:pockt/features/loans/domain/loan_progress.dart';
 
 void main() {
@@ -129,5 +130,107 @@ void main() {
     expect(payTx.type, equals(TxType.income));
     expect(payTx.amount, equals(250000));
     expect(payTx.loanId, equals(loanId));
+  });
+
+  test('crear préstamo con cronograma guarda cuotas, deriva datos y getInstallments las retorna', () async {
+    final schedule = [
+      ParsedInstallment(number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+      ParsedInstallment(number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+      ParsedInstallment(number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+    ];
+
+    final loanId = await repo.createLoan(
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo Itaú',
+      totalAmount: 0, // será derivado
+      startDate: DateTime(2027, 1, 1),
+      schedule: schedule,
+    );
+
+    final loan = await repo.getLoan(loanId);
+    expect(loan, isNotNull);
+    expect(loan!.totalAmount, 905000 + 805000 + 705000);
+    expect(loan.installmentsTotal, 3);
+    expect(loan.installmentAmount, isNull);
+    expect(loan.dueDay, 2);
+
+    final installments = await repo.getInstallments(loanId);
+    expect(installments.length, 3);
+    expect(installments[0].number, 1);
+    expect(installments[0].amount, 905000);
+    expect(installments[1].number, 2);
+    expect(installments[1].amount, 805000);
+    expect(installments[2].number, 3);
+    expect(installments[2].amount, 705000);
+
+    // Actualizar con nuevo cronograma reemplaza cuotas y actualiza préstamo
+    final newSchedule = [
+      ParsedInstallment(number: 1, dueDate: DateTime(2027, 1, 5), amount: 500000),
+      ParsedInstallment(number: 2, dueDate: DateTime(2027, 2, 5), amount: 500000),
+    ];
+    await repo.updateLoan(
+      id: loanId,
+      schedule: newSchedule,
+    );
+
+    final updatedLoan = await repo.getLoan(loanId);
+    expect(updatedLoan!.totalAmount, 1000000);
+    expect(updatedLoan.installmentsTotal, 2);
+    expect(updatedLoan.dueDay, 5);
+
+    final updatedInstallments = await repo.getInstallments(loanId);
+    expect(updatedInstallments.length, 2);
+    expect(updatedInstallments[0].amount, 500000);
+
+    // deleteLoan borra también las cuotas
+    await repo.deleteLoan(loanId);
+    final remainingInstallments = await repo.getInstallments(loanId);
+    expect(remainingInstallments, isEmpty);
+  });
+
+  test('pasar de cronograma a monto fijo borra las cuotas', () async {
+    final loanId = await repo.createLoan(
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo Itaú',
+      totalAmount: 0,
+      startDate: DateTime(2027, 1, 1),
+      schedule: [
+        ParsedInstallment(number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+      ],
+    );
+
+    await repo.updateLoan(
+      id: loanId,
+      totalAmount: 3000000,
+      installmentAmount: 250000,
+      installmentsTotal: 12,
+      dueDay: 2,
+      schedule: const [],
+    );
+
+    expect(await repo.getInstallments(loanId), isEmpty);
+    final loan = await repo.getLoan(loanId);
+    expect(loan!.totalAmount, 3000000);
+    expect(loan.installmentAmount, 250000);
+  });
+
+  test('wipeAllData borra cuotas de préstamos', () async {
+    final schedule = [
+      ParsedInstallment(number: 1, dueDate: DateTime(2027, 1, 2), amount: 900000),
+    ];
+    final loanId = await repo.createLoan(
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo',
+      totalAmount: 900000,
+      startDate: DateTime(2027, 1, 1),
+      schedule: schedule,
+    );
+
+    expect(await repo.getInstallments(loanId), isNotEmpty);
+    await db.wipeAllData();
+    expect(await repo.getInstallments(loanId), isEmpty);
   });
 }

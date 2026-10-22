@@ -5,6 +5,7 @@ import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/notifications/notifier.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
+import 'package:pockt/features/loans/domain/installment_schedule_parser.dart';
 import 'package:pockt/features/loans/domain/loan_progress.dart';
 import 'package:pockt/features/loans/domain/loan_reminders.dart';
 import 'package:uuid/uuid.dart';
@@ -67,7 +68,7 @@ class LoansRepository {
           ),
         ])
         .watch()
-        .map((rows) {
+        .asyncMap((rows) async {
           final Map<String, Loan> loansMap = {};
           final Map<String, List<Transaction>> paymentsMap = {};
 
@@ -80,13 +81,23 @@ class LoansRepository {
             }
           }
 
+          final allInstallments = await (_db.select(_db.loanInstallments)
+                ..orderBy([(i) => OrderingTerm.asc(i.number)]))
+              .get();
+          final Map<String, List<LoanInstallment>> scheduleMap = {};
+          for (final inst in allInstallments) {
+            scheduleMap.putIfAbsent(inst.loanId, () => []).add(inst);
+          }
+
           final now = _clock();
           final list = <LoanWithProgress>[];
           for (final loan in loansMap.values) {
             final payments = paymentsMap[loan.id] ?? const [];
+            final schedule = scheduleMap[loan.id];
             final progress = calculateLoanProgress(
               loan: loan,
               payments: payments,
+              schedule: schedule,
               now: now,
             );
             if (!progress.isClosed) {
@@ -123,6 +134,20 @@ class LoansRepository {
     )..where((l) => l.id.equals(id))).getSingleOrNull();
   }
 
+  Future<List<LoanInstallment>> getInstallments(String loanId) {
+    return (_db.select(_db.loanInstallments)
+          ..where((i) => i.loanId.equals(loanId))
+          ..orderBy([(i) => OrderingTerm.asc(i.number)]))
+        .get();
+  }
+
+  Stream<List<LoanInstallment>> watchInstallments(String loanId) {
+    return (_db.select(_db.loanInstallments)
+          ..where((i) => i.loanId.equals(loanId))
+          ..orderBy([(i) => OrderingTerm.asc(i.number)]))
+        .watch();
+  }
+
   Future<String> createLoan({
     required LoanDirection direction,
     required LoanKind kind,
@@ -135,9 +160,21 @@ class LoansRepository {
     required DateTime startDate,
     int reminderDays = 2,
     bool recordInitialDisbursement = false,
+    List<ParsedInstallment>? schedule,
   }) async {
     final loanId = _uuid.v4();
     final now = DateTime.now();
+
+    final hasSchedule = schedule != null && schedule.isNotEmpty;
+    final effTotalAmount = hasSchedule
+        ? schedule.fold<int>(0, (sum, i) => sum + i.amount)
+        : totalAmount;
+    final effInstallmentsTotal = hasSchedule
+        ? schedule.length
+        : installmentsTotal;
+    final effInstallmentAmount = hasSchedule ? null : installmentAmount;
+    final effDueDay = hasSchedule ? schedule.first.dueDate.day : dueDay;
+    final effKind = hasSchedule ? LoanKind.installments : kind;
 
     await _db
         .into(_db.loans)
@@ -145,19 +182,35 @@ class LoansRepository {
           LoansCompanion.insert(
             id: loanId,
             direction: direction,
-            kind: kind,
+            kind: effKind,
             name: name,
             counterparty: Value(counterparty),
-            totalAmount: totalAmount,
-            installmentAmount: Value(installmentAmount),
-            installmentsTotal: Value(installmentsTotal),
-            dueDay: Value(dueDay),
+            totalAmount: effTotalAmount,
+            installmentAmount: Value(effInstallmentAmount),
+            installmentsTotal: Value(effInstallmentsTotal),
+            dueDay: Value(effDueDay),
             startDate: startDate,
             reminderDays: Value(reminderDays),
             createdAt: now,
             updatedAt: now,
           ),
         );
+
+    if (hasSchedule) {
+      await _db.batch((b) {
+        b.insertAll(
+          _db.loanInstallments,
+          schedule.map(
+            (i) => LoanInstallmentsCompanion.insert(
+              loanId: loanId,
+              number: i.number,
+              dueDate: i.dueDate,
+              amount: i.amount,
+            ),
+          ),
+        );
+      });
+    }
 
     if (direction == LoanDirection.lent && recordInitialDisbursement) {
       // Registrar salida inicial como gasto en categoría "Préstamos"
@@ -168,7 +221,7 @@ class LoansRepository {
             TransactionsCompanion.insert(
               id: _uuid.v4(),
               type: TxType.expense,
-              amount: totalAmount,
+              amount: effTotalAmount,
               categoryId: prestamosCat,
               occurredAt: startDate,
               createdAt: now,
@@ -192,16 +245,45 @@ class LoansRepository {
     int? installmentsTotal,
     int? dueDay,
     int? reminderDays,
+    List<ParsedInstallment>? schedule,
   }) async {
+    int? effTotal = totalAmount;
+    int? effInstAmount = installmentAmount;
+    int? effInstTotal = installmentsTotal;
+    int? effDueDay = dueDay;
+
+    if (schedule != null) {
+      await (_db.delete(_db.loanInstallments)..where((i) => i.loanId.equals(id))).go();
+      if (schedule.isNotEmpty) {
+        await _db.batch((b) {
+          b.insertAll(
+            _db.loanInstallments,
+            schedule.map(
+              (i) => LoanInstallmentsCompanion.insert(
+                loanId: id,
+                number: i.number,
+                dueDate: i.dueDate,
+                amount: i.amount,
+              ),
+            ),
+          );
+        });
+        effTotal = schedule.fold<int>(0, (sum, i) => sum + i.amount);
+        effInstTotal = schedule.length;
+        effInstAmount = null;
+        effDueDay = schedule.first.dueDate.day;
+      }
+    }
+
     final companion = LoansCompanion(
       name: name != null ? Value(name) : const Value.absent(),
       counterparty: Value(counterparty),
-      totalAmount: totalAmount != null
-          ? Value(totalAmount)
+      totalAmount: effTotal != null
+          ? Value(effTotal)
           : const Value.absent(),
-      installmentAmount: Value(installmentAmount),
-      installmentsTotal: Value(installmentsTotal),
-      dueDay: Value(dueDay),
+      installmentAmount: Value(effInstAmount),
+      installmentsTotal: Value(effInstTotal),
+      dueDay: Value(effDueDay),
       reminderDays: reminderDays != null
           ? Value(reminderDays)
           : const Value.absent(),
@@ -238,6 +320,7 @@ class LoansRepository {
     // Desvincular pagos
     await (_db.update(_db.transactions)..where((t) => t.loanId.equals(id)))
         .write(const TransactionsCompanion(loanId: Value(null)));
+    await (_db.delete(_db.loanInstallments)..where((i) => i.loanId.equals(id))).go();
     await (_db.delete(_db.loans)..where((l) => l.id.equals(id))).go();
     await _triggerRemindersUpdate();
   }
@@ -347,6 +430,14 @@ final loanPaymentsProvider = StreamProvider.family<List<Transaction>, String>((
 final loanProvider = StreamProvider.family<Loan?, String>((ref, loanId) {
   final repo = ref.watch(loansRepositoryProvider);
   return repo.watchLoan(loanId);
+});
+
+final loanInstallmentsProvider = StreamProvider.family<List<LoanInstallment>, String>((
+  ref,
+  loanId,
+) {
+  final repo = ref.watch(loansRepositoryProvider);
+  return repo.watchInstallments(loanId);
 });
 
 class LoanWithProgress {

@@ -9,6 +9,16 @@ import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/features/loans/domain/loan_progress.dart';
 import 'package:pockt/features/reminders/domain/reminder_plan.dart';
 
+const _kDayNames = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
+];
+
 /// Helper para verificar si un horario cae en las horas de silencio.
 bool _isInQuietHours(
   int h,
@@ -57,20 +67,63 @@ int loanNotificationId(String loanId) {
 PlannedReminder? planLoanReminder({
   required Loan loan,
   required List<Transaction> payments,
+  List<LoanInstallment>? schedule,
   required DateTime nowLocal,
   ({int h, int m}) quietStart = (h: 23, m: 0),
   ({int h, int m}) quietEnd = (h: 9, m: 0),
 }) {
   if (loan.closedAt != null) return null;
-  if (loan.dueDay == null) return null;
   if (loan.reminderDays <= 0) return null;
+
+  final hasSchedule = schedule != null && schedule.isNotEmpty;
+  if (!hasSchedule && loan.dueDay == null) return null;
 
   final progress = calculateLoanProgress(
     loan: loan,
     payments: payments,
+    schedule: schedule,
     now: nowLocal,
   );
   if (progress.isClosed || progress.balance <= 0) return null;
+
+  // Hora por defecto: 09:00
+  var targetH = 9;
+  var targetM = 0;
+  if (_isInQuietHours(targetH, targetM, quietStart, quietEnd)) {
+    targetH = quietEnd.h;
+    targetM = quietEnd.m;
+  }
+
+  if (hasSchedule) {
+    final nextInstallment = progress.nextInstallment;
+    if (nextInstallment == null) return null;
+
+    final dueDate = nextInstallment.dueDate;
+    final reminderDate = dueDate.subtract(Duration(days: loan.reminderDays));
+    final scheduledAt = DateTime(
+      reminderDate.year,
+      reminderDate.month,
+      reminderDate.day,
+      targetH,
+      targetM,
+    );
+
+    final k = nextInstallment.number;
+    final n = schedule.length;
+    final title = 'Vence la cuota $k de $n';
+    final dayName = _kDayNames[dueDate.weekday - 1];
+    final ddMm =
+        '${dueDate.day.toString().padLeft(2, '0')}/${dueDate.month.toString().padLeft(2, '0')}';
+    final amountFormatted = formatGs(nextInstallment.amount);
+    final body = '${loan.name} · $amountFormatted el $dayName $ddMm';
+
+    return PlannedReminder(
+      atLocal: scheduledAt,
+      notificationId: loanNotificationId(loan.id),
+      title: title,
+      body: body,
+    );
+  }
 
   final today = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
 
@@ -101,14 +154,6 @@ PlannedReminder? planLoanReminder({
   final reminderDate = currentMonthDue.subtract(
     Duration(days: loan.reminderDays),
   );
-
-  // Hora por defecto: 09:00
-  var targetH = 9;
-  var targetM = 0;
-  if (_isInQuietHours(targetH, targetM, quietStart, quietEnd)) {
-    targetH = quietEnd.h;
-    targetM = quietEnd.m;
-  }
 
   final scheduledAt = DateTime(
     reminderDate.year,
@@ -159,9 +204,14 @@ Future<void> rescheduleLoanReminders({
       db.transactions,
     )..where((t) => t.loanId.equals(loan.id) & t.deletedAt.isNull())).get();
 
+    final schedule = await (db.select(
+      db.loanInstallments,
+    )..where((i) => i.loanId.equals(loan.id))..orderBy([(i) => OrderingTerm.asc(i.number)])).get();
+
     final reminder = planLoanReminder(
       loan: loan,
       payments: payments,
+      schedule: schedule,
       nowLocal: nowLocal,
       quietStart: quietStart,
       quietEnd: quietEnd,

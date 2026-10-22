@@ -42,6 +42,16 @@ class Loans extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class LoanInstallments extends Table {
+  TextColumn get loanId => text().references(Loans, #id)();
+  IntColumn get number => integer()();
+  DateTimeColumn get dueDate => dateTime()();
+  IntColumn get amount => integer()();
+
+  @override
+  Set<Column> get primaryKey => {loanId, number};
+}
+
 class Categories extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();

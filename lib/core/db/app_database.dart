@@ -23,6 +23,7 @@ part 'app_database.g.dart';
     MerchantMemory,
     SalaryDeductions,
     Loans,
+    LoanInstallments,
     Goals,
     GoalContributions,
     EntryShortcuts,
@@ -35,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -405,6 +406,14 @@ class AppDatabase extends _$AppDatabase {
             }
           }
         }
+        if (from < 15) {
+          final hasLoanInstallments = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='loan_installments';",
+          ).get()).isNotEmpty;
+          if (!hasLoanInstallments) {
+            await m.createTable(loanInstallments);
+          }
+        }
       },
     );
   }
@@ -499,6 +508,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> wipeAllData() async {
     await transaction(() async {
       await delete(transactions).go();
+      await delete(loanInstallments).go();
       await delete(loans).go();
       await delete(goalContributions).go();
       await delete(goals).go();

@@ -210,6 +210,76 @@ void main() {
       expect(progress.nextDueDate, DateTime(2026, 11, 15));
       expect(progress.daysUntilNextDue, 34);
     });
+
+    test('préstamo con cronograma calcula próxima cuota, vencimiento, restantes y fin estimado', () {
+      final schedule = [
+        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+      ];
+
+      final schedLoan = Loan(
+        id: 'loan-sched',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo Itaú',
+        totalAmount: 905000 + 805000 + 705000,
+        installmentAmount: null,
+        installmentsTotal: 3,
+        dueDay: 2,
+        startDate: DateTime(2027, 1, 1),
+        reminderDays: 2,
+        createdAt: DateTime(2027, 1, 1),
+        updatedAt: DateTime(2027, 1, 1),
+      );
+
+      // Sin pagos: próxima cuota es la 1
+      final p0 = calculateLoanProgress(
+        loan: schedLoan,
+        payments: [],
+        schedule: schedule,
+        now: DateTime(2026, 12, 28),
+      );
+      expect(p0.installmentsPaid, 0);
+      expect(p0.installmentsRemaining, 3);
+      expect(p0.nextInstallment, equals(schedule[0]));
+      expect(p0.nextDueDate, DateTime(2027, 1, 2));
+      expect(p0.daysUntilNextDue, 5);
+      expect(p0.estimatedEndDate, DateTime(2027, 3, 2));
+
+      // 1 pago regular + 1 extra: próxima cuota es la 2 (el extra no avanza la cuota)
+      final p1 = calculateLoanProgress(
+        loan: schedLoan,
+        payments: [
+          makePayment(id: 'p1', amount: 905000, date: DateTime(2027, 1, 2)),
+          makePayment(id: 'p-extra', amount: 100000, date: DateTime(2027, 1, 15), isExtra: true),
+        ],
+        schedule: schedule,
+        now: DateTime(2027, 1, 20),
+      );
+      expect(p1.installmentsPaid, 1);
+      expect(p1.installmentsRemaining, 2);
+      expect(p1.nextInstallment, equals(schedule[1]));
+      expect(p1.nextDueDate, DateTime(2027, 2, 2));
+      expect(p1.estimatedEndDate, DateTime(2027, 3, 2));
+
+      // Pagadas todas las cuotas
+      final pAll = calculateLoanProgress(
+        loan: schedLoan,
+        payments: [
+          makePayment(id: 'p1', amount: 905000, date: DateTime(2027, 1, 2)),
+          makePayment(id: 'p2', amount: 805000, date: DateTime(2027, 2, 2)),
+          makePayment(id: 'p3', amount: 705000, date: DateTime(2027, 3, 2)),
+        ],
+        schedule: schedule,
+        now: DateTime(2027, 3, 2),
+      );
+      expect(pAll.isClosed, isTrue);
+      expect(pAll.nextInstallment, isNull);
+      expect(pAll.nextDueDate, isNull);
+      expect(pAll.installmentsRemaining, 0);
+      expect(pAll.estimatedEndDate, DateTime(2027, 3, 2));
+    });
   });
 
   group('installmentsSummary', () {

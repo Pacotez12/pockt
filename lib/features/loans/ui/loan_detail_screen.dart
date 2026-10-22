@@ -56,7 +56,13 @@ class LoanDetailScreen extends ConsumerWidget {
     }
 
     final payments = paymentsAsync.value ?? [];
-    final progress = calculateLoanProgress(loan: loan, payments: payments);
+    final installmentsAsync = ref.watch(loanInstallmentsProvider(loanId));
+    final schedule = installmentsAsync.value ?? [];
+    final progress = calculateLoanProgress(
+      loan: loan,
+      payments: payments,
+      schedule: schedule,
+    );
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -152,6 +158,18 @@ class LoanDetailScreen extends ConsumerWidget {
 
             // Tarjeta principal con anillo y saldo
             LoanHeroCard(loan: loan, progress: progress),
+            if (schedule.isNotEmpty && !progress.isClosed) ...[
+              const SizedBox(height: 12),
+              LoanNextInstallmentCard(loan: loan, progress: progress),
+            ],
+            if (schedule.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              LoanScheduleCard(
+                loan: loan,
+                progress: progress,
+                schedule: schedule,
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Botones de acción
