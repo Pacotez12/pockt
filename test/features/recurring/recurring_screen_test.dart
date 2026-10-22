@@ -109,6 +109,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Guardar regla recurrente
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('save-recurring-button')));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -227,6 +229,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Guardar regla recurrente
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await tester.pumpAndSettle();
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const ValueKey('save-recurring-button')));
         await Future<void>.delayed(const Duration(milliseconds: 100));

@@ -86,7 +86,7 @@ void main() {
     final db = openDb();
     addTearDown(db.close);
 
-    expect(db.schemaVersion, 15);
+    expect(db.schemaVersion, greaterThanOrEqualTo(15));
 
     // 1. Tabla loan_installments creada
     final tables = await db.customSelect(

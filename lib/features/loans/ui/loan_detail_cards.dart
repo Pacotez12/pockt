@@ -283,6 +283,73 @@ class LoanPaymentRow extends StatelessWidget {
   }
 }
 
+class LoanPaidBeforeRow extends StatelessWidget {
+  final int count;
+  final int amount;
+
+  const LoanPaidBeforeRow({
+    super.key,
+    required this.count,
+    required this.amount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.pockt;
+    final label = count == 1
+        ? 'Cuota 1 · antes de Pockt'
+        : 'Cuotas 1–$count · antes de Pockt';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: BorderRadius.circular(PocktRadii.l),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.textSecondary.withValues(alpha: 0.12),
+              ),
+              child: Center(
+                child: Icon(
+                  uiIcon('clock-counter-clockwise'),
+                  size: 16,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            Text(
+              formatGs(amount),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class LoanNextInstallmentCard extends StatelessWidget {
   final Loan loan;
   final LoanProgress progress;

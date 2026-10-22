@@ -79,37 +79,67 @@ class RecurringFrequencyCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [1, 5, 10, 15, 20, 25, 28, 30].map((d) {
-                final sel = dayOfMonth == d;
-                return Pressable(
-                  onTap: () => onDayOfMonthChanged(d),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sel ? colors.brandStart : colors.glassFill,
-                      borderRadius: BorderRadius.circular(PocktRadii.m),
-                      border: Border.all(
-                        color: sel ? colors.brandStart : colors.glassBorder,
-                      ),
-                    ),
-                    child: Text(
-                      '$d',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: sel ? Colors.white : colors.textPrimary,
-                      ),
-                    ),
+            Column(
+              children: [
+                for (int row = 0; row < 5; row++) ...[
+                  if (row > 0) const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      for (int col = 0; col < 7; col++) ...[
+                        if (col > 0) const SizedBox(width: 6),
+                        Expanded(
+                          child: () {
+                            final d = row * 7 + col + 1;
+                            if (d > 31) return const SizedBox.shrink();
+                            final sel = dayOfMonth == d;
+                            return Pressable(
+                              key: ValueKey('day-$d'),
+                              onTap: () => onDayOfMonthChanged(d),
+                              child: Container(
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? colors.brandStart
+                                      : colors.glassFill,
+                                  borderRadius: BorderRadius.circular(
+                                    PocktRadii.m,
+                                  ),
+                                  border: Border.all(
+                                    color: sel
+                                        ? colors.brandStart
+                                        : colors.glassBorder,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$d',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: sel
+                                        ? Colors.white
+                                        : colors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }(),
+                        ),
+                      ],
+                    ],
                   ),
-                );
-              }).toList(),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '29, 30 y 31: en meses más cortos se usa el último día.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                color: colors.textTertiary,
+              ),
             ),
           ],
         ],

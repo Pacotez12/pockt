@@ -19,6 +19,8 @@ class LoanProgress {
   final DateTime? estimatedEndDate;
   final int? daysUntilNextDue;
   final LoanInstallment? nextInstallment;
+  final int paidBeforeCount;
+  final int paidBeforeAmount;
 
   const LoanProgress({
     required this.paid,
@@ -31,6 +33,8 @@ class LoanProgress {
     this.estimatedEndDate,
     this.daysUntilNextDue,
     this.nextInstallment,
+    this.paidBeforeCount = 0,
+    this.paidBeforeAmount = 0,
   });
 }
 
@@ -55,20 +59,33 @@ LoanProgress calculateLoanProgress({
     }
   }).toList();
 
-  final paid = relevantPayments.fold<int>(0, (sum, p) => sum + p.amount);
+  final hasSchedule = schedule != null && schedule.isNotEmpty;
+  final paidBeforeCount = loan.paidBeforeCount;
+  final int paidBeforeAmount;
+  if (hasSchedule) {
+    paidBeforeAmount = schedule
+        .take(paidBeforeCount)
+        .fold<int>(0, (sum, i) => sum + i.amount);
+  } else if (loan.kind == LoanKind.installments && loan.installmentAmount != null) {
+    paidBeforeAmount = paidBeforeCount * loan.installmentAmount!;
+  } else {
+    paidBeforeAmount = 0;
+  }
+
+  final paidFromPayments = relevantPayments.fold<int>(0, (sum, p) => sum + p.amount);
+  final paid = paidBeforeAmount + paidFromPayments;
   final balance = max(0, loan.totalAmount - paid);
   final isClosed = balance <= 0 || loan.closedAt != null;
 
-  // Cuotas pagadas: solo pagos regulares (los extra no suman cuota, pero sí bajan el saldo)
+  // Cuotas pagadas: cuotas previas a Pockt + pagos regulares en Pockt
   final regularPaymentsCount = relevantPayments
       .where((p) => !isLoanExtraPayment(p))
       .length;
-  final totalCount = (schedule != null && schedule.isNotEmpty)
-      ? schedule.length
-      : loan.installmentsTotal;
+  final totalCount = hasSchedule ? schedule.length : loan.installmentsTotal;
+  final totalRegularAndBefore = paidBeforeCount + regularPaymentsCount;
   final installmentsPaid = totalCount != null
-      ? min(totalCount, regularPaymentsCount)
-      : regularPaymentsCount;
+      ? min(totalCount, totalRegularAndBefore)
+      : totalRegularAndBefore;
 
   final percent = loan.totalAmount > 0
       ? (paid / loan.totalAmount).clamp(0.0, 1.0)
@@ -79,8 +96,6 @@ LoanProgress calculateLoanProgress({
   int? daysUntilNextDue;
   DateTime? estimatedEndDate;
   LoanInstallment? nextInstallment;
-
-  final hasSchedule = schedule != null && schedule.isNotEmpty;
 
   if (hasSchedule) {
     if (isClosed) {
@@ -150,6 +165,8 @@ LoanProgress calculateLoanProgress({
     estimatedEndDate: estimatedEndDate,
     daysUntilNextDue: daysUntilNextDue,
     nextInstallment: nextInstallment,
+    paidBeforeCount: paidBeforeCount,
+    paidBeforeAmount: paidBeforeAmount,
   );
 }
 

@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
@@ -412,6 +412,14 @@ class AppDatabase extends _$AppDatabase {
           ).get()).isNotEmpty;
           if (!hasLoanInstallments) {
             await m.createTable(loanInstallments);
+          }
+        }
+        if (from < 16) {
+          final hasPaidBefore = (await customSelect(
+            "SELECT name FROM pragma_table_info('loans') WHERE name = 'paid_before_count';",
+          ).get()).isNotEmpty;
+          if (!hasPaidBefore) {
+            await m.addColumn(loans, loans.paidBeforeCount);
           }
         }
       },

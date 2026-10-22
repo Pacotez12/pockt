@@ -128,6 +128,7 @@ void main() {
       installmentAmount: 1000000,
       installmentsTotal: 12,
       dueDay: 15,
+      paidBeforeCount: 0,
       reminderDays: 2,
       startDate: DateTime(2026, 10, 1),
       createdAt: nowLocal,

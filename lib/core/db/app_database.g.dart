@@ -647,6 +647,18 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
     requiredDuringInsert: false,
     defaultValue: const Constant(2),
   );
+  static const VerificationMeta _paidBeforeCountMeta = const VerificationMeta(
+    'paidBeforeCount',
+  );
+  @override
+  late final GeneratedColumn<int> paidBeforeCount = GeneratedColumn<int>(
+    'paid_before_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -683,6 +695,7 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
     startDate,
     closedAt,
     reminderDays,
+    paidBeforeCount,
     createdAt,
     updatedAt,
   ];
@@ -778,6 +791,15 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         ),
       );
     }
+    if (data.containsKey('paid_before_count')) {
+      context.handle(
+        _paidBeforeCountMeta,
+        paidBeforeCount.isAcceptableOrUnknown(
+          data['paid_before_count']!,
+          _paidBeforeCountMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -855,6 +877,10 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
         DriftSqlType.int,
         data['${effectivePrefix}reminder_days'],
       )!,
+      paidBeforeCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}paid_before_count'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -890,6 +916,7 @@ class Loan extends DataClass implements Insertable<Loan> {
   final DateTime startDate;
   final DateTime? closedAt;
   final int reminderDays;
+  final int paidBeforeCount;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Loan({
@@ -905,6 +932,7 @@ class Loan extends DataClass implements Insertable<Loan> {
     required this.startDate,
     this.closedAt,
     required this.reminderDays,
+    required this.paidBeforeCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -939,6 +967,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       map['closed_at'] = Variable<DateTime>(closedAt);
     }
     map['reminder_days'] = Variable<int>(reminderDays);
+    map['paid_before_count'] = Variable<int>(paidBeforeCount);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -968,6 +997,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           ? const Value.absent()
           : Value(closedAt),
       reminderDays: Value(reminderDays),
+      paidBeforeCount: Value(paidBeforeCount),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -995,6 +1025,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
       reminderDays: serializer.fromJson<int>(json['reminderDays']),
+      paidBeforeCount: serializer.fromJson<int>(json['paidBeforeCount']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1019,6 +1050,7 @@ class Loan extends DataClass implements Insertable<Loan> {
       'startDate': serializer.toJson<DateTime>(startDate),
       'closedAt': serializer.toJson<DateTime?>(closedAt),
       'reminderDays': serializer.toJson<int>(reminderDays),
+      'paidBeforeCount': serializer.toJson<int>(paidBeforeCount),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1037,6 +1069,7 @@ class Loan extends DataClass implements Insertable<Loan> {
     DateTime? startDate,
     Value<DateTime?> closedAt = const Value.absent(),
     int? reminderDays,
+    int? paidBeforeCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Loan(
@@ -1056,6 +1089,7 @@ class Loan extends DataClass implements Insertable<Loan> {
     startDate: startDate ?? this.startDate,
     closedAt: closedAt.present ? closedAt.value : this.closedAt,
     reminderDays: reminderDays ?? this.reminderDays,
+    paidBeforeCount: paidBeforeCount ?? this.paidBeforeCount,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1083,6 +1117,9 @@ class Loan extends DataClass implements Insertable<Loan> {
       reminderDays: data.reminderDays.present
           ? data.reminderDays.value
           : this.reminderDays,
+      paidBeforeCount: data.paidBeforeCount.present
+          ? data.paidBeforeCount.value
+          : this.paidBeforeCount,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1103,6 +1140,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           ..write('startDate: $startDate, ')
           ..write('closedAt: $closedAt, ')
           ..write('reminderDays: $reminderDays, ')
+          ..write('paidBeforeCount: $paidBeforeCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1123,6 +1161,7 @@ class Loan extends DataClass implements Insertable<Loan> {
     startDate,
     closedAt,
     reminderDays,
+    paidBeforeCount,
     createdAt,
     updatedAt,
   );
@@ -1142,6 +1181,7 @@ class Loan extends DataClass implements Insertable<Loan> {
           other.startDate == this.startDate &&
           other.closedAt == this.closedAt &&
           other.reminderDays == this.reminderDays &&
+          other.paidBeforeCount == this.paidBeforeCount &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1159,6 +1199,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
   final Value<DateTime> startDate;
   final Value<DateTime?> closedAt;
   final Value<int> reminderDays;
+  final Value<int> paidBeforeCount;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1175,6 +1216,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     this.startDate = const Value.absent(),
     this.closedAt = const Value.absent(),
     this.reminderDays = const Value.absent(),
+    this.paidBeforeCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1192,6 +1234,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     required DateTime startDate,
     this.closedAt = const Value.absent(),
     this.reminderDays = const Value.absent(),
+    this.paidBeforeCount = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -1216,6 +1259,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     Expression<DateTime>? startDate,
     Expression<DateTime>? closedAt,
     Expression<int>? reminderDays,
+    Expression<int>? paidBeforeCount,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1233,6 +1277,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       if (startDate != null) 'start_date': startDate,
       if (closedAt != null) 'closed_at': closedAt,
       if (reminderDays != null) 'reminder_days': reminderDays,
+      if (paidBeforeCount != null) 'paid_before_count': paidBeforeCount,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1252,6 +1297,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     Value<DateTime>? startDate,
     Value<DateTime?>? closedAt,
     Value<int>? reminderDays,
+    Value<int>? paidBeforeCount,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1269,6 +1315,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
       startDate: startDate ?? this.startDate,
       closedAt: closedAt ?? this.closedAt,
       reminderDays: reminderDays ?? this.reminderDays,
+      paidBeforeCount: paidBeforeCount ?? this.paidBeforeCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1318,6 +1365,9 @@ class LoansCompanion extends UpdateCompanion<Loan> {
     if (reminderDays.present) {
       map['reminder_days'] = Variable<int>(reminderDays.value);
     }
+    if (paidBeforeCount.present) {
+      map['paid_before_count'] = Variable<int>(paidBeforeCount.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1345,6 +1395,7 @@ class LoansCompanion extends UpdateCompanion<Loan> {
           ..write('startDate: $startDate, ')
           ..write('closedAt: $closedAt, ')
           ..write('reminderDays: $reminderDays, ')
+          ..write('paidBeforeCount: $paidBeforeCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -10272,6 +10323,7 @@ typedef $$LoansTableCreateCompanionBuilder = LoansCompanion Function({
   required DateTime startDate,
   Value<DateTime?> closedAt,
   Value<int> reminderDays,
+  Value<int> paidBeforeCount,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -10289,6 +10341,7 @@ typedef $$LoansTableUpdateCompanionBuilder = LoansCompanion Function({
   Value<DateTime> startDate,
   Value<DateTime?> closedAt,
   Value<int> reminderDays,
+  Value<int> paidBeforeCount,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -10425,6 +10478,11 @@ class $$LoansTableFilterComposer extends Composer<_$AppDatabase, $LoansTable> {
 
   ColumnFilters<int> get reminderDays => $composableBuilder(
     column: $table.reminderDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get paidBeforeCount => $composableBuilder(
+    column: $table.paidBeforeCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10583,6 +10641,11 @@ class $$LoansTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get paidBeforeCount => $composableBuilder(
+    column: $table.paidBeforeCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10646,6 +10709,11 @@ class $$LoansTableAnnotationComposer
 
   GeneratedColumn<int> get reminderDays => $composableBuilder(
     column: $table.reminderDays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get paidBeforeCount => $composableBuilder(
+    column: $table.paidBeforeCount,
     builder: (column) => column,
   );
 
@@ -10776,6 +10844,7 @@ class $$LoansTableTableManager
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime?> closedAt = const Value.absent(),
                 Value<int> reminderDays = const Value.absent(),
+                Value<int> paidBeforeCount = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -10792,6 +10861,7 @@ class $$LoansTableTableManager
                 startDate: startDate,
                 closedAt: closedAt,
                 reminderDays: reminderDays,
+                paidBeforeCount: paidBeforeCount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -10810,6 +10880,7 @@ class $$LoansTableTableManager
                 required DateTime startDate,
                 Value<DateTime?> closedAt = const Value.absent(),
                 Value<int> reminderDays = const Value.absent(),
+                Value<int> paidBeforeCount = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -10826,6 +10897,7 @@ class $$LoansTableTableManager
                 startDate: startDate,
                 closedAt: closedAt,
                 reminderDays: reminderDays,
+                paidBeforeCount: paidBeforeCount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

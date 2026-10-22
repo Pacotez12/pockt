@@ -161,6 +161,7 @@ class LoansRepository {
     int reminderDays = 2,
     bool recordInitialDisbursement = false,
     List<ParsedInstallment>? schedule,
+    int paidBeforeCount = 0,
   }) async {
     final loanId = _uuid.v4();
     final now = DateTime.now();
@@ -191,6 +192,7 @@ class LoansRepository {
             dueDay: Value(effDueDay),
             startDate: startDate,
             reminderDays: Value(reminderDays),
+            paidBeforeCount: Value(paidBeforeCount),
             createdAt: now,
             updatedAt: now,
           ),
@@ -246,6 +248,7 @@ class LoansRepository {
     int? dueDay,
     int? reminderDays,
     List<ParsedInstallment>? schedule,
+    int? paidBeforeCount,
   }) async {
     int? effTotal = totalAmount;
     int? effInstAmount = installmentAmount;
@@ -281,11 +284,18 @@ class LoansRepository {
       totalAmount: effTotal != null
           ? Value(effTotal)
           : const Value.absent(),
-      installmentAmount: Value(effInstAmount),
+      installmentAmount: (schedule != null && schedule.isNotEmpty)
+          ? const Value(null)
+          : (effInstAmount != null
+              ? Value(effInstAmount)
+              : const Value.absent()),
       installmentsTotal: Value(effInstTotal),
       dueDay: Value(effDueDay),
       reminderDays: reminderDays != null
           ? Value(reminderDays)
+          : const Value.absent(),
+      paidBeforeCount: paidBeforeCount != null
+          ? Value(paidBeforeCount)
           : const Value.absent(),
       updatedAt: Value(DateTime.now()),
     );

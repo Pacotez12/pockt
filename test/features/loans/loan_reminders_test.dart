@@ -28,6 +28,7 @@ void main() {
         totalAmount: 12000000,
         installmentAmount: 1000000,
         dueDay: 15,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2026, 10, 1),
         createdAt: now,
@@ -61,6 +62,7 @@ void main() {
         installmentAmount: null,
         installmentsTotal: 3,
         dueDay: 2,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2027, 1, 1),
         createdAt: now,
@@ -88,6 +90,45 @@ void main() {
       expect(reminder.body, equals('Préstamo Itaú · Gs. 905.000 el sábado 02/01'));
     });
 
+    test('aviso con cronograma y paidBeforeCount usa la cuota siguiente correspondiente', () {
+      final now = DateTime(2027, 1, 15, 10, 0);
+      final loan = Loan(
+        id: 'loan-sched',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo Itaú',
+        totalAmount: 2415000,
+        installmentAmount: null,
+        installmentsTotal: 3,
+        dueDay: 2,
+        paidBeforeCount: 1, // Cuota 1 ya pagada antes de Pockt
+        reminderDays: 2,
+        startDate: DateTime(2027, 1, 1),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final schedule = [
+        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+      ];
+
+      final reminder = planLoanReminder(
+        loan: loan,
+        payments: const [],
+        schedule: schedule,
+        nowLocal: now,
+        quietStart: quietStart,
+        quietEnd: quietEnd,
+      );
+
+      expect(reminder, isNotNull);
+      // 02 de febrero 2027 - 2 días = 31 de enero 2027 a las 09:00
+      expect(reminder!.atLocal, DateTime(2027, 1, 31, 9, 0));
+      expect(reminder.title, equals('Vence la cuota 2 de 3'));
+      expect(reminder.body, equals('Préstamo Itaú · Gs. 805.000 el martes 02/02'));
+    });
+
     test('no se programa si ya se pagó la cuota del mes', () {
       final now = DateTime(2026, 10, 5, 10, 0);
       final loan = Loan(
@@ -98,6 +139,7 @@ void main() {
         totalAmount: 12000000,
         installmentAmount: 1000000,
         dueDay: 15,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2026, 10, 1),
         createdAt: now,
@@ -142,6 +184,7 @@ void main() {
         totalAmount: 12000000,
         installmentAmount: 1000000,
         dueDay: 15,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2026, 10, 1),
         createdAt: now,
@@ -186,6 +229,7 @@ void main() {
         totalAmount: 12000000,
         installmentAmount: 1000000,
         dueDay: 15,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2026, 10, 1),
         createdAt: now,
@@ -219,6 +263,7 @@ void main() {
         totalAmount: 1000000,
         installmentAmount: 1000000,
         dueDay: 15,
+        paidBeforeCount: 0,
         reminderDays: 2,
         startDate: DateTime(2026, 10, 1),
         closedAt: now,

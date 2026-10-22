@@ -6,6 +6,7 @@ import 'package:pockt/core/design/haptics.dart';
 import 'package:pockt/core/design/icons.dart';
 import 'package:pockt/core/design/motion.dart';
 import 'package:pockt/core/design/tokens.dart';
+import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/format/dates.dart';
 import 'package:pockt/core/format/money.dart';
@@ -38,6 +39,9 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
   final _dueDayController = TextEditingController();
   final _scheduleController = TextEditingController();
   InstallmentScheduleParseResult? _scheduleResult;
+  int _paidBeforeCount = 0;
+  Loan? _initialLoan;
+  String _initialScheduleText = '';
 
   DateTime _startDate = DateTime.now();
   int _reminderDays = 2;
@@ -59,9 +63,11 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
         .getLoan(widget.loanId!);
     if (loan == null || !mounted) return;
 
+    _initialLoan = loan;
     setState(() {
       _direction = loan.direction;
       _kind = loan.kind;
+      _paidBeforeCount = loan.paidBeforeCount;
       _nameController.text = loan.name;
       _counterpartyController.text = loan.counterparty ?? '';
       _totalAmountController.text = loan.totalAmount.toString();
@@ -93,6 +99,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                   ))
               .toList(),
         );
+        _initialScheduleText = _scheduleController.text;
         _scheduleResult = parseInstallmentSchedule(_scheduleController.text);
       });
     }
@@ -110,7 +117,94 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
     super.dispose();
   }
 
+  bool get _hasChanges {
+    if (widget.loanId == null) {
+      return _nameController.text.trim().isNotEmpty ||
+          _counterpartyController.text.trim().isNotEmpty ||
+          _totalAmountController.text.trim().isNotEmpty ||
+          _installmentAmountController.text.trim().isNotEmpty ||
+          _installmentsTotalController.text.trim().isNotEmpty ||
+          _dueDayController.text.trim().isNotEmpty ||
+          _scheduleController.text.trim().isNotEmpty ||
+          _paidBeforeCount > 0 ||
+          _recordInitialDisbursement ||
+          _direction != LoanDirection.owe ||
+          _kind != LoanKind.installments ||
+          _installmentMode != _InstallmentMode.fixed;
+    }
+    if (_initialLoan == null) return false;
+    return _nameController.text.trim() != _initialLoan!.name ||
+        _counterpartyController.text.trim() !=
+            (_initialLoan!.counterparty ?? '') ||
+        _totalAmountController.text.trim() !=
+            _initialLoan!.totalAmount.toString() ||
+        _installmentAmountController.text.trim() !=
+            (_initialLoan!.installmentAmount?.toString() ?? '') ||
+        _installmentsTotalController.text.trim() !=
+            (_initialLoan!.installmentsTotal?.toString() ?? '') ||
+        _dueDayController.text.trim() !=
+            (_initialLoan!.dueDay?.toString() ?? '') ||
+        _paidBeforeCount != _initialLoan!.paidBeforeCount ||
+        _reminderDays != _initialLoan!.reminderDays ||
+        _scheduleController.text.trim() != _initialScheduleText;
+  }
+
+  Future<bool> _handlePop() async {
+    if (!_hasChanges) return true;
+    final colors = context.pockt;
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.sheetSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PocktRadii.xl),
+        ),
+        title: Text(
+          '¿Descartar el préstamo?',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            color: colors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'Si salís ahora se pierde lo que cargaste.',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            color: colors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Seguir editando',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+                color: colors.danger,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    return shouldDiscard ?? false;
+  }
+
   void _recalculateTotalIfNeeded() {
+    _clampPaidBeforeCount();
     if (!_calculateFromInstallments) return;
     final instAmount = int.tryParse(
       _installmentAmountController.text.replaceAll('.', '').trim(),
@@ -119,6 +213,19 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
     if (instAmount != null && count != null && count > 0) {
       final total = instAmount * count;
       _totalAmountController.text = total.toString();
+    }
+  }
+
+  void _clampPaidBeforeCount() {
+    final int maxInstallments;
+    if (_installmentMode == _InstallmentMode.schedule) {
+      maxInstallments = _scheduleResult?.installments.length ?? 0;
+    } else {
+      maxInstallments =
+          int.tryParse(_installmentsTotalController.text.trim()) ?? 0;
+    }
+    if (maxInstallments > 0 && _paidBeforeCount > maxInstallments) {
+      setState(() => _paidBeforeCount = maxInstallments);
     }
   }
 
@@ -182,6 +289,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
     final repo = ref.read(loansRepositoryProvider);
 
     try {
+      final paidBefore = _kind == LoanKind.installments ? _paidBeforeCount : 0;
       if (widget.loanId == null) {
         await repo.createLoan(
           direction: _direction,
@@ -194,6 +302,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           installmentAmount: instAmount,
           installmentsTotal: instTotal,
           dueDay: dueDay,
+          paidBeforeCount: paidBefore,
           startDate: _startDate,
           reminderDays: _reminderDays,
           recordInitialDisbursement: _recordInitialDisbursement,
@@ -210,6 +319,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           installmentAmount: instAmount,
           installmentsTotal: instTotal,
           dueDay: dueDay,
+          paidBeforeCount: paidBefore,
           reminderDays: _reminderDays,
           // Lista vacía borra el cronograma si se pasó a monto fijo.
           schedule: isScheduleMode ? scheduleToSave : const [],
@@ -231,24 +341,39 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
   Widget build(BuildContext context) {
     final colors = context.pockt;
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          widget.loanId == null ? 'Nuevo préstamo' : 'Editar préstamo',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: colors.textPrimary,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final canLeave = await _handlePop();
+        if (canLeave && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: colors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.loanId == null ? 'Nuevo préstamo' : 'Editar préstamo',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
           ),
-        ),
-        leading: IconButton(
-          icon: Icon(uiIcon('arrow-left'), color: colors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+          leading: IconButton(
+            key: const ValueKey('loan-editor-back'),
+            icon: Icon(uiIcon('arrow-left'), color: colors.textPrimary),
+            onPressed: () async {
+              final canLeave = await _handlePop();
+              if (canLeave && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -338,16 +463,26 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pegá el cronograma (una cuota por línea)',
+                        'Cronograma',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Pegá una cuota por línea: número fecha monto',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: colors.textTertiary,
                         ),
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        key: const ValueKey('schedule-input'),
                         controller: _scheduleController,
                         maxLines: 6,
                         minLines: 4,
@@ -359,7 +494,6 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                           height: 1.5,
                         ),
                         decoration: InputDecoration(
-                          labelText: 'Pegá el cronograma (una cuota por línea)',
                           hintText:
                               '1 02/01/2027 905.000\n2 02/02/2027 805.000\n3 02/03/2027 705.000',
                           hintStyle: TextStyle(
@@ -380,6 +514,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                         onChanged: (val) {
                           setState(() {
                             _scheduleResult = parseInstallmentSchedule(val);
+                            _clampPaidBeforeCount();
                           });
                         },
                       ),
@@ -442,7 +577,9 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${_scheduleResult!.installments.length} cuotas',
+                                    _scheduleResult!.installments.length == 1
+                                        ? '1 cuota'
+                                        : '${_scheduleResult!.installments.length} cuotas',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 13,
@@ -503,6 +640,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                             ],
                           ),
                         ),
+                        _buildPaidBeforeSelector(colors),
                       ],
                     ],
                   ),
@@ -618,6 +756,8 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
                           ),
                         ),
                       ),
+                      if (_kind == LoanKind.installments)
+                        _buildPaidBeforeSelector(colors),
                     ],
                   ),
                 ),
@@ -738,6 +878,140 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           ),
         ),
       ),
+    ));
+  }
+
+  Widget _buildPaidBeforeSelector(PocktColors colors) {
+    final int maxInstallments;
+    final int paidBeforeGs;
+
+    if (_installmentMode == _InstallmentMode.schedule) {
+      maxInstallments = _scheduleResult?.installments.length ?? 0;
+      if (_scheduleResult != null && _scheduleResult!.isValid) {
+        paidBeforeGs = _scheduleResult!.installments
+            .take(_paidBeforeCount)
+            .fold<int>(0, (sum, i) => sum + i.amount);
+      } else {
+        paidBeforeGs = 0;
+      }
+    } else {
+      maxInstallments =
+          int.tryParse(_installmentsTotalController.text.trim()) ?? 0;
+      final instAmount = int.tryParse(
+            _installmentAmountController.text.replaceAll('.', '').trim(),
+          ) ??
+          0;
+      paidBeforeGs = _paidBeforeCount * instAmount;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Cuotas que ya pagaste antes de usar Pockt',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: colors.glassFill,
+              borderRadius: BorderRadius.circular(PocktRadii.m),
+              border: Border.all(color: colors.glassBorder),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Pressable(
+                  key: const ValueKey('paid-before-dec'),
+                  onTap: _paidBeforeCount > 0
+                      ? () {
+                          Haptics.tick();
+                          setState(() => _paidBeforeCount--);
+                        }
+                      : null,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _paidBeforeCount > 0
+                          ? colors.textPrimary.withValues(alpha: 0.10)
+                          : colors.textPrimary.withValues(alpha: 0.04),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        uiIcon('minus'),
+                        size: 16,
+                        color: _paidBeforeCount > 0
+                            ? colors.textPrimary
+                            : colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ),
+                Text(
+                  '$_paidBeforeCount',
+                  key: const ValueKey('paid-before-count'),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                Pressable(
+                  key: const ValueKey('paid-before-inc'),
+                  onTap: (maxInstallments == 0 ||
+                          _paidBeforeCount < maxInstallments)
+                      ? () {
+                          Haptics.tick();
+                          setState(() => _paidBeforeCount++);
+                        }
+                      : null,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: (maxInstallments == 0 ||
+                              _paidBeforeCount < maxInstallments)
+                          ? colors.textPrimary.withValues(alpha: 0.10)
+                          : colors.textPrimary.withValues(alpha: 0.04),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        uiIcon('plus'),
+                        size: 16,
+                        color: (maxInstallments == 0 ||
+                                _paidBeforeCount < maxInstallments)
+                            ? colors.textPrimary
+                            : colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Cuentan como pagadas (${formatGs(paidBeforeGs)}) pero no como gasto.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              color: colors.textTertiary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -753,7 +1027,8 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
         children: [
           Expanded(
             child: _SegmentTab(
-              label: 'Debo (me prestaron / cuotas)',
+              title: 'Debo',
+              subtitle: 'me prestaron / cuotas',
               selected: _direction == LoanDirection.owe,
               onTap: () {
                 Haptics.tick();
@@ -763,7 +1038,8 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           ),
           Expanded(
             child: _SegmentTab(
-              label: 'Presté (me deben)',
+              title: 'Presté',
+              subtitle: 'me deben',
               selected: _direction == LoanDirection.lent,
               onTap: () {
                 Haptics.tick();
@@ -788,7 +1064,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
         children: [
           Expanded(
             child: _SegmentTab(
-              label: 'En cuotas',
+              title: 'En cuotas',
               selected: _kind == LoanKind.installments,
               onTap: () {
                 Haptics.tick();
@@ -798,7 +1074,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           ),
           Expanded(
             child: _SegmentTab(
-              label: 'Préstamo general',
+              title: 'Préstamo general',
               selected: _kind == LoanKind.loan,
               onTap: () {
                 Haptics.tick();
@@ -823,7 +1099,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
         children: [
           Expanded(
             child: _SegmentTab(
-              label: 'Monto fijo',
+              title: 'Monto fijo',
               selected: _installmentMode == _InstallmentMode.fixed,
               onTap: () {
                 Haptics.tick();
@@ -833,7 +1109,7 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
           ),
           Expanded(
             child: _SegmentTab(
-              label: 'Cronograma',
+              title: 'Cronograma',
               selected: _installmentMode == _InstallmentMode.schedule,
               onTap: () {
                 Haptics.tick();
@@ -848,12 +1124,14 @@ class _LoanEditorScreenState extends ConsumerState<LoanEditorScreen> {
 }
 
 class _SegmentTab extends StatelessWidget {
-  final String label;
+  final String title;
+  final String? subtitle;
   final bool selected;
   final VoidCallback onTap;
 
   const _SegmentTab({
-    required this.label,
+    required this.title,
+    this.subtitle,
     required this.selected,
     required this.onTap,
   });
@@ -868,7 +1146,7 @@ class _SegmentTab extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(PocktRadii.m),
           color: selected
@@ -881,14 +1159,35 @@ class _SegmentTab extends StatelessWidget {
               : null,
         ),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? colors.brandStart : colors.textSecondary,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected ? colors.brandStart : colors.textPrimary,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: selected
+                        ? colors.brandStart.withValues(alpha: 0.90)
+                        : colors.textTertiary,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

@@ -234,7 +234,12 @@ class LoanDetailScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            if (payments.isEmpty)
+            if (progress.paidBeforeCount > 0)
+              LoanPaidBeforeRow(
+                count: progress.paidBeforeCount,
+                amount: progress.paidBeforeAmount,
+              ),
+            if (payments.isEmpty && progress.paidBeforeCount == 0)
               GlassCard(
                 padding: const EdgeInsets.symmetric(
                   vertical: 36,

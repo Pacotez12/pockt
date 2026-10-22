@@ -35,6 +35,7 @@ class Loans extends Table {
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get closedAt => dateTime().nullable()();
   IntColumn get reminderDays => integer().withDefault(const Constant(2))();
+  IntColumn get paidBeforeCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

@@ -146,6 +146,7 @@ void main() {
       totalAmount: 0, // será derivado
       startDate: DateTime(2027, 1, 1),
       schedule: schedule,
+      paidBeforeCount: 1,
     );
 
     final loan = await repo.getLoan(loanId);
@@ -154,6 +155,7 @@ void main() {
     expect(loan.installmentsTotal, 3);
     expect(loan.installmentAmount, isNull);
     expect(loan.dueDay, 2);
+    expect(loan.paidBeforeCount, 1);
 
     final installments = await repo.getInstallments(loanId);
     expect(installments.length, 3);

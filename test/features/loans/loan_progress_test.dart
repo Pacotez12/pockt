@@ -15,6 +15,7 @@ void main() {
       installmentAmount: 100000,
       installmentsTotal: 12,
       dueDay: 15,
+      paidBeforeCount: 0,
       startDate: DateTime(2026, 1, 1),
       reminderDays: 2,
       createdAt: DateTime(2026, 1, 1),
@@ -172,6 +173,7 @@ void main() {
           installmentAmount: null,
           installmentsTotal: null,
           dueDay: 20,
+          paidBeforeCount: 0,
           startDate: DateTime(2026, 2, 1),
           reminderDays: 2,
           createdAt: DateTime(2026, 2, 1),
@@ -227,6 +229,7 @@ void main() {
         installmentAmount: null,
         installmentsTotal: 3,
         dueDay: 2,
+        paidBeforeCount: 0,
         startDate: DateTime(2027, 1, 1),
         reminderDays: 2,
         createdAt: DateTime(2027, 1, 1),
@@ -279,6 +282,87 @@ void main() {
       expect(pAll.nextDueDate, isNull);
       expect(pAll.installmentsRemaining, 0);
       expect(pAll.estimatedEndDate, DateTime(2027, 3, 2));
+    });
+
+    test('paidBeforeCount con monto fijo suma a pagado y cuotas pagadas sin movimientos', () {
+      final motoLoan = Loan(
+        id: 'moto',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo moto',
+        totalAmount: 6390000,
+        installmentAmount: 355000,
+        installmentsTotal: 18,
+        dueDay: 25,
+        paidBeforeCount: 1,
+        startDate: DateTime(2026, 1, 1),
+        reminderDays: 2,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+
+      // Sin movimientos en Pockt: arranca en 1 de 18 y saldo reducido
+      final p0 = calculateLoanProgress(
+        loan: motoLoan,
+        payments: const [],
+        now: DateTime(2026, 2, 1),
+      );
+      expect(p0.installmentsPaid, 1);
+      expect(p0.paid, 355000);
+      expect(p0.balance, 6035000);
+      expect(p0.installmentsRemaining, 17);
+      expect(p0.paidBeforeCount, 1);
+      expect(p0.paidBeforeAmount, 355000);
+
+      // Con 1 pago regular en Pockt: avanza a cuota 2
+      final p1 = calculateLoanProgress(
+        loan: motoLoan,
+        payments: [
+          makePayment(id: 'p1', amount: 355000, date: DateTime(2026, 2, 25)),
+        ],
+        now: DateTime(2026, 2, 26),
+      );
+      expect(p1.installmentsPaid, 2);
+      expect(p1.paid, 355000 * 2);
+      expect(p1.balance, 6390000 - (355000 * 2));
+      expect(p1.installmentsRemaining, 16);
+    });
+
+    test('paidBeforeCount con cronograma suma primeras k cuotas y próxima cuota empieza en k', () {
+      final schedule = [
+        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+      ];
+      final schedLoan = Loan(
+        id: 'loan-sched',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo Itaú',
+        totalAmount: 905000 + 805000 + 705000,
+        installmentAmount: null,
+        installmentsTotal: 3,
+        dueDay: 2,
+        paidBeforeCount: 1,
+        startDate: DateTime(2027, 1, 1),
+        reminderDays: 2,
+        createdAt: DateTime(2027, 1, 1),
+        updatedAt: DateTime(2027, 1, 1),
+      );
+
+      final p0 = calculateLoanProgress(
+        loan: schedLoan,
+        payments: const [],
+        schedule: schedule,
+        now: DateTime(2027, 1, 10),
+      );
+      expect(p0.installmentsPaid, 1);
+      expect(p0.paid, 905000);
+      expect(p0.balance, 805000 + 705000);
+      expect(p0.installmentsRemaining, 2);
+      expect(p0.nextInstallment, equals(schedule[1])); // Cuota 2
+      expect(p0.paidBeforeCount, 1);
+      expect(p0.paidBeforeAmount, 905000);
     });
   });
 

@@ -45,6 +45,7 @@ void main() {
       kind: LoanKind.installments,
       name: 'Cuota',
       totalAmount: 1000000,
+      paidBeforeCount: 0,
       startDate: DateTime(2026, 1, 1),
       reminderDays: 2,
       createdAt: DateTime(2026, 1, 1),

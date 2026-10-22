@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/design/glass.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/features/loans/data/loans_repository.dart';
 import 'package:pockt/features/loans/domain/installment_schedule_parser.dart';
@@ -55,6 +56,7 @@ void main() {
       installmentAmount: null,
       installmentsTotal: 3,
       dueDay: 2,
+      paidBeforeCount: 0,
       reminderDays: 2,
       startDate: DateTime(2027, 1, 1),
       createdAt: DateTime(2027, 1, 1),
@@ -108,7 +110,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Nombre o concepto'), 'Préstamo Itaú');
 
     // Pegar cronograma con error
-    final scheduleField = find.widgetWithText(TextField, 'Pegá el cronograma (una cuota por línea)');
+    final scheduleField = find.byKey(const ValueKey('schedule-input'));
     expect(scheduleField, findsOneWidget);
 
     await tester.enterText(scheduleField, '1 fecha-invalida 905.000');
@@ -170,5 +172,124 @@ void main() {
     expect(find.text('Cuota 1 · 02/01/2027'), findsOneWidget);
     expect(find.text('Cuota 2 · 02/02/2027'), findsOneWidget);
     expect(find.text('Cuota 3 · 02/03/2027'), findsOneWidget);
+  });
+
+  testWidgets('LoanDetailScreen muestra fila informativa de cuotas ya pagadas antes de Pockt', (tester) async {
+    final loanId = await repo.createLoan(
+      direction: LoanDirection.owe,
+      kind: LoanKind.installments,
+      name: 'Préstamo moto',
+      totalAmount: 6390000,
+      installmentAmount: 355000,
+      installmentsTotal: 18,
+      dueDay: 25,
+      paidBeforeCount: 1,
+      startDate: DateTime(2027, 1, 1),
+    );
+
+    await tester.pumpWidget(buildTestApp(home: LoanDetailScreen(loanId: loanId)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cuota 1 · antes de Pockt'), findsOneWidget);
+    expect(find.text('Gs. 355.000'), findsWidgets);
+    expect(find.text('Aún no registraste pagos para este préstamo.'), findsNothing);
+  });
+
+  testWidgets('LoanEditorScreen muestra Debo / Presté con título y subtítulo centrados', (tester) async {
+    await tester.pumpWidget(buildTestApp(home: const LoanEditorScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Debo'), findsOneWidget);
+    expect(find.text('me prestaron / cuotas'), findsOneWidget);
+    expect(find.text('Presté'), findsOneWidget);
+    expect(find.text('me deben'), findsOneWidget);
+  });
+
+  testWidgets('LoanEditorScreen en cronograma no duplica el título y usa singular 1 cuota', (tester) async {
+    await tester.pumpWidget(buildTestApp(home: const LoanEditorScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cronograma'));
+    await tester.pumpAndSettle();
+
+    // El título "Cronograma" dentro de la tarjeta aparece una sola vez (no duplicado en el input)
+    expect(
+      find.descendant(
+        of: find.byType(GlassCard),
+        matching: find.text('Cronograma'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Pegá el cronograma (una cuota por línea)'), findsNothing);
+
+    final scheduleField = find.byKey(const ValueKey('schedule-input'));
+    await tester.enterText(scheduleField, '1 02/01/2027 905.000\n');
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 cuota'), findsOneWidget);
+  });
+
+  testWidgets('LoanEditorScreen selector -/+ de cuotas ya pagadas antes de Pockt', (tester) async {
+    await tester.pumpWidget(buildTestApp(home: const LoanEditorScreen()));
+    await tester.pumpAndSettle();
+
+    // Scroll hasta el selector si está offscreen
+    await tester.ensureVisible(find.byKey(const ValueKey('paid-before-count')));
+    expect(find.text('Cuotas que ya pagaste antes de usar Pockt'), findsOneWidget);
+    expect(find.byKey(const ValueKey('paid-before-count')), findsOneWidget);
+    expect(find.text('0'), findsWidgets);
+
+    // Ingresar monto de cuota y cant cuotas
+    await tester.ensureVisible(find.widgetWithText(TextField, 'Monto de cuota'));
+    await tester.enterText(find.widgetWithText(TextField, 'Monto de cuota'), '355.000');
+    await tester.enterText(find.widgetWithText(TextField, 'Cant. cuotas'), '18');
+    await tester.pumpAndSettle();
+
+    // Incrementar a 1
+    await tester.ensureVisible(find.byKey(const ValueKey('paid-before-inc')));
+    await tester.tap(find.byKey(const ValueKey('paid-before-inc')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsWidgets);
+    expect(find.textContaining('Cuentan como pagadas (Gs. 355.000) pero no como gasto.'), findsOneWidget);
+
+    // Decrementar a 0
+    await tester.ensureVisible(find.byKey(const ValueKey('paid-before-dec')));
+    await tester.tap(find.byKey(const ValueKey('paid-before-dec')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Cuentan como pagadas (Gs. 0) pero no como gasto.'), findsOneWidget);
+  });
+
+  testWidgets('LoanEditorScreen pide confirmación al descartar con cambios', (tester) async {
+    await tester.pumpWidget(buildTestApp(home: const LoanEditorScreen()));
+    await tester.pumpAndSettle();
+
+    // Ingresar un nombre
+    await tester.enterText(find.widgetWithText(TextField, 'Nombre o concepto'), 'Mi préstamo');
+    await tester.pumpAndSettle();
+
+    // Tocar botón atrás
+    await tester.tap(find.byKey(const ValueKey('loan-editor-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Descartar el préstamo?'), findsOneWidget);
+    expect(find.text('Si salís ahora se pierde lo que cargaste.'), findsOneWidget);
+
+    // Cancelar
+    await tester.tap(find.text('Seguir editando'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Descartar el préstamo?'), findsNothing);
+    expect(find.text('Nuevo préstamo'), findsOneWidget);
+
+    // Descartar
+    await tester.tap(find.byKey(const ValueKey('loan-editor-back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Descartar'));
+    await tester.pumpAndSettle();
+
+    // Se cerró la pantalla (no encuentra el AppBar 'Nuevo préstamo')
+    expect(find.text('Nuevo préstamo'), findsNothing);
   });
 }
