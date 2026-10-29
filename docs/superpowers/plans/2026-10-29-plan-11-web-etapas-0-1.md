@@ -193,22 +193,22 @@ y `drift_sqlite_async`, Node 24 + Vite + React para la mini web de la prueba.
 
 ### Tarea 1.3: login con Google (orquestador con el usuario)
 
-- [ ] Crear cliente OAuth **web** en el proyecto de Google Cloud existente
+- [x] Crear cliente OAuth **web** en el proyecto de Google Cloud existente
   (con el usuario presente, él aprueba).
-- [ ] Configurar el proveedor Google en Supabase (local en `config.toml` y
+- [x] Configurar el proveedor Google en Supabase (local en `config.toml` y
   después en la nube) con orígenes permitidos de Vercel y localhost.
 - [ ] Verificación: login de Google en local devuelve sesión y `auth.uid()`.
 
 ### Tarea 1.4: nube (orquestador con el usuario)
 
-- [ ] El usuario crea las cuentas (Supabase, PowerSync) e inicia sesión.
-- [ ] Proyecto Supabase: aplicar migraciones (`npx supabase db push`), correr
+- [x] El usuario crea las cuentas (Supabase, PowerSync) e inicia sesión.
+- [x] Proyecto Supabase: aplicar migraciones (`npx supabase db push`), correr
   `rls_test.sql` contra la nube.
-- [ ] Instancia PowerSync conectada a Supabase con las reglas de la tarea 1.2.
+- [x] Instancia PowerSync conectada a Supabase con las reglas de la tarea 1.2.
 - [ ] Llaves en `backend/.env` (ignorado) y en un gestor del usuario; nunca en
   el repo.
 - [ ] Verificación: la mini web de la tarea 0.4 apuntando a la nube sincroniza
   con un usuario de prueba.
-- [ ] De la auditoría de la etapa 1 (pendientes de validar en la nube): las
+- [x] De la auditoría de la etapa 1 (pendientes de validar en la nube): las
   conexiones de PowerSync a Postgres usan TLS (`sslmode=require` o
   `verify-full`) y el `jwks_uri` es el HTTPS del proyecto Supabase.

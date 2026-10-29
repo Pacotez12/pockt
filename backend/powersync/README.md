@@ -99,3 +99,12 @@ quieren conservar sus datos. El spike y los otros proyectos quedan corriendo.
 Referencias oficiales: [Data Queries y selección de columnas](https://docs.powersync.com/sync/rules/data-queries),
 [desarrollo local Supabase](https://docs.powersync.com/integrations/supabase/local-development),
 [protocolo y checkpoints](https://docs.powersync.com/architecture/powersync-protocol).
+
+## Producción (PowerSync Cloud)
+
+La instancia en la nube usa el formato nuevo **Sync Streams** (`config.edition: 3`),
+guardado en `sync-streams.yaml`: las mismas 12 consultas que `sync-rules.yaml`,
+filtradas con `auth.user_id()` y sin bajar `user_id`. Se cargó desde el panel de
+PowerSync (Sync Streams → Deploy). La conexión a Supabase usa un rol de
+replicación propio con SSL `verify-full`, y las sesiones se validan con el JWKS
+HTTPS de Supabase. `sync-rules.yaml` queda para el entorno local.

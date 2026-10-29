@@ -1,0 +1,20 @@
+config:
+  edition: 3
+
+streams:
+  # Un stream por usuario: cada uno recibe solo sus filas; user_id no baja al cliente.
+  user_data:
+    auto_subscribe: true
+    queries:
+      - SELECT id, type, amount, currency, category_id, merchant, note, occurred_at, created_at, updated_at, source, recurring_rule_id, suggestion_id, loan_id, is_extra, event_id, deleted_at FROM transactions WHERE user_id = auth.user_id()
+      - SELECT id, name, icon, color_dark, color_light, kind, sort_order, archived, updated_at FROM categories WHERE user_id = auth.user_id()
+      - SELECT id, direction, kind, name, counterparty, total_amount, installment_amount, installments_total, due_day, start_date, closed_at, reminder_days, paid_before_count, created_at, updated_at FROM loans WHERE user_id = auth.user_id()
+      - SELECT id, loan_id, number, due_date, amount, updated_at FROM loan_installments WHERE user_id = auth.user_id()
+      - SELECT id, name, icon, target_amount, target_date, created_at, archived, updated_at FROM goals WHERE user_id = auth.user_id()
+      - SELECT id, goal_id, amount, date, note, created_at, updated_at FROM goal_contributions WHERE user_id = auth.user_id()
+      - SELECT id, category_id, monthly_limit, alert80_sent_for, alert100_sent_for, updated_at FROM budgets WHERE user_id = auth.user_id()
+      - SELECT id, name, type, amount, category_id, frequency, day_of_month, day_of_week, month_of_year, next_due_date, active, updated_at FROM recurring_rules WHERE user_id = auth.user_id()
+      - SELECT id, mode, pay_days, pay_day_rules, monthly_amount, pay_split_percents, category_id, effective_from, updated_at FROM income_schedules WHERE user_id = auth.user_id()
+      - SELECT id, schedule_id, name, kind, value, updated_at FROM salary_deductions WHERE user_id = auth.user_id()
+      - SELECT id, name, icon, start_date, end_date, is_active, created_at, updated_at FROM events WHERE user_id = auth.user_id()
+      - SELECT id, key, value, updated_at FROM settings WHERE user_id = auth.user_id()
