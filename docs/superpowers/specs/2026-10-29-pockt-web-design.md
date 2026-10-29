@@ -147,10 +147,14 @@ La web no comparte código con la app. Para que los números coincidan:
   y Skiper UI (solo gratis, con la atribución que pida) copiando solo lo
   necesario, revisando licencia y código, y adaptando cada uno a los tokens
   de Pockt.
-- Skills para diseñar y revisar: ui-ux-pro-max, impeccable, high-end-visual-design,
-  emil-design-eng, animate, review-animations, fixing-accessibility,
-  fixing-motion-performance, web-design-guidelines. Cada pantalla nueva se
-  valida en el visual companion antes de implementarla.
+- Skills de diseño: **`apple-design` es la principal** (movimiento físico con
+  springs interrumpibles, paneles y gestos, materiales translúcidos,
+  tipografía, reducir movimiento) y manda cuando hay dudas; `emil-design-eng`
+  es la segunda (pulido de componentes y decisiones de animación). De apoyo:
+  ui-ux-pro-max, impeccable, high-end-visual-design, animate,
+  review-animations, fixing-accessibility, fixing-motion-performance,
+  web-design-guidelines. Cada pantalla nueva se valida en el visual companion
+  antes de implementarla.
 
 ## 8. Errores y estados
 
