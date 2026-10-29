@@ -67,7 +67,7 @@ y `drift_sqlite_async`, Node 24 + Vite + React para la mini web de la prueba.
 
 **Interfaces:**
 - Produce: Postgres local en `localhost:54322`, API de Supabase en
-  `localhost:54321`, PowerSync en `localhost:8080`; tabla `spike_tx(id text
+  `localhost:54321`, PowerSync en `localhost:18080`; tabla `spike_tx(id text
   primary key, user_id uuid not null default auth.uid(), amount integer not
   null, note text, occurred_at bigint not null, updated_at bigint not null,
   deleted_at bigint)` con RLS `user_id = auth.uid()`; script
@@ -75,7 +75,7 @@ y `drift_sqlite_async`, Node 24 + Vite + React para la mini web de la prueba.
   prueba.
 
 - [ ] **Paso 1:** `spike/infra/check.sh` que falla si no responde
-  `curl -sf localhost:8080/probes/liveness` o si `psql` no ve la tabla
+  `curl -sf localhost:18080/probes/liveness` o si `psql` no ve la tabla
   `spike_tx` con RLS activa (`relrowsecurity = true`).
 - [ ] **Paso 2:** correr `check.sh` y verlo fallar.
 - [ ] **Paso 3:** levantar Supabase (`npx supabase start` en

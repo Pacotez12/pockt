@@ -1,0 +1,38 @@
+:root { font-family: Inter, system-ui, sans-serif; color: #f5f5f5; background: #101012; color-scheme: dark; font-synthesis: none; --muted: #b3b3bb; --border: #37373e; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(960px, 100%); margin: 0 auto; padding: 32px 24px 64px; }
+header, .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+header { margin-bottom: 48px; }
+.brand { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+.brand > span { color: #ff8a3d; }
+.badge { font-size: 12px; border: 1px solid var(--border); border-radius: 24px; padding: 8px 12px; color: var(--muted); }
+h1 { font-size: clamp(28px, 5vw, 40px); letter-spacing: -1px; margin: 0 0 12px; }
+h2 { font-size: 20px; margin: 0; }
+p { line-height: 1.5; color: var(--muted); }
+.intro { margin-bottom: 32px; }
+.panel { border: 1px solid var(--border); border-radius: 12px; padding: 24px; background: #19191d; }
+.login { max-width: 480px; }
+form { display: grid; gap: 12px; margin-top: 24px; }
+label { font-size: 14px; }
+input, button { font: inherit; border-radius: 8px; min-height: 44px; padding: 12px 16px; }
+input { width: 100%; background: #101012; border: 1px solid var(--border); color: inherit; margin-bottom: 8px; }
+button { background: #ff8a3d; color: #17100b; font-weight: 700; border: 1px solid transparent; cursor: pointer; }
+button:hover { background: #ffa66c; }
+button:disabled { opacity: .55; cursor: wait; }
+.secondary { background: transparent; color: #f5f5f5; border-color: var(--border); }
+.secondary:hover { background: #303037; }
+:focus-visible { outline: 3px solid #ffa66c; outline-offset: 3px; }
+.toolbar { margin-bottom: 24px; }
+.toolbar p { font-size: 13px; margin: 8px 0 0; }
+.count { color: var(--muted); font-size: 14px; margin-left: 8px; }
+.movements { list-style: none; margin: 0; padding: 0; }
+.movements li { display: flex; justify-content: space-between; gap: 24px; padding: 20px 0; border-top: 1px solid var(--border); }
+.movements li > div { min-width: 0; }
+.movements p { margin: 8px 0; font-size: 13px; }
+code { display: block; font-size: 11px; overflow-wrap: anywhere; color: var(--muted); }
+.amount { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
+.hint { font-size: 12px; margin-top: 24px; }
+.empty { padding: 24px 0; border-top: 1px solid var(--border); }
+[role=alert] { color: #ffb4a5; overflow-wrap: anywhere; }
+@media (max-width: 480px) { main { padding: 24px 16px; } .panel { padding: 16px; } .movements li { flex-direction: column; gap: 12px; } }

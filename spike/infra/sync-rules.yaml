@@ -1,0 +1,5 @@
+bucket_definitions:
+  user_spike:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM spike_tx WHERE user_id = bucket.user_id

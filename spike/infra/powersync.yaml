@@ -1,0 +1,18 @@
+telemetry:
+  disable_telemetry_sharing: true
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_SOURCE_URI
+      sslmode: disable
+storage:
+  type: postgresql
+  uri: !env PS_STORAGE_URI
+  sslmode: disable
+port: 8080
+sync_rules:
+  path: /config/sync-rules.yaml
+client_auth:
+  supabase: true
+  jwks_uri: http://supabase_kong_pockt-spike:8000/auth/v1/.well-known/jwks.json
+  audience: [authenticated]

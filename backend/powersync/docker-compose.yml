@@ -1,0 +1,43 @@
+name: pockt-backend-sync
+services:
+  storage:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: powersync
+      POSTGRES_PASSWORD: ${PS_STORAGE_PASSWORD:?Completar .env}
+    volumes:
+      - storage:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d powersync']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  powersync:
+    image: journeyapps/powersync-service:1.27.2@sha256:d7a99817057a42dae9e6d8fe0c70b49d99105dcac8b8ab0e9ed3cf1ff0978b8b
+    command: [start, -r, unified]
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
+      PS_SOURCE_URI: ${PS_SOURCE_URI:?Completar .env}
+      PS_STORAGE_URI: postgresql://postgres:${PS_STORAGE_PASSWORD}@storage:5432/powersync
+    ports:
+      - '127.0.0.1:${PS_HOST_PORT:-18081}:8080'
+    volumes:
+      - ./powersync.yaml:/config/powersync.yaml:ro,z
+      - ./sync-rules.yaml:/config/sync-rules.yaml:ro,z
+    networks:
+      - default
+      - supabase
+    depends_on:
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:8080/probes/liveness').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  storage:
+networks:
+  supabase:
+    external: true
+    name: supabase_network_pockt-backend

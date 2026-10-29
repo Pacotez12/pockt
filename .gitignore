@@ -49,3 +49,14 @@ app.*.map.json
 android/key.properties
 **/client_secret*.json
 **/google-services.json
+
+# Infraestructura descartable local
+spike/**/.env
+spike/**/node_modules/
+spike/**/supabase/.temp/
+spike/**/supabase/.branches/
+
+# Backend Supabase local
+backend/**/.env
+backend/supabase/.temp/
+backend/supabase/.branches/
