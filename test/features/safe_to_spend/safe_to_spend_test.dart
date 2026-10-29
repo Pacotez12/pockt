@@ -491,59 +491,86 @@ void main() {
       },
     );
 
-    test('con esquema quincenal y cobro registrado hoy, reparte entre los días hasta la siguiente quincena', () async {
-      final cat = await (db.select(db.categories)..limit(1)).getSingle();
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      // Creamos esquema quincenal con cobro el día de hoy
-      await db
-          .into(db.incomeSchedules)
-          .insert(
-            IncomeSchedulesCompanion.insert(
-              id: 'sched-1',
-              mode: 'biweekly',
-              payDays: '[${today.day}, -1]',
-              payDayRules: '["either", "previous"]',
-              paySplitPercents: '[50, 50]',
-              categoryId: cat.id,
-              monthlyAmount: Value(4000000),
-              effectiveFrom: DateTime(today.year, today.month, 1),
-            ),
+    for (final scenario in [
+      (
+        today: DateTime(2026, 10, 15),
+        nextPay: DateTime(2026, 10, 30),
+        days: 15,
+      ),
+      (today: DateTime(2026, 10, 29), nextPay: DateTime(2026, 10, 30), days: 1),
+      (
+        today: DateTime(2026, 10, 31),
+        nextPay: DateTime(2026, 11, 30),
+        days: 30,
+      ),
+    ]) {
+      test(
+        'con esquema quincenal y cobro registrado hoy, reparte hasta el siguiente cobro: ${scenario.today}',
+        () async {
+          tz.initializeTimeZones();
+          setLocalZone(kFallbackZone);
+          final today = scenario.today;
+          container.dispose();
+          container = ProviderContainer(
+            overrides: [
+              databaseProvider.overrideWithValue(db),
+              safeToSpendClockProvider.overrideWithValue(() => today),
+            ],
           );
+          final cat = await (db.select(db.categories)..limit(1)).getSingle();
+          await db
+              .into(db.incomeSchedules)
+              .insert(
+                IncomeSchedulesCompanion.insert(
+                  id: 'sched-1',
+                  mode: 'biweekly',
+                  payDays: '[${today.day}, -1]',
+                  payDayRules: '["either", "previous"]',
+                  paySplitPercents: '[50, 50]',
+                  categoryId: cat.id,
+                  monthlyAmount: const Value(4000000),
+                  effectiveFrom: DateTime(today.year, today.month, 1),
+                ),
+              );
+          // Mediodía en Paraguay, independiente de la zona horaria del host.
+          final paidAt = dayRangeUtc(today).startUtc
+              .add(const Duration(hours: 12));
+          await db
+              .into(db.transactions)
+              .insert(
+                TransactionsCompanion.insert(
+                  id: 'tx-salary-today',
+                  type: TxType.income,
+                  amount: 2000000,
+                  categoryId: cat.id,
+                  occurredAt: paidAt,
+                  createdAt: paidAt,
+                  updatedAt: paidAt,
+                  source: TxSource.incomeSchedule,
+                ),
+              );
 
-      // Cobro de hoy ya registrado
-      await db
-          .into(db.transactions)
-          .insert(
-            TransactionsCompanion.insert(
-              id: 'tx-salary-today',
-              type: TxType.income,
-              amount: 2000000,
-              categoryId: cat.id,
-              occurredAt: today,
-              createdAt: today,
-              updatedAt: today,
-              source: TxSource.incomeSchedule,
-            ),
+          final values = <SafeToSpend>[];
+          final subscription = container.listen(safeToSpendProvider, (_, next) {
+            if (next.value case final value?) values.add(value);
+          });
+          addTearDown(subscription.close);
+          final wait = Stopwatch()..start();
+          while (values.isEmpty && wait.elapsed < const Duration(seconds: 5)) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+          expect(
+            values,
+            isNotEmpty,
+            reason: 'El provider debe emitir un valor',
           );
-
-      final queue = <SafeToSpend>[];
-      final sub = container.listen(safeToSpendProvider, (prev, next) {
-        final val = next.value;
-        if (val != null) {
-          queue.add(val);
-        }
-      });
-      addTearDown(sub.close);
-
-      while (queue.isEmpty) {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-
-      final val = queue.last;
-      expect(val.daysUntilPay, greaterThan(1));
-      expect(val.amount, lessThan(2000000));
-    });
+          final value = values.last;
+          expect(value.hasIncomeSchedule, isTrue);
+          expect(value.targetDate, scenario.nextPay);
+          expect(value.daysUntilPay, scenario.days);
+          expect(value.amount, (2000000 / scenario.days).round());
+        },
+      );
+    }
   });
 }

@@ -186,9 +186,15 @@ SafeToSpend safeToSpendToday({
   );
 }
 
+/// Reloj leído en cada recálculo; en producción conserva DateTime.now.
+final safeToSpendClockProvider = Provider<DateTime Function()>((ref) {
+  return DateTime.now;
+});
+
 /// Provider reactivo que provee el cálculo de "Podés gastar hoy" combinando
 /// ingresos, gastos, aportes a metas, reglas recurrentes y metas activas.
 final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
+  final clock = ref.watch(safeToSpendClockProvider);
   final db = ref.watch(databaseProvider);
   final schedRepo = ref.watch(incomeScheduleRepositoryProvider);
   final goalsRepo = ref.watch(goalsRepositoryProvider);
@@ -208,7 +214,7 @@ final safeToSpendProvider = StreamProvider<SafeToSpend>((ref) {
       )
       .watch()
       .asyncMap((_) async {
-        final now = DateTime.now();
+        final now = clock();
         final today = DateTime(now.year, now.month, now.day);
 
         final sched =
