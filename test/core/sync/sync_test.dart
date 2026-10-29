@@ -74,6 +74,8 @@ ps.SyncStatus makeSyncStatus({
 class FakeSyncDatabaseClient implements SyncDatabaseClient {
   bool connectCalled = false;
   bool disconnectCalled = false;
+  int connectCallCount = 0;
+  int disconnectCallCount = 0;
   ps.PowerSyncBackendConnector? lastConnector;
 
   final statusController = StreamController<ps.SyncStatus>.broadcast();
@@ -95,6 +97,7 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
 
   @override
   Future<void> connect({required ps.PowerSyncBackendConnector connector}) async {
+    connectCallCount++;
     connectCalled = true;
     disconnectCalled = false;
     lastConnector = connector;
@@ -102,6 +105,7 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
 
   @override
   Future<void> disconnect() async {
+    disconnectCallCount++;
     disconnectCalled = true;
     connectCalled = false;
   }
@@ -583,6 +587,36 @@ void main() {
         controller.currentSyncState,
         equals(const SyncState.error('Validation failed on server')),
       );
+    });
+
+    test('10) retry() desconecta y vuelve a conectar si corresponde', () async {
+      when(() => mockAuth.currentSession).thenReturn(testSession);
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(fakeSyncDb.connectCalled, isTrue);
+
+      final disconnectsBefore = fakeSyncDb.disconnectCallCount;
+      final connectsBefore = fakeSyncDb.connectCallCount;
+
+      await controller.retry();
+
+      expect(fakeSyncDb.disconnectCallCount, equals(disconnectsBefore + 1));
+      expect(fakeSyncDb.connectCallCount, equals(connectsBefore + 1));
     });
   });
 }

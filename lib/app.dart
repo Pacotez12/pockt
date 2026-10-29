@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pockt/core/design/theme.dart';
 import 'package:pockt/core/settings/amounts_privacy.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
+import 'package:pockt/core/sync/sync_controller.dart';
 import 'package:pockt/features/backup/domain/backup_service.dart';
 import 'package:pockt/features/capture/data/capture_service.dart';
 import 'package:pockt/features/capture/data/email_capture_service.dart';
@@ -44,6 +45,7 @@ class _PocktAppState extends ConsumerState<PocktApp>
       _runSmsCaptureSync();
       _runEmailCaptureSync();
       _runBackupIfDue();
+      _initSync();
     });
   }
 
@@ -73,6 +75,10 @@ class _PocktAppState extends ConsumerState<PocktApp>
     unawaited(
       ref.read(backupServiceProvider).backupIfDue().catchError((_) => null),
     );
+  }
+
+  void _initSync() {
+    ref.read(syncControllerProvider);
   }
 
   void _runSuggestionGenerator() {

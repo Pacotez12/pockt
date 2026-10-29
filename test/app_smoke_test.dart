@@ -6,7 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/app.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/notifications/notifier.dart';
+import 'package:pockt/core/sync/sync_controller.dart';
 import 'package:pockt/features/recurring/domain/suggestion_generator.dart';
+
+class _FakeSyncController implements SyncController {
+  @override
+  bool get isSyncAvailable => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
 
 class _SpySuggestionGenerator extends SuggestionGenerator {
   int runCount = 0;
@@ -53,6 +62,24 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(spy.runCount, 2);
+  });
+
+  testWidgets('PocktApp lee syncControllerProvider al iniciar sin bloquear el primer frame', (tester) async {
+    var syncControllerInitialized = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          syncControllerProvider.overrideWith((ref) {
+            syncControllerInitialized = true;
+            return _FakeSyncController();
+          }),
+        ],
+        child: const PocktApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(syncControllerInitialized, isTrue);
   });
 }
 

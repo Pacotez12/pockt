@@ -186,3 +186,12 @@ abstract final class PocktType {
   static const double title = 20; // subpantallas
   static const double tabTitle = 24; // pestañas principales
 }
+
+/// Colores de marcas de terceros permitidas (por ejemplo, Google Sign-In).
+abstract final class PocktBrandLogos {
+  static const Color googleBlue = Color(0xFF4285F4);
+  static const Color googleGreen = Color(0xFF34A853);
+  static const Color googleYellow = Color(0xFFFBBC05);
+  static const Color googleRed = Color(0xFFEA4335);
+  static const Color googleDarkText = Color(0xFF111111);
+}

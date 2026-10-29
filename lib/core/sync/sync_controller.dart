@@ -248,6 +248,7 @@ class SyncController {
   Stream<SyncState> get syncStateStream => _syncStateController.stream;
 
   void _init() {
+    if (!isSyncAvailable) return;
     _currentSession = authService.currentSession;
     _statusSub = _database.statusStream.listen(_onStatusUpdate);
     _pendingSub = _database.watchPendingCount().listen(_onPendingUpdate);
@@ -298,6 +299,19 @@ class SyncController {
     }
 
     _calculateAndEmitState();
+  }
+
+  /// Reintenta la sincronización: desconecta y vuelve a conectar si corresponde.
+  Future<void> retry() async {
+    if (_isConnectingOrConnected) {
+      _isConnectingOrConnected = false;
+      try {
+        await _database.disconnect();
+      } catch (e) {
+        debugPrint('Error al desconectar en retry: $e');
+      }
+    }
+    await _reevaluateConnection();
   }
 
   void _onStatusUpdate(ps.SyncStatus status) {

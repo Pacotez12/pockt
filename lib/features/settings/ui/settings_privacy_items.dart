@@ -13,6 +13,7 @@ import 'package:pockt/features/settings/ui/settings_tiles.dart';
 import 'package:pockt/features/settings/ui/wipe_data_dialog.dart';
 import 'package:pockt/features/settings/ui/about_pockt_dialog.dart';
 import 'package:pockt/features/settings/ui/lock_settings_tile.dart';
+import 'package:pockt/features/settings/ui/sync_settings_tile.dart';
 
 List<Widget> privacySettingsItems(BuildContext context, WidgetRef ref) {
   final colors = context.pockt;
@@ -45,6 +46,7 @@ List<Widget> privacySettingsItems(BuildContext context, WidgetRef ref) {
       onChanged: (val) =>
           repo.set(SettingsKeys.privacyHideAmounts, val.toString()),
     ),
+    const SyncSettingsTile(),
     StreamBuilder<BackupStatus>(
       stream: ref.watch(backupServiceProvider).watchStatus(),
       builder: (context, snapshot) {
