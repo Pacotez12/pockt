@@ -204,6 +204,7 @@ class LoansRepository {
           _db.loanInstallments,
           schedule.map(
             (i) => LoanInstallmentsCompanion.insert(
+              id: '$loanId:${i.number}',
               loanId: loanId,
               number: i.number,
               dueDate: i.dueDate,
@@ -263,6 +264,7 @@ class LoansRepository {
             _db.loanInstallments,
             schedule.map(
               (i) => LoanInstallmentsCompanion.insert(
+                id: '$id:${i.number}',
                 loanId: id,
                 number: i.number,
                 dueDate: i.dueDate,

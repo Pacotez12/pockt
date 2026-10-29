@@ -69,6 +69,7 @@ List<LoanInstallment>? effectiveSchedule(
   return [
     for (var i = 0; i < count; i++)
       LoanInstallment(
+        id: '${loan.id}:${i + 1}',
         loanId: loan.id,
         number: i + 1,
         dueDate: dueIn(first.year, first.month + i),

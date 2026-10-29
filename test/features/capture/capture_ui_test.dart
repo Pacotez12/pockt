@@ -261,6 +261,7 @@ void main() {
             .into(testDb.merchantMemory)
             .insert(
               MerchantMemoryCompanion.insert(
+                id: 'pizza hut-multiplaza|$comidaId',
                 merchantKey: 'pizza hut-multiplaza',
                 categoryId: comidaId,
                 uses: 2,

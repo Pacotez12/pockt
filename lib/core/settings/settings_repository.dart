@@ -91,7 +91,11 @@ class SettingsRepository {
     await _db
         .into(_db.settings)
         .insertOnConflictUpdate(
-          SettingsCompanion(key: Value(key), value: Value(value)),
+          SettingsCompanion(
+            id: Value(key),
+            key: Value(key),
+            value: Value(value),
+          ),
         );
   }
 }

@@ -69,9 +69,9 @@ void main() {
         updatedAt: now,
       );
       final schedule = [
-        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
-        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
-        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+        LoanInstallment(id: 'loan-sched:1', loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(id: 'loan-sched:2', loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(id: 'loan-sched:3', loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
       ];
 
       final reminder = planLoanReminder(
@@ -108,9 +108,9 @@ void main() {
         updatedAt: now,
       );
       final schedule = [
-        LoanInstallment(loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
-        LoanInstallment(loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
-        LoanInstallment(loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
+        LoanInstallment(id: 'loan-sched:1', loanId: 'loan-sched', number: 1, dueDate: DateTime(2027, 1, 2), amount: 905000),
+        LoanInstallment(id: 'loan-sched:2', loanId: 'loan-sched', number: 2, dueDate: DateTime(2027, 2, 2), amount: 805000),
+        LoanInstallment(id: 'loan-sched:3', loanId: 'loan-sched', number: 3, dueDate: DateTime(2027, 3, 2), amount: 705000),
       ];
 
       final reminder = planLoanReminder(

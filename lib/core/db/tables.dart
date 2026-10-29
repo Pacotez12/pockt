@@ -44,13 +44,14 @@ class Loans extends Table {
 }
 
 class LoanInstallments extends Table {
+  TextColumn get id => text()();
   TextColumn get loanId => text().references(Loans, #id)();
   IntColumn get number => integer()();
   DateTimeColumn get dueDate => dateTime()();
   IntColumn get amount => integer()();
 
   @override
-  Set<Column> get primaryKey => {loanId, number};
+  Set<Column> get primaryKey => {id};
 }
 
 class Categories extends Table {
@@ -204,19 +205,21 @@ class Budgets extends Table {
 }
 
 class DayMarks extends Table {
+  TextColumn get id => text()();
   TextColumn get date => text()();
   BoolColumn get noSpend => boolean()();
 
   @override
-  Set<Column> get primaryKey => {date};
+  Set<Column> get primaryKey => {id};
 }
 
 class Settings extends Table {
+  TextColumn get id => text()();
   TextColumn get key => text()();
   TextColumn get value => text()();
 
   @override
-  Set<Column> get primaryKey => {key};
+  Set<Column> get primaryKey => {id};
 }
 
 enum KeywordSource { seed, user }
@@ -237,6 +240,7 @@ class CategoryKeywords extends Table {
 }
 
 class MerchantMemory extends Table {
+  TextColumn get id => text()();
   TextColumn get merchantKey => text()();
   TextColumn get categoryId => text().references(Categories, #id)();
   IntColumn get uses => integer()();
@@ -244,7 +248,7 @@ class MerchantMemory extends Table {
   BoolColumn get autoConfirm => boolean().withDefault(const Constant(false))();
 
   @override
-  Set<Column> get primaryKey => {merchantKey, categoryId};
+  Set<Column> get primaryKey => {id};
 }
 
 class Goals extends Table {

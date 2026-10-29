@@ -290,6 +290,7 @@ void main() {
         .into(db.merchantMemory)
         .insert(
           MerchantMemoryCompanion.insert(
+            id: 'pedidos ya|$catComidaId',
             merchantKey: 'pedidos ya',
             categoryId: catComidaId,
             uses: 3,
@@ -407,6 +408,7 @@ void main() {
         .into(db.merchantMemory)
         .insert(
           MerchantMemoryCompanion.insert(
+            id: 'financiera fic pago de tarjeta con|$catTarjetasId',
             merchantKey: 'financiera fic pago de tarjeta con',
             categoryId: catTarjetasId,
             uses: 2,

@@ -18,7 +18,11 @@ class DayMarksRepository {
     await db
         .into(db.dayMarks)
         .insertOnConflictUpdate(
-          DayMarksCompanion(date: Value(key), noSpend: const Value(true)),
+          DayMarksCompanion(
+            id: Value(key),
+            date: Value(key),
+            noSpend: const Value(true),
+          ),
         );
   }
 

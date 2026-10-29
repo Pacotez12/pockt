@@ -5345,6 +5345,15 @@ class $DayMarksTable extends DayMarks with TableInfo<$DayMarksTable, DayMark> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $DayMarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
   late final GeneratedColumn<String> date = GeneratedColumn<String>(
@@ -5369,7 +5378,7 @@ class $DayMarksTable extends DayMarks with TableInfo<$DayMarksTable, DayMark> {
     ),
   );
   @override
-  List<GeneratedColumn> get $columns => [date, noSpend];
+  List<GeneratedColumn> get $columns => [id, date, noSpend];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5382,6 +5391,11 @@ class $DayMarksTable extends DayMarks with TableInfo<$DayMarksTable, DayMark> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
     if (data.containsKey('date')) {
       context.handle(
         _dateMeta,
@@ -5402,11 +5416,15 @@ class $DayMarksTable extends DayMarks with TableInfo<$DayMarksTable, DayMark> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {date};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   DayMark map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DayMark(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       date: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}date'],
@@ -5425,19 +5443,25 @@ class $DayMarksTable extends DayMarks with TableInfo<$DayMarksTable, DayMark> {
 }
 
 class DayMark extends DataClass implements Insertable<DayMark> {
+  final String id;
   final String date;
   final bool noSpend;
-  const DayMark({required this.date, required this.noSpend});
+  const DayMark({required this.id, required this.date, required this.noSpend});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
     map['date'] = Variable<String>(date);
     map['no_spend'] = Variable<bool>(noSpend);
     return map;
   }
 
   DayMarksCompanion toCompanion(bool nullToAbsent) {
-    return DayMarksCompanion(date: Value(date), noSpend: Value(noSpend));
+    return DayMarksCompanion(
+      id: Value(id),
+      date: Value(date),
+      noSpend: Value(noSpend),
+    );
   }
 
   factory DayMark.fromJson(
@@ -5446,6 +5470,7 @@ class DayMark extends DataClass implements Insertable<DayMark> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DayMark(
+      id: serializer.fromJson<String>(json['id']),
       date: serializer.fromJson<String>(json['date']),
       noSpend: serializer.fromJson<bool>(json['noSpend']),
     );
@@ -5454,15 +5479,20 @@ class DayMark extends DataClass implements Insertable<DayMark> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
       'date': serializer.toJson<String>(date),
       'noSpend': serializer.toJson<bool>(noSpend),
     };
   }
 
-  DayMark copyWith({String? date, bool? noSpend}) =>
-      DayMark(date: date ?? this.date, noSpend: noSpend ?? this.noSpend);
+  DayMark copyWith({String? id, String? date, bool? noSpend}) => DayMark(
+    id: id ?? this.id,
+    date: date ?? this.date,
+    noSpend: noSpend ?? this.noSpend,
+  );
   DayMark copyWithCompanion(DayMarksCompanion data) {
     return DayMark(
+      id: data.id.present ? data.id.value : this.id,
       date: data.date.present ? data.date.value : this.date,
       noSpend: data.noSpend.present ? data.noSpend.value : this.noSpend,
     );
@@ -5471,6 +5501,7 @@ class DayMark extends DataClass implements Insertable<DayMark> {
   @override
   String toString() {
     return (StringBuffer('DayMark(')
+          ..write('id: $id, ')
           ..write('date: $date, ')
           ..write('noSpend: $noSpend')
           ..write(')'))
@@ -5478,36 +5509,43 @@ class DayMark extends DataClass implements Insertable<DayMark> {
   }
 
   @override
-  int get hashCode => Object.hash(date, noSpend);
+  int get hashCode => Object.hash(id, date, noSpend);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DayMark &&
+          other.id == this.id &&
           other.date == this.date &&
           other.noSpend == this.noSpend);
 }
 
 class DayMarksCompanion extends UpdateCompanion<DayMark> {
+  final Value<String> id;
   final Value<String> date;
   final Value<bool> noSpend;
   final Value<int> rowid;
   const DayMarksCompanion({
+    this.id = const Value.absent(),
     this.date = const Value.absent(),
     this.noSpend = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DayMarksCompanion.insert({
+    required String id,
     required String date,
     required bool noSpend,
     this.rowid = const Value.absent(),
-  }) : date = Value(date),
+  }) : id = Value(id),
+       date = Value(date),
        noSpend = Value(noSpend);
   static Insertable<DayMark> custom({
+    Expression<String>? id,
     Expression<String>? date,
     Expression<bool>? noSpend,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (date != null) 'date': date,
       if (noSpend != null) 'no_spend': noSpend,
       if (rowid != null) 'rowid': rowid,
@@ -5515,11 +5553,13 @@ class DayMarksCompanion extends UpdateCompanion<DayMark> {
   }
 
   DayMarksCompanion copyWith({
+    Value<String>? id,
     Value<String>? date,
     Value<bool>? noSpend,
     Value<int>? rowid,
   }) {
     return DayMarksCompanion(
+      id: id ?? this.id,
       date: date ?? this.date,
       noSpend: noSpend ?? this.noSpend,
       rowid: rowid ?? this.rowid,
@@ -5529,6 +5569,9 @@ class DayMarksCompanion extends UpdateCompanion<DayMark> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
     if (date.present) {
       map['date'] = Variable<String>(date.value);
     }
@@ -5544,6 +5587,7 @@ class DayMarksCompanion extends UpdateCompanion<DayMark> {
   @override
   String toString() {
     return (StringBuffer('DayMarksCompanion(')
+          ..write('id: $id, ')
           ..write('date: $date, ')
           ..write('noSpend: $noSpend, ')
           ..write('rowid: $rowid')
@@ -5557,6 +5601,15 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $SettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
   late final GeneratedColumn<String> key = GeneratedColumn<String>(
@@ -5576,7 +5629,7 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [key, value];
+  List<GeneratedColumn> get $columns => [id, key, value];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5589,6 +5642,11 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
     if (data.containsKey('key')) {
       context.handle(
         _keyMeta,
@@ -5609,11 +5667,15 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {key};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Setting map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Setting(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       key: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}key'],
@@ -5632,19 +5694,25 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
 }
 
 class Setting extends DataClass implements Insertable<Setting> {
+  final String id;
   final String key;
   final String value;
-  const Setting({required this.key, required this.value});
+  const Setting({required this.id, required this.key, required this.value});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
     map['key'] = Variable<String>(key);
     map['value'] = Variable<String>(value);
     return map;
   }
 
   SettingsCompanion toCompanion(bool nullToAbsent) {
-    return SettingsCompanion(key: Value(key), value: Value(value));
+    return SettingsCompanion(
+      id: Value(id),
+      key: Value(key),
+      value: Value(value),
+    );
   }
 
   factory Setting.fromJson(
@@ -5653,6 +5721,7 @@ class Setting extends DataClass implements Insertable<Setting> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Setting(
+      id: serializer.fromJson<String>(json['id']),
       key: serializer.fromJson<String>(json['key']),
       value: serializer.fromJson<String>(json['value']),
     );
@@ -5661,15 +5730,20 @@ class Setting extends DataClass implements Insertable<Setting> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
       'key': serializer.toJson<String>(key),
       'value': serializer.toJson<String>(value),
     };
   }
 
-  Setting copyWith({String? key, String? value}) =>
-      Setting(key: key ?? this.key, value: value ?? this.value);
+  Setting copyWith({String? id, String? key, String? value}) => Setting(
+    id: id ?? this.id,
+    key: key ?? this.key,
+    value: value ?? this.value,
+  );
   Setting copyWithCompanion(SettingsCompanion data) {
     return Setting(
+      id: data.id.present ? data.id.value : this.id,
       key: data.key.present ? data.key.value : this.key,
       value: data.value.present ? data.value.value : this.value,
     );
@@ -5678,6 +5752,7 @@ class Setting extends DataClass implements Insertable<Setting> {
   @override
   String toString() {
     return (StringBuffer('Setting(')
+          ..write('id: $id, ')
           ..write('key: $key, ')
           ..write('value: $value')
           ..write(')'))
@@ -5685,34 +5760,43 @@ class Setting extends DataClass implements Insertable<Setting> {
   }
 
   @override
-  int get hashCode => Object.hash(key, value);
+  int get hashCode => Object.hash(id, key, value);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Setting && other.key == this.key && other.value == this.value);
+      (other is Setting &&
+          other.id == this.id &&
+          other.key == this.key &&
+          other.value == this.value);
 }
 
 class SettingsCompanion extends UpdateCompanion<Setting> {
+  final Value<String> id;
   final Value<String> key;
   final Value<String> value;
   final Value<int> rowid;
   const SettingsCompanion({
+    this.id = const Value.absent(),
     this.key = const Value.absent(),
     this.value = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SettingsCompanion.insert({
+    required String id,
     required String key,
     required String value,
     this.rowid = const Value.absent(),
-  }) : key = Value(key),
+  }) : id = Value(id),
+       key = Value(key),
        value = Value(value);
   static Insertable<Setting> custom({
+    Expression<String>? id,
     Expression<String>? key,
     Expression<String>? value,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (key != null) 'key': key,
       if (value != null) 'value': value,
       if (rowid != null) 'rowid': rowid,
@@ -5720,11 +5804,13 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 
   SettingsCompanion copyWith({
+    Value<String>? id,
     Value<String>? key,
     Value<String>? value,
     Value<int>? rowid,
   }) {
     return SettingsCompanion(
+      id: id ?? this.id,
       key: key ?? this.key,
       value: value ?? this.value,
       rowid: rowid ?? this.rowid,
@@ -5734,6 +5820,9 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
     if (key.present) {
       map['key'] = Variable<String>(key.value);
     }
@@ -5749,6 +5838,7 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   @override
   String toString() {
     return (StringBuffer('SettingsCompanion(')
+          ..write('id: $id, ')
           ..write('key: $key, ')
           ..write('value: $value, ')
           ..write('rowid: $rowid')
@@ -6087,6 +6177,15 @@ class $MerchantMemoryTable extends MerchantMemory
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $MerchantMemoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _merchantKeyMeta = const VerificationMeta(
     'merchantKey',
   );
@@ -6149,6 +6248,7 @@ class $MerchantMemoryTable extends MerchantMemory
   );
   @override
   List<GeneratedColumn> get $columns => [
+    id,
     merchantKey,
     categoryId,
     uses,
@@ -6167,6 +6267,11 @@ class $MerchantMemoryTable extends MerchantMemory
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
     if (data.containsKey('merchant_key')) {
       context.handle(
         _merchantKeyMeta,
@@ -6218,11 +6323,15 @@ class $MerchantMemoryTable extends MerchantMemory
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {merchantKey, categoryId};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   MerchantMemoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return MerchantMemoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       merchantKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}merchant_key'],
@@ -6254,12 +6363,14 @@ class $MerchantMemoryTable extends MerchantMemory
 
 class MerchantMemoryData extends DataClass
     implements Insertable<MerchantMemoryData> {
+  final String id;
   final String merchantKey;
   final String categoryId;
   final int uses;
   final DateTime lastUsedAt;
   final bool autoConfirm;
   const MerchantMemoryData({
+    required this.id,
     required this.merchantKey,
     required this.categoryId,
     required this.uses,
@@ -6269,6 +6380,7 @@ class MerchantMemoryData extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
     map['merchant_key'] = Variable<String>(merchantKey);
     map['category_id'] = Variable<String>(categoryId);
     map['uses'] = Variable<int>(uses);
@@ -6279,6 +6391,7 @@ class MerchantMemoryData extends DataClass
 
   MerchantMemoryCompanion toCompanion(bool nullToAbsent) {
     return MerchantMemoryCompanion(
+      id: Value(id),
       merchantKey: Value(merchantKey),
       categoryId: Value(categoryId),
       uses: Value(uses),
@@ -6293,6 +6406,7 @@ class MerchantMemoryData extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MerchantMemoryData(
+      id: serializer.fromJson<String>(json['id']),
       merchantKey: serializer.fromJson<String>(json['merchantKey']),
       categoryId: serializer.fromJson<String>(json['categoryId']),
       uses: serializer.fromJson<int>(json['uses']),
@@ -6304,6 +6418,7 @@ class MerchantMemoryData extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
       'merchantKey': serializer.toJson<String>(merchantKey),
       'categoryId': serializer.toJson<String>(categoryId),
       'uses': serializer.toJson<int>(uses),
@@ -6313,12 +6428,14 @@ class MerchantMemoryData extends DataClass
   }
 
   MerchantMemoryData copyWith({
+    String? id,
     String? merchantKey,
     String? categoryId,
     int? uses,
     DateTime? lastUsedAt,
     bool? autoConfirm,
   }) => MerchantMemoryData(
+    id: id ?? this.id,
     merchantKey: merchantKey ?? this.merchantKey,
     categoryId: categoryId ?? this.categoryId,
     uses: uses ?? this.uses,
@@ -6327,6 +6444,7 @@ class MerchantMemoryData extends DataClass
   );
   MerchantMemoryData copyWithCompanion(MerchantMemoryCompanion data) {
     return MerchantMemoryData(
+      id: data.id.present ? data.id.value : this.id,
       merchantKey: data.merchantKey.present
           ? data.merchantKey.value
           : this.merchantKey,
@@ -6346,6 +6464,7 @@ class MerchantMemoryData extends DataClass
   @override
   String toString() {
     return (StringBuffer('MerchantMemoryData(')
+          ..write('id: $id, ')
           ..write('merchantKey: $merchantKey, ')
           ..write('categoryId: $categoryId, ')
           ..write('uses: $uses, ')
@@ -6357,11 +6476,12 @@ class MerchantMemoryData extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(merchantKey, categoryId, uses, lastUsedAt, autoConfirm);
+      Object.hash(id, merchantKey, categoryId, uses, lastUsedAt, autoConfirm);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is MerchantMemoryData &&
+          other.id == this.id &&
           other.merchantKey == this.merchantKey &&
           other.categoryId == this.categoryId &&
           other.uses == this.uses &&
@@ -6370,6 +6490,7 @@ class MerchantMemoryData extends DataClass
 }
 
 class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
+  final Value<String> id;
   final Value<String> merchantKey;
   final Value<String> categoryId;
   final Value<int> uses;
@@ -6377,6 +6498,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   final Value<bool> autoConfirm;
   final Value<int> rowid;
   const MerchantMemoryCompanion({
+    this.id = const Value.absent(),
     this.merchantKey = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.uses = const Value.absent(),
@@ -6385,17 +6507,20 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     this.rowid = const Value.absent(),
   });
   MerchantMemoryCompanion.insert({
+    required String id,
     required String merchantKey,
     required String categoryId,
     required int uses,
     required DateTime lastUsedAt,
     this.autoConfirm = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : merchantKey = Value(merchantKey),
+  }) : id = Value(id),
+       merchantKey = Value(merchantKey),
        categoryId = Value(categoryId),
        uses = Value(uses),
        lastUsedAt = Value(lastUsedAt);
   static Insertable<MerchantMemoryData> custom({
+    Expression<String>? id,
     Expression<String>? merchantKey,
     Expression<String>? categoryId,
     Expression<int>? uses,
@@ -6404,6 +6529,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (merchantKey != null) 'merchant_key': merchantKey,
       if (categoryId != null) 'category_id': categoryId,
       if (uses != null) 'uses': uses,
@@ -6414,6 +6540,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   }
 
   MerchantMemoryCompanion copyWith({
+    Value<String>? id,
     Value<String>? merchantKey,
     Value<String>? categoryId,
     Value<int>? uses,
@@ -6422,6 +6549,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
     Value<int>? rowid,
   }) {
     return MerchantMemoryCompanion(
+      id: id ?? this.id,
       merchantKey: merchantKey ?? this.merchantKey,
       categoryId: categoryId ?? this.categoryId,
       uses: uses ?? this.uses,
@@ -6434,6 +6562,9 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
     if (merchantKey.present) {
       map['merchant_key'] = Variable<String>(merchantKey.value);
     }
@@ -6458,6 +6589,7 @@ class MerchantMemoryCompanion extends UpdateCompanion<MerchantMemoryData> {
   @override
   String toString() {
     return (StringBuffer('MerchantMemoryCompanion(')
+          ..write('id: $id, ')
           ..write('merchantKey: $merchantKey, ')
           ..write('categoryId: $categoryId, ')
           ..write('uses: $uses, ')
@@ -6831,6 +6963,15 @@ class $LoanInstallmentsTable extends LoanInstallments
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $LoanInstallmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _loanIdMeta = const VerificationMeta('loanId');
   @override
   late final GeneratedColumn<String> loanId = GeneratedColumn<String>(
@@ -6873,7 +7014,7 @@ class $LoanInstallmentsTable extends LoanInstallments
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [loanId, number, dueDate, amount];
+  List<GeneratedColumn> get $columns => [id, loanId, number, dueDate, amount];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6886,6 +7027,11 @@ class $LoanInstallmentsTable extends LoanInstallments
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
     if (data.containsKey('loan_id')) {
       context.handle(
         _loanIdMeta,
@@ -6922,11 +7068,15 @@ class $LoanInstallmentsTable extends LoanInstallments
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {loanId, number};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   LoanInstallment map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LoanInstallment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
       loanId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}loan_id'],
@@ -6953,11 +7103,13 @@ class $LoanInstallmentsTable extends LoanInstallments
 }
 
 class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
+  final String id;
   final String loanId;
   final int number;
   final DateTime dueDate;
   final int amount;
   const LoanInstallment({
+    required this.id,
     required this.loanId,
     required this.number,
     required this.dueDate,
@@ -6966,6 +7118,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
     map['loan_id'] = Variable<String>(loanId);
     map['number'] = Variable<int>(number);
     map['due_date'] = Variable<DateTime>(dueDate);
@@ -6975,6 +7128,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
 
   LoanInstallmentsCompanion toCompanion(bool nullToAbsent) {
     return LoanInstallmentsCompanion(
+      id: Value(id),
       loanId: Value(loanId),
       number: Value(number),
       dueDate: Value(dueDate),
@@ -6988,6 +7142,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LoanInstallment(
+      id: serializer.fromJson<String>(json['id']),
       loanId: serializer.fromJson<String>(json['loanId']),
       number: serializer.fromJson<int>(json['number']),
       dueDate: serializer.fromJson<DateTime>(json['dueDate']),
@@ -6998,6 +7153,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
       'loanId': serializer.toJson<String>(loanId),
       'number': serializer.toJson<int>(number),
       'dueDate': serializer.toJson<DateTime>(dueDate),
@@ -7006,11 +7162,13 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   }
 
   LoanInstallment copyWith({
+    String? id,
     String? loanId,
     int? number,
     DateTime? dueDate,
     int? amount,
   }) => LoanInstallment(
+    id: id ?? this.id,
     loanId: loanId ?? this.loanId,
     number: number ?? this.number,
     dueDate: dueDate ?? this.dueDate,
@@ -7018,6 +7176,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   );
   LoanInstallment copyWithCompanion(LoanInstallmentsCompanion data) {
     return LoanInstallment(
+      id: data.id.present ? data.id.value : this.id,
       loanId: data.loanId.present ? data.loanId.value : this.loanId,
       number: data.number.present ? data.number.value : this.number,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
@@ -7028,6 +7187,7 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   @override
   String toString() {
     return (StringBuffer('LoanInstallment(')
+          ..write('id: $id, ')
           ..write('loanId: $loanId, ')
           ..write('number: $number, ')
           ..write('dueDate: $dueDate, ')
@@ -7037,11 +7197,12 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
   }
 
   @override
-  int get hashCode => Object.hash(loanId, number, dueDate, amount);
+  int get hashCode => Object.hash(id, loanId, number, dueDate, amount);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LoanInstallment &&
+          other.id == this.id &&
           other.loanId == this.loanId &&
           other.number == this.number &&
           other.dueDate == this.dueDate &&
@@ -7049,12 +7210,14 @@ class LoanInstallment extends DataClass implements Insertable<LoanInstallment> {
 }
 
 class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
+  final Value<String> id;
   final Value<String> loanId;
   final Value<int> number;
   final Value<DateTime> dueDate;
   final Value<int> amount;
   final Value<int> rowid;
   const LoanInstallmentsCompanion({
+    this.id = const Value.absent(),
     this.loanId = const Value.absent(),
     this.number = const Value.absent(),
     this.dueDate = const Value.absent(),
@@ -7062,16 +7225,19 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
     this.rowid = const Value.absent(),
   });
   LoanInstallmentsCompanion.insert({
+    required String id,
     required String loanId,
     required int number,
     required DateTime dueDate,
     required int amount,
     this.rowid = const Value.absent(),
-  }) : loanId = Value(loanId),
+  }) : id = Value(id),
+       loanId = Value(loanId),
        number = Value(number),
        dueDate = Value(dueDate),
        amount = Value(amount);
   static Insertable<LoanInstallment> custom({
+    Expression<String>? id,
     Expression<String>? loanId,
     Expression<int>? number,
     Expression<DateTime>? dueDate,
@@ -7079,6 +7245,7 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (loanId != null) 'loan_id': loanId,
       if (number != null) 'number': number,
       if (dueDate != null) 'due_date': dueDate,
@@ -7088,6 +7255,7 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
   }
 
   LoanInstallmentsCompanion copyWith({
+    Value<String>? id,
     Value<String>? loanId,
     Value<int>? number,
     Value<DateTime>? dueDate,
@@ -7095,6 +7263,7 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
     Value<int>? rowid,
   }) {
     return LoanInstallmentsCompanion(
+      id: id ?? this.id,
       loanId: loanId ?? this.loanId,
       number: number ?? this.number,
       dueDate: dueDate ?? this.dueDate,
@@ -7106,6 +7275,9 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
     if (loanId.present) {
       map['loan_id'] = Variable<String>(loanId.value);
     }
@@ -7127,6 +7299,7 @@ class LoanInstallmentsCompanion extends UpdateCompanion<LoanInstallment> {
   @override
   String toString() {
     return (StringBuffer('LoanInstallmentsCompanion(')
+          ..write('id: $id, ')
           ..write('loanId: $loanId, ')
           ..write('number: $number, ')
           ..write('dueDate: $dueDate, ')
@@ -14048,11 +14221,13 @@ typedef $$BudgetsTableProcessedTableManager =
       PrefetchHooks Function({bool categoryId})
     >;
 typedef $$DayMarksTableCreateCompanionBuilder = DayMarksCompanion Function({
+  required String id,
   required String date,
   required bool noSpend,
   Value<int> rowid,
 });
 typedef $$DayMarksTableUpdateCompanionBuilder = DayMarksCompanion Function({
+  Value<String> id,
   Value<String> date,
   Value<bool> noSpend,
   Value<int> rowid,
@@ -14067,6 +14242,11 @@ class $$DayMarksTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnFilters(column),
@@ -14087,6 +14267,11 @@ class $$DayMarksTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnOrderings(column),
@@ -14107,6 +14292,9 @@ class $$DayMarksTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<String> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
 
@@ -14140,17 +14328,26 @@ class $$DayMarksTableTableManager
               $$DayMarksTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$DayMarksTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> date = const Value.absent(),
-            Value<bool> noSpend = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) => DayMarksCompanion(date: date, noSpend: noSpend, rowid: rowid),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<bool> noSpend = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DayMarksCompanion(
+                id: id,
+                date: date,
+                noSpend: noSpend,
+                rowid: rowid,
+              ),
           createCompanionCallback:
               ({
+                required String id,
                 required String date,
                 required bool noSpend,
                 Value<int> rowid = const Value.absent(),
               }) => DayMarksCompanion.insert(
+                id: id,
                 date: date,
                 noSpend: noSpend,
                 rowid: rowid,
@@ -14187,11 +14384,13 @@ typedef $$DayMarksTableProcessedTableManager =
       PrefetchHooks Function()
     >;
 typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
+  required String id,
   required String key,
   required String value,
   Value<int> rowid,
 });
 typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
+  Value<String> id,
   Value<String> key,
   Value<String> value,
   Value<int> rowid,
@@ -14206,6 +14405,11 @@ class $$SettingsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get key => $composableBuilder(
     column: $table.key,
     builder: (column) => ColumnFilters(column),
@@ -14226,6 +14430,11 @@ class $$SettingsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get key => $composableBuilder(
     column: $table.key,
     builder: (column) => ColumnOrderings(column),
@@ -14246,6 +14455,9 @@ class $$SettingsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<String> get key =>
       $composableBuilder(column: $table.key, builder: (column) => column);
 
@@ -14280,15 +14492,23 @@ class $$SettingsTableTableManager
           createComputedFieldComposer: () =>
               $$SettingsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
             Value<String> key = const Value.absent(),
             Value<String> value = const Value.absent(),
             Value<int> rowid = const Value.absent(),
-          }) => SettingsCompanion(key: key, value: value, rowid: rowid),
-          createCompanionCallback: ({
-            required String key,
-            required String value,
-            Value<int> rowid = const Value.absent(),
-          }) => SettingsCompanion.insert(key: key, value: value, rowid: rowid),
+          }) => SettingsCompanion(id: id, key: key, value: value, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String key,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => SettingsCompanion.insert(
+                id: id,
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -14626,6 +14846,7 @@ typedef $$CategoryKeywordsTableProcessedTableManager =
     >;
 typedef $$MerchantMemoryTableCreateCompanionBuilder =
     MerchantMemoryCompanion Function({
+      required String id,
       required String merchantKey,
       required String categoryId,
       required int uses,
@@ -14635,6 +14856,7 @@ typedef $$MerchantMemoryTableCreateCompanionBuilder =
     });
 typedef $$MerchantMemoryTableUpdateCompanionBuilder =
     MerchantMemoryCompanion Function({
+      Value<String> id,
       Value<String> merchantKey,
       Value<String> categoryId,
       Value<int> uses,
@@ -14683,6 +14905,11 @@ class $$MerchantMemoryTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get merchantKey => $composableBuilder(
     column: $table.merchantKey,
     builder: (column) => ColumnFilters(column),
@@ -14736,6 +14963,11 @@ class $$MerchantMemoryTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get merchantKey => $composableBuilder(
     column: $table.merchantKey,
     builder: (column) => ColumnOrderings(column),
@@ -14789,6 +15021,9 @@ class $$MerchantMemoryTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<String> get merchantKey => $composableBuilder(
     column: $table.merchantKey,
     builder: (column) => column,
@@ -14861,6 +15096,7 @@ class $$MerchantMemoryTableTableManager
               $$MerchantMemoryTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> id = const Value.absent(),
                 Value<String> merchantKey = const Value.absent(),
                 Value<String> categoryId = const Value.absent(),
                 Value<int> uses = const Value.absent(),
@@ -14868,6 +15104,7 @@ class $$MerchantMemoryTableTableManager
                 Value<bool> autoConfirm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MerchantMemoryCompanion(
+                id: id,
                 merchantKey: merchantKey,
                 categoryId: categoryId,
                 uses: uses,
@@ -14877,6 +15114,7 @@ class $$MerchantMemoryTableTableManager
               ),
           createCompanionCallback:
               ({
+                required String id,
                 required String merchantKey,
                 required String categoryId,
                 required int uses,
@@ -14884,6 +15122,7 @@ class $$MerchantMemoryTableTableManager
                 Value<bool> autoConfirm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MerchantMemoryCompanion.insert(
+                id: id,
                 merchantKey: merchantKey,
                 categoryId: categoryId,
                 uses: uses,
@@ -15281,6 +15520,7 @@ typedef $$SalaryDeductionsTableProcessedTableManager =
     >;
 typedef $$LoanInstallmentsTableCreateCompanionBuilder =
     LoanInstallmentsCompanion Function({
+      required String id,
       required String loanId,
       required int number,
       required DateTime dueDate,
@@ -15289,6 +15529,7 @@ typedef $$LoanInstallmentsTableCreateCompanionBuilder =
     });
 typedef $$LoanInstallmentsTableUpdateCompanionBuilder =
     LoanInstallmentsCompanion Function({
+      Value<String> id,
       Value<String> loanId,
       Value<int> number,
       Value<DateTime> dueDate,
@@ -15332,6 +15573,11 @@ class $$LoanInstallmentsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get number => $composableBuilder(
     column: $table.number,
     builder: (column) => ColumnFilters(column),
@@ -15380,6 +15626,11 @@ class $$LoanInstallmentsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get number => $composableBuilder(
     column: $table.number,
     builder: (column) => ColumnOrderings(column),
@@ -15428,6 +15679,9 @@ class $$LoanInstallmentsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<int> get number =>
       $composableBuilder(column: $table.number, builder: (column) => column);
 
@@ -15491,12 +15745,14 @@ class $$LoanInstallmentsTableTableManager
               $$LoanInstallmentsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> id = const Value.absent(),
                 Value<String> loanId = const Value.absent(),
                 Value<int> number = const Value.absent(),
                 Value<DateTime> dueDate = const Value.absent(),
                 Value<int> amount = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LoanInstallmentsCompanion(
+                id: id,
                 loanId: loanId,
                 number: number,
                 dueDate: dueDate,
@@ -15505,12 +15761,14 @@ class $$LoanInstallmentsTableTableManager
               ),
           createCompanionCallback:
               ({
+                required String id,
                 required String loanId,
                 required int number,
                 required DateTime dueDate,
                 required int amount,
                 Value<int> rowid = const Value.absent(),
               }) => LoanInstallmentsCompanion.insert(
+                id: id,
                 loanId: loanId,
                 number: number,
                 dueDate: dueDate,

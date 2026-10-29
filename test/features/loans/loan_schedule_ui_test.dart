@@ -64,6 +64,7 @@ void main() {
     );
 
     final nextInst = LoanInstallment(
+      id: 'loan-1:2',
       loanId: 'loan-1',
       number: 2,
       dueDate: DateTime.utc(2027, 2, 2),

@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -422,6 +422,148 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(loans, loans.paidBeforeCount);
           }
         }
+        if (from < 17) {
+          // 1. loan_installments: id = '<loanId>:<number>'
+          final hasLoanInstallments = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='loan_installments';",
+          ).get()).isNotEmpty;
+          if (hasLoanInstallments) {
+            final hasId = (await customSelect(
+              "SELECT name FROM pragma_table_info('loan_installments') WHERE name = 'id';",
+            ).get()).isNotEmpty;
+            if (!hasId) {
+              await customStatement('''
+                CREATE TABLE loan_installments_new (
+                  id TEXT NOT NULL PRIMARY KEY,
+                  loan_id TEXT NOT NULL REFERENCES loans(id),
+                  number INTEGER NOT NULL,
+                  due_date INTEGER NOT NULL,
+                  amount INTEGER NOT NULL
+                );
+              ''');
+              await customStatement('''
+                INSERT INTO loan_installments_new (id, loan_id, number, due_date, amount)
+                SELECT (loan_id || ':' || number), loan_id, number, due_date, amount
+                FROM loan_installments;
+              ''');
+              await customStatement('DROP TABLE loan_installments;');
+              await customStatement(
+                'ALTER TABLE loan_installments_new RENAME TO loan_installments;',
+              );
+            }
+          }
+
+          // 2. settings: id = key
+          final hasSettings = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='settings';",
+          ).get()).isNotEmpty;
+          if (hasSettings) {
+            final hasId = (await customSelect(
+              "SELECT name FROM pragma_table_info('settings') WHERE name = 'id';",
+            ).get()).isNotEmpty;
+            if (!hasId) {
+              await customStatement('''
+                CREATE TABLE settings_new (
+                  id TEXT NOT NULL PRIMARY KEY,
+                  "key" TEXT NOT NULL,
+                  value TEXT NOT NULL
+                );
+              ''');
+              await customStatement('''
+                INSERT INTO settings_new (id, "key", value)
+                SELECT "key", "key", value
+                FROM settings;
+              ''');
+              await customStatement('DROP TABLE settings;');
+              await customStatement(
+                'ALTER TABLE settings_new RENAME TO settings;',
+              );
+            }
+          }
+
+          // 3. day_marks: id = date
+          final hasDayMarks = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='day_marks';",
+          ).get()).isNotEmpty;
+          if (hasDayMarks) {
+            final hasId = (await customSelect(
+              "SELECT name FROM pragma_table_info('day_marks') WHERE name = 'id';",
+            ).get()).isNotEmpty;
+            if (!hasId) {
+              final pragmaCols = (await customSelect(
+                "PRAGMA table_info('day_marks');",
+              ).get()).map((c) => c.read<String>('name')).toSet();
+              final noSpendCol =
+                  pragmaCols.contains('no_spend') ? 'no_spend' : '1';
+
+              await customStatement('''
+                CREATE TABLE day_marks_new (
+                  id TEXT NOT NULL PRIMARY KEY,
+                  date TEXT NOT NULL,
+                  no_spend INTEGER NOT NULL
+                );
+              ''');
+              await customStatement('''
+                INSERT INTO day_marks_new (id, date, no_spend)
+                SELECT date, date, $noSpendCol
+                FROM day_marks;
+              ''');
+              await customStatement('DROP TABLE day_marks;');
+              await customStatement(
+                'ALTER TABLE day_marks_new RENAME TO day_marks;',
+              );
+            }
+          }
+
+          // 4. merchant_memory: id = '<merchantKey>|<categoryId>'
+          final hasMerchantMemory = (await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='merchant_memory';",
+          ).get()).isNotEmpty;
+          if (hasMerchantMemory) {
+            final hasId = (await customSelect(
+              "SELECT name FROM pragma_table_info('merchant_memory') WHERE name = 'id';",
+            ).get()).isNotEmpty;
+            if (!hasId) {
+              final pragmaCols = (await customSelect(
+                "PRAGMA table_info('merchant_memory');",
+              ).get()).map((c) => c.read<String>('name')).toSet();
+              final mKeyCol = pragmaCols.contains('merchant_key')
+                  ? 'merchant_key'
+                  : (pragmaCols.contains('clean_merchant')
+                      ? 'clean_merchant'
+                      : 'raw_merchant');
+              final usesCol = pragmaCols.contains('uses')
+                  ? 'uses'
+                  : (pragmaCols.contains('usage_count') ? 'usage_count' : '1');
+              final autoConfirmCol = pragmaCols.contains('auto_confirm')
+                  ? 'auto_confirm'
+                  : '0';
+              final lastUsedAtCol = pragmaCols.contains('last_used_at')
+                  ? 'last_used_at'
+                  : '0';
+
+              await customStatement('''
+                CREATE TABLE merchant_memory_new (
+                  id TEXT NOT NULL PRIMARY KEY,
+                  merchant_key TEXT NOT NULL,
+                  category_id TEXT NOT NULL REFERENCES categories(id),
+                  uses INTEGER NOT NULL,
+                  last_used_at INTEGER NOT NULL,
+                  auto_confirm INTEGER NOT NULL DEFAULT 0
+                );
+              ''');
+              await customStatement('''
+                INSERT OR REPLACE INTO merchant_memory_new (id, merchant_key, category_id, uses, last_used_at, auto_confirm)
+                SELECT ($mKeyCol || '|' || category_id), $mKeyCol, category_id, $usesCol, $lastUsedAtCol, $autoConfirmCol
+                FROM merchant_memory;
+              ''');
+              await customStatement('DROP TABLE merchant_memory;');
+              await customStatement(
+                'ALTER TABLE merchant_memory_new RENAME TO merchant_memory;',
+              );
+            }
+          }
+        }
       },
     );
   }
@@ -499,6 +641,7 @@ class AppDatabase extends _$AppDatabase {
     if (counts.isNotEmpty) {
       final companions = counts.entries.map((e) {
         return MerchantMemoryCompanion.insert(
+          id: '${e.key.$1}|${e.key.$2}',
           merchantKey: e.key.$1,
           categoryId: e.key.$2,
           uses: e.value.uses,

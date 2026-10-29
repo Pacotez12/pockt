@@ -71,6 +71,7 @@ class TransactionsRepository {
           .into(db.merchantMemory)
           .insert(
             MerchantMemoryCompanion.insert(
+              id: '$key|$categoryId',
               merchantKey: key,
               categoryId: categoryId,
               uses: 1,

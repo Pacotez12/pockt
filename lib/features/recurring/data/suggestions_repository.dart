@@ -247,6 +247,7 @@ class SuggestionsRepository {
                 .into(_db.merchantMemory)
                 .insert(
                   MerchantMemoryCompanion.insert(
+                    id: '$mKey|$finalCategoryId',
                     merchantKey: mKey,
                     categoryId: finalCategoryId,
                     uses: 1,
