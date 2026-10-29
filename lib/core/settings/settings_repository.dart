@@ -88,15 +88,24 @@ class SettingsRepository {
 
   /// Guarda o actualiza [key] con [value].
   Future<void> set(String key, String value) async {
-    await _db
-        .into(_db.settings)
-        .insertOnConflictUpdate(
+    await _db.transaction(() async {
+      final existing = await (_db.select(_db.settings)
+            ..where((s) => s.key.equals(key)))
+          .getSingleOrNull();
+      if (existing != null) {
+        await (_db.update(_db.settings)..where((s) => s.key.equals(key))).write(
+          SettingsCompanion(value: Value(value)),
+        );
+      } else {
+        await _db.into(_db.settings).insert(
           SettingsCompanion(
             id: Value(key),
             key: Value(key),
             value: Value(value),
           ),
         );
+      }
+    });
   }
 }
 

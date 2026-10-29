@@ -13,6 +13,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   drift: 2.35.2
+  drift_sqlite_async: 0.3.1
   powersync: 2.5.0
   drift_flutter: 0.3.1
   flutter_riverpod: 3.4.3
@@ -28,6 +29,8 @@ dependencies:
   cryptography: 2.9.0
   flutter_secure_storage: 11.2.0
   sqlite3: 3.5.2
+  sqlite_async: 0.14.7
+  path: 1.9.1
   path_provider: 2.1.6
   local_auth: 3.0.2
   package_info_plus: 10.2.2

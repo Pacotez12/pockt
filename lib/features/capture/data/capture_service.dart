@@ -525,28 +525,35 @@ class CaptureService {
           if (dupTx == null &&
               classification.autoConfirm &&
               classification.categoryId != null) {
-            final sugId = _uuid.v4();
             final now = _clock();
-            await _db
-                .into(_db.suggestedTransactions)
-                .insert(
-                  SuggestedTransactionsCompanion.insert(
-                    id: sugId,
-                    type: TxType.expense,
-                    amount: classification.amount!,
-                    categoryId: Value(classification.categoryId),
-                    merchant: Value(classification.merchant),
-                    occurredAt: occurredUtc,
-                    source: TxSource.capture,
-                    status: 'pending',
-                    rawText: Value(parsed.sanitizedRawText),
-                    fingerprint: Value(fingerprint),
-                    captureMeta: Value(smsCaptureMeta),
-                    createdAt: now,
-                  ),
-                  mode: InsertMode.insertOrIgnore,
-                );
-            await _suggestionsRepo.confirm(sugId, occurredAt: occurredUtc);
+            await _db.transaction(() async {
+              final existing = await (_db.select(_db.suggestedTransactions)
+                    ..where((s) => s.fingerprint.equals(fingerprint))
+                    ..limit(1))
+                  .getSingleOrNull();
+              if (existing != null) {
+                return;
+              }
+
+              final sugId = _uuid.v4();
+              await _db.into(_db.suggestedTransactions).insert(
+                SuggestedTransactionsCompanion.insert(
+                  id: sugId,
+                  type: TxType.expense,
+                  amount: classification.amount!,
+                  categoryId: Value(classification.categoryId),
+                  merchant: Value(classification.merchant),
+                  occurredAt: occurredUtc,
+                  source: TxSource.capture,
+                  status: 'pending',
+                  rawText: Value(parsed.sanitizedRawText),
+                  fingerprint: Value(fingerprint),
+                  captureMeta: Value(smsCaptureMeta),
+                  createdAt: now,
+                ),
+              );
+              await _suggestionsRepo.confirm(sugId, occurredAt: occurredUtc);
+            });
           } else {
             final created = await _suggestionsRepo.createIfAbsent(
               type: TxType.expense,

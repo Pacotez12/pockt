@@ -434,45 +434,55 @@ class EmailCaptureService {
 
         case EmailOutcomeKind.autoApply:
           final now = _clock();
-          if (classification.suggestedAction == CounterpartyAction.income) {
-            await _txRepo.add(
-              type: TxType.income,
-              amount: amount,
-              categoryId: classification.categoryId ?? _kOtrosCatId,
-              occurredAt: occurredUtc,
-              merchant: parsed.counterparty,
-              note: parsed.concept,
-            );
-          } else if (classification.suggestedAction ==
-              CounterpartyAction.loanRepayment) {
-            await _loansRepo.recordPayment(
-              loanId: classification.loanId!,
-              amount: amount,
-              date: occurredUtc,
-              note: parsed.concept,
-            );
-          }
+          final applied = await _db.transaction(() async {
+            final existing = await (_db.select(_db.suggestedTransactions)
+                  ..where((s) => s.fingerprint.equals(fingerprint))
+                  ..limit(1))
+                .getSingleOrNull();
+            if (existing != null) {
+              return false;
+            }
 
-          // Guardar sugerencia confirmada para que quede fingerprint
-          await _db.into(_db.suggestedTransactions).insert(
-            SuggestedTransactionsCompanion.insert(
-              id: _uuid.v4(),
-              type: txType,
-              amount: amount,
-              categoryId: Value(classification.categoryId ?? _kOtrosCatId),
-              merchant: Value(parsed.counterparty),
-              occurredAt: occurredUtc,
-              source: TxSource.capture,
-              status: 'confirmed',
-              rawText: Value(parsed.sanitizedRawText),
-              fingerprint: Value(fingerprint),
-              captureMeta: Value(captureMetaJson),
-              createdAt: now,
-            ),
-            mode: InsertMode.insertOrIgnore,
-          );
+            if (classification.suggestedAction == CounterpartyAction.income) {
+              await _txRepo.add(
+                type: TxType.income,
+                amount: amount,
+                categoryId: classification.categoryId ?? _kOtrosCatId,
+                occurredAt: occurredUtc,
+                merchant: parsed.counterparty,
+                note: parsed.concept,
+              );
+            } else if (classification.suggestedAction ==
+                CounterpartyAction.loanRepayment) {
+              await _loansRepo.recordPayment(
+                loanId: classification.loanId!,
+                amount: amount,
+                date: occurredUtc,
+                note: parsed.concept,
+              );
+            }
 
-          if (notify) {
+            // Guardar sugerencia confirmada para que quede fingerprint
+            await _db.into(_db.suggestedTransactions).insert(
+              SuggestedTransactionsCompanion.insert(
+                id: _uuid.v4(),
+                type: txType,
+                amount: amount,
+                categoryId: Value(classification.categoryId ?? _kOtrosCatId),
+                merchant: Value(parsed.counterparty),
+                occurredAt: occurredUtc,
+                source: TxSource.capture,
+                status: 'confirmed',
+                rawText: Value(parsed.sanitizedRawText),
+                fingerprint: Value(fingerprint),
+                captureMeta: Value(captureMetaJson),
+                createdAt: now,
+              ),
+            );
+            return true;
+          });
+
+          if (applied && notify) {
             final formatted = formatGs(amount);
             final person = parsed.counterparty ?? '';
             await _notifier.show(
@@ -563,29 +573,38 @@ class EmailCaptureService {
               if (dupTx == null &&
                   svc.autoConfirm &&
                   svc.categoryId != null) {
-                final sugId = _uuid.v4();
                 final now = _clock();
-                await _db.into(_db.suggestedTransactions).insert(
-                  SuggestedTransactionsCompanion.insert(
-                    id: sugId,
-                    type: TxType.expense,
-                    amount: amount,
-                    categoryId: Value(svc.categoryId),
-                    merchant: Value(svc.merchant),
+                await _db.transaction(() async {
+                  final existing = await (_db.select(_db.suggestedTransactions)
+                        ..where((s) => s.fingerprint.equals(fingerprint))
+                        ..limit(1))
+                      .getSingleOrNull();
+                  if (existing != null) {
+                    return;
+                  }
+
+                  final sugId = _uuid.v4();
+                  await _db.into(_db.suggestedTransactions).insert(
+                    SuggestedTransactionsCompanion.insert(
+                      id: sugId,
+                      type: TxType.expense,
+                      amount: amount,
+                      categoryId: Value(svc.categoryId),
+                      merchant: Value(svc.merchant),
+                      occurredAt: occurredUtc,
+                      source: TxSource.capture,
+                      status: 'pending',
+                      rawText: Value(parsed.sanitizedRawText),
+                      fingerprint: Value(fingerprint),
+                      captureMeta: Value(captureMetaJson),
+                      createdAt: now,
+                    ),
+                  );
+                  await _suggestionsRepo.confirm(
+                    sugId,
                     occurredAt: occurredUtc,
-                    source: TxSource.capture,
-                    status: 'pending',
-                    rawText: Value(parsed.sanitizedRawText),
-                    fingerprint: Value(fingerprint),
-                    captureMeta: Value(captureMetaJson),
-                    createdAt: now,
-                  ),
-                  mode: InsertMode.insertOrIgnore,
-                );
-                await _suggestionsRepo.confirm(
-                  sugId,
-                  occurredAt: occurredUtc,
-                );
+                  );
+                });
               } else {
                 final created = await _suggestionsRepo.createIfAbsent(
                   type: TxType.expense,

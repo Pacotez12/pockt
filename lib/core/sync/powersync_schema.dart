@@ -85,6 +85,15 @@ const Schema pocktPowerSyncSchema = Schema([
     Column.text('fingerprint'),
     Column.text('capture_meta'),
     Column.integer('created_at'),
+  ], indexes: [
+    Index('suggested_transactions_fingerprint', [
+      IndexedColumn.ascending('fingerprint'),
+    ]),
+    Index('suggested_transactions_source_source_ref_occurred_at', [
+      IndexedColumn.ascending('source'),
+      IndexedColumn.ascending('source_ref'),
+      IndexedColumn.ascending('occurred_at'),
+    ]),
   ], localOnly: true),
   Table('recurring_rules', [
     Column.text('name'),
@@ -159,5 +168,10 @@ const Schema pocktPowerSyncSchema = Schema([
     Column.text('loan_id'),
     Column.integer('auto_apply'),
     Column.integer('updated_at'),
+  ], indexes: [
+    Index('counterparty_rules_name_direction', [
+      IndexedColumn.ascending('name_key'),
+      IndexedColumn.ascending('direction'),
+    ]),
   ], localOnly: true),
 ]);

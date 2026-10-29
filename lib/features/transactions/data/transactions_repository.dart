@@ -116,6 +116,7 @@ class TransactionsRepository {
               id: id,
               type: type,
               amount: amount,
+              currency: const Value('PYG'),
               categoryId: categoryId,
               occurredAt: occurredAt.toUtc(),
               createdAt: now,
@@ -124,6 +125,7 @@ class TransactionsRepository {
               merchant: Value(merchant),
               note: Value(note),
               loanId: Value(loanId),
+              isExtra: const Value(false),
               eventId: Value(effectiveEventId),
             ),
           );

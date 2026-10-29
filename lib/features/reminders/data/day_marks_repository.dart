@@ -15,15 +15,24 @@ class DayMarksRepository {
   /// Marca [localDay] como día sin gastos ("Hoy no gasté nada").
   Future<void> markNoSpend(DateTime localDay) async {
     final key = _formatDay(localDay);
-    await db
-        .into(db.dayMarks)
-        .insertOnConflictUpdate(
+    await db.transaction(() async {
+      final existing = await (db.select(db.dayMarks)
+            ..where((t) => t.date.equals(key)))
+          .getSingleOrNull();
+      if (existing != null) {
+        await (db.update(db.dayMarks)..where((t) => t.date.equals(key))).write(
+          const DayMarksCompanion(noSpend: Value(true)),
+        );
+      } else {
+        await db.into(db.dayMarks).insert(
           DayMarksCompanion(
             id: Value(key),
             date: Value(key),
             noSpend: const Value(true),
           ),
         );
+      }
+    });
   }
 
   /// Devuelve el conjunto de fechas locales que tienen la marca `noSpend = true`

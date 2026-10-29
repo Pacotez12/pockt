@@ -27,13 +27,15 @@ class CounterpartyRulesRepository {
     String? loanId,
     bool autoApply = false,
   }) async {
-    final existing = await find(nameKey, direction);
-    final now = DateTime.now();
-    final id = existing?.id ?? const Uuid().v4();
+    return _db.transaction(() async {
+      final existing = await find(nameKey, direction);
+      final now = DateTime.now();
 
-    await _db.into(_db.counterpartyRules).insertOnConflictUpdate(
+      if (existing != null) {
+        await (_db.update(_db.counterpartyRules)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(
           CounterpartyRulesCompanion(
-            id: Value(id),
             nameKey: Value(nameKey),
             direction: Value(direction),
             action: Value(action),
@@ -43,6 +45,21 @@ class CounterpartyRulesRepository {
             updatedAt: Value(now),
           ),
         );
+      } else {
+        await _db.into(_db.counterpartyRules).insert(
+          CounterpartyRulesCompanion.insert(
+            id: const Uuid().v4(),
+            nameKey: nameKey,
+            direction: direction,
+            action: action,
+            categoryId: Value(categoryId),
+            loanId: Value(loanId),
+            autoApply: Value(autoApply),
+            updatedAt: now,
+          ),
+        );
+      }
+    });
   }
 
   Stream<List<CounterpartyRule>> watchAll() {

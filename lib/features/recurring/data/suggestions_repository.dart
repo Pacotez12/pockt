@@ -93,28 +93,55 @@ class SuggestionsRepository {
   }) async {
     final now = _clock();
     try {
-      final inserted = await _db
-          .into(_db.suggestedTransactions)
-          .insertReturningOrNull(
-            SuggestedTransactionsCompanion.insert(
-              id: _uuid.v4(),
-              type: type,
-              amount: amount,
-              currency: Value(currency),
-              categoryId: Value(categoryId),
-              merchant: Value(merchant),
-              occurredAt: occurredAt,
-              source: source,
-              sourceRef: Value(sourceRef),
-              status: 'pending',
-              rawText: Value(rawText),
-              fingerprint: Value(fingerprint),
-              captureMeta: Value(captureMeta),
-              createdAt: now,
-            ),
-            mode: InsertMode.insertOrIgnore,
-          );
-      return inserted != null;
+      return await _db.transaction(() async {
+        if (fingerprint != null) {
+          final existingByFp = await (_db.select(_db.suggestedTransactions)
+                ..where((s) => s.fingerprint.equals(fingerprint))
+                ..limit(1))
+              .getSingleOrNull();
+          if (existingByFp != null) {
+            return false;
+          }
+        }
+
+        if (sourceRef != null) {
+          final existingBySourceRef =
+              await (_db.select(_db.suggestedTransactions)
+                    ..where(
+                      (s) =>
+                          s.source.equalsValue(source) &
+                          s.sourceRef.equals(sourceRef) &
+                          s.occurredAt.equals(occurredAt),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
+          if (existingBySourceRef != null) {
+            return false;
+          }
+        }
+
+        final inserted = await _db
+            .into(_db.suggestedTransactions)
+            .insertReturningOrNull(
+              SuggestedTransactionsCompanion.insert(
+                id: _uuid.v4(),
+                type: type,
+                amount: amount,
+                currency: Value(currency),
+                categoryId: Value(categoryId),
+                merchant: Value(merchant),
+                occurredAt: occurredAt,
+                source: source,
+                sourceRef: Value(sourceRef),
+                status: 'pending',
+                rawText: Value(rawText),
+                fingerprint: Value(fingerprint),
+                captureMeta: Value(captureMeta),
+                createdAt: now,
+              ),
+            );
+        return inserted != null;
+      });
     } catch (_) {
       return false;
     }
@@ -212,6 +239,7 @@ class SuggestionsRepository {
               suggestionId: Value(sug.id),
               recurringRuleId: Value(sug.linkedRecurringRuleId),
               loanId: Value(sug.linkedLoanId),
+              isExtra: const Value(false),
             ),
           );
 

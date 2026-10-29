@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import 'package:drift_sqlite_async/drift_sqlite_async.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/sync/pockt_powersync.dart';
 import 'package:pockt/features/entry/domain/natural_parser.dart';
 import 'package:pockt/features/income/domain/salary_deduction.dart';
+import 'package:powersync/powersync.dart' hide Table;
 import 'package:uuid/uuid.dart';
 
 part 'app_database.g.dart';
@@ -33,6 +35,11 @@ part 'app_database.g.dart';
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  AppDatabase.powerSync(PowerSyncDatabase db)
+      : super(SqliteAsyncDriftConnection(
+          db,
+          transformTableUpdates: transformTableUpdates,
+        ));
   AppDatabase.forTesting(super.e);
 
   @override
@@ -42,24 +49,46 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (m) async {
-        await m.createAll();
-        await _seedCategories();
-        await _seedCategoryKeywords();
-        // Instalaciones nuevas: el mismo índice único que crea la migración v3.
-        await customStatement(
-          'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
-          'ON suggested_transactions (source, source_ref, occurred_at);',
-        );
-        await customStatement(
-          'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_fingerprint '
-          'ON suggested_transactions (fingerprint);',
-        );
-        await customStatement(
-          'CREATE UNIQUE INDEX IF NOT EXISTS idx_counterparty_rules_name_direction '
-          'ON counterparty_rules (name_key, direction);',
-        );
+        final isPowerSync = (await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'view' AND name = 'transactions';",
+        ).get()).isNotEmpty;
+        if (!isPowerSync) {
+          await m.createAll();
+          await _seedCategories();
+          await _seedCategoryKeywords();
+          // Instalaciones nuevas: el mismo índice único que crea la migración v3.
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_source_source_ref_occurred_at '
+            'ON suggested_transactions (source, source_ref, occurred_at);',
+          );
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_suggested_transactions_fingerprint '
+            'ON suggested_transactions (fingerprint);',
+          );
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_counterparty_rules_name_direction '
+            'ON counterparty_rules (name_key, direction);',
+          );
+        } else {
+          // Instalación nueva sobre PowerSync: las tablas y vistas ya fueron
+          // creadas por pocktPowerSyncSchema. Sembrar categorías y palabras clave
+          // solo si la base está vacía (no provino de una migración legacy).
+          final existingCats = await select(categories).get();
+          if (existingCats.isEmpty) {
+            await _seedCategories();
+            await _seedCategoryKeywords();
+          }
+        }
       },
       onUpgrade: (m, from, to) async {
+        final isPowerSync = (await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'view' AND name = 'transactions';",
+        ).get()).isNotEmpty;
+        if (isPowerSync) {
+          // En PowerSync las tablas son vistas gestionadas por pocktPowerSyncSchema;
+          // onUpgrade no debe ejecutar ALTER TABLE sobre vistas.
+          return;
+        }
         if (from < 2) {
           await m.createTable(categoryKeywords);
           await m.createTable(merchantMemory);
@@ -569,6 +598,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _seedCategoryKeywords() async {
+    final existingKeywords = await select(categoryKeywords).get();
+    if (existingKeywords.isNotEmpty) return;
+
     final cats = await select(categories).get();
     final companionList = <CategoryKeywordsCompanion>[];
     const uuid = Uuid();
@@ -824,12 +856,21 @@ class AppDatabase extends _$AppDatabase {
     ];
 
     await batch((b) {
-      b.insertAll(categories, seed);
+      b.insertAll(
+        categories,
+        seed.map((c) => c.copyWith(archived: const Value(false))),
+      );
     });
   }
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'pockt');
+    return DatabaseConnection.delayed(Future(() async {
+      final psDb = await openPocktPowerSync();
+      return SqliteAsyncDriftConnection(
+        psDb,
+        transformTableUpdates: transformTableUpdates,
+      );
+    }));
   }
 }
 

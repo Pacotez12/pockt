@@ -273,6 +273,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
+  drift_sqlite_async:
+    dependency: "direct main"
+    description:
+      name: drift_sqlite_async
+      sha256: "28c666847ecbc2e90dbcf8e8c2eecbf847a38af7e6480efc08f3a3c39e060f8d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
   equatable:
     dependency: transitive
     description:
@@ -789,7 +797,7 @@ packages:
     source: hosted
     version: "2.10.0"
   path:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path
       sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"
@@ -1152,7 +1160,7 @@ packages:
     source: hosted
     version: "0.9.5"
   sqlite_async:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: sqlite_async
       sha256: "6cc9971764f786e44f0280f28fc9da99096bdfd9234dd508454aaefecf36775e"
