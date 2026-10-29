@@ -24,39 +24,42 @@ Set<TableUpdate> transformTableUpdates(UpdateNotification notification) {
   return updates;
 }
 
+@visibleForTesting
+String? debugOverridePowerSyncPath;
+@visibleForTesting
+String? debugOverrideLegacyDriftPath;
+
 /// Ruta por defecto para la base de datos PowerSync en el dispositivo.
 Future<String> defaultPowerSyncPath() async {
+  if (debugOverridePowerSyncPath != null) {
+    return debugOverridePowerSyncPath!;
+  }
   final dir = await getApplicationSupportDirectory();
   return p.join(dir.path, 'pockt_powersync.db');
 }
 
 /// Ruta por defecto para la base de datos Drift legacy.
 Future<String> defaultLegacyDriftPath() async {
+  if (debugOverrideLegacyDriftPath != null) {
+    return debugOverrideLegacyDriftPath!;
+  }
   final dir = await getApplicationDocumentsDirectory();
   return p.join(dir.path, 'pockt.sqlite');
 }
 
-PowerSyncDatabase? _sharedPowerSyncDatabase;
+Future<PowerSyncDatabase>? _sharedPowerSyncDatabaseFuture;
 
 @visibleForTesting
 void resetSharedPowerSyncDatabase() {
-  _sharedPowerSyncDatabase = null;
+  _sharedPowerSyncDatabaseFuture = null;
+  debugOverridePowerSyncPath = null;
+  debugOverrideLegacyDriftPath = null;
 }
 
-/// Abre e inicializa la base de datos PowerSync con [pocktPowerSyncSchema].
-///
-/// Si existe una base Drift legacy y no ha sido migrada, ejecuta la migración
-/// una sola vez antes de retornar.
-Future<PowerSyncDatabase> openPocktPowerSync({
+Future<PowerSyncDatabase> _createAndInitPowerSync({
   String? path,
   String? legacyDbPath,
 }) async {
-  if (path == null &&
-      _sharedPowerSyncDatabase != null &&
-      !_sharedPowerSyncDatabase!.closed) {
-    return _sharedPowerSyncDatabase!;
-  }
-
   final resolvedPath = path ?? await defaultPowerSyncPath();
   final db = PowerSyncDatabase(
     schema: pocktPowerSyncSchema,
@@ -74,8 +77,37 @@ Future<PowerSyncDatabase> openPocktPowerSync({
     }
   }
 
-  if (path == null) {
-    _sharedPowerSyncDatabase = db;
-  }
   return db;
+}
+
+/// Abre e inicializa la base de datos PowerSync con [pocktPowerSyncSchema].
+///
+/// Si existe una base Drift legacy y no ha sido migrada, ejecuta la migración
+/// una sola vez antes de retornar.
+Future<PowerSyncDatabase> openPocktPowerSync({
+  String? path,
+  String? legacyDbPath,
+}) {
+  if (path != null) {
+    return _createAndInitPowerSync(path: path, legacyDbPath: legacyDbPath);
+  }
+
+  final existing = _sharedPowerSyncDatabaseFuture;
+  if (existing != null) {
+    return existing.then((db) {
+      if (db.closed) {
+        _sharedPowerSyncDatabaseFuture = null;
+        return openPocktPowerSync(legacyDbPath: legacyDbPath);
+      }
+      return db;
+    });
+  }
+
+  final future =
+      _createAndInitPowerSync(path: null, legacyDbPath: legacyDbPath);
+  _sharedPowerSyncDatabaseFuture = future;
+  return future.catchError((error) {
+    _sharedPowerSyncDatabaseFuture = null;
+    throw error;
+  });
 }

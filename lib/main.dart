@@ -6,6 +6,7 @@ import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/demo/demo_seed.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 Future<void> bootstrap() async {
@@ -13,6 +14,20 @@ Future<void> bootstrap() async {
   tz.initializeTimeZones();
   await initLocalZone();
   await initBackgroundTasks();
+
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        // ignore: deprecated_member_use
+        anonKey: supabaseAnonKey,
+      );
+    } catch (e) {
+      debugPrint('No se pudo inicializar Supabase: $e');
+    }
+  }
 
   AppDatabase? demoDb;
   if (const bool.fromEnvironment('POCKT_DEMO')) {

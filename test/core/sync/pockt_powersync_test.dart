@@ -589,5 +589,61 @@ Moneda y Monto: | PYG 120,000 |
         expect(vAfter['user_version'], equals(17));
       },
     );
+
+    test(
+      '(g) llamadas concurrentes a openPocktPowerSync sin path devuelven la misma instancia sin carrera',
+      () async {
+        resetSharedPowerSyncDatabase();
+        final targetDbPath = p.join(tempDir.path, 'powersync_concurrent.db');
+        debugOverridePowerSyncPath = targetDbPath;
+        debugOverrideLegacyDriftPath = p.join(tempDir.path, 'non_existent_legacy.db');
+
+        final results = await Future.wait([
+          openPocktPowerSync(),
+          openPocktPowerSync(),
+        ]);
+        addTearDown(() async {
+          resetSharedPowerSyncDatabase();
+          try {
+            await results[0].close();
+          } catch (_) {}
+          try {
+            await results[1].close();
+          } catch (_) {}
+        });
+
+        expect(
+          identical(results[0], results[1]),
+          isTrue,
+          reason: 'Dos llamadas concurrentes deben retornar exactamente la misma instancia de PowerSyncDatabase',
+        );
+      },
+    );
+
+    test(
+      '(h) si openPocktPowerSync falla, limpia el future compartido permitiendo reintentar',
+      () async {
+        resetSharedPowerSyncDatabase();
+        // Simular falla con path inválido
+        debugOverridePowerSyncPath = '/dev/null/impossible/path/powersync.db';
+        debugOverrideLegacyDriftPath = p.join(tempDir.path, 'non_existent_legacy.db');
+
+        try {
+          await openPocktPowerSync();
+          fail('Debe haber fallado al abrir ruta inválida');
+        } catch (_) {}
+
+        // Al cambiar a una ruta válida, debe poder reintentar exitosamente
+        final validPath = p.join(tempDir.path, 'powersync_retry.db');
+        debugOverridePowerSyncPath = validPath;
+        final db = await openPocktPowerSync();
+        addTearDown(() async {
+          resetSharedPowerSyncDatabase();
+          await db.close();
+        });
+
+        expect(db.closed, isFalse);
+      },
+    );
   });
 }

@@ -65,6 +65,9 @@ abstract class SettingsKeys {
   static const captureEmailOwnerName = 'capture.emailOwnerName';
   static const captureEmailUnrecognized = 'capture.emailUnrecognized';
   static const captureEmailNeedsReconnect = 'capture.emailNeedsReconnect';
+
+  // Sincronización con la nube (Plan 12 / spec §3)
+  static const syncEnabled = 'sync.enabled';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.
