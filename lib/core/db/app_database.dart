@@ -265,7 +265,9 @@ class AppDatabase extends _$AppDatabase {
           }
         }
         if (from < 9) {
-          await m.addColumn(transactions, transactions.isExtra);
+          await customStatement(
+            'ALTER TABLE transactions ADD COLUMN is_extra INTEGER NOT NULL DEFAULT 0 CHECK (is_extra IN (0, 1));',
+          );
           // Pagos extra viejos: los marcaba la nota. Solo los ligados a un préstamo.
           await customStatement(
             'UPDATE transactions SET is_extra = 1 '
@@ -307,7 +309,9 @@ class AppDatabase extends _$AppDatabase {
               (r) => r.read<String>('name') == 'auto_confirm',
             );
             if (!hasAutoConfirm) {
-              await m.addColumn(merchantMemory, merchantMemory.autoConfirm);
+              await customStatement(
+                'ALTER TABLE merchant_memory ADD COLUMN auto_confirm INTEGER NOT NULL DEFAULT 0 CHECK (auto_confirm IN (0, 1));',
+              );
             }
           } else {
             await m.createTable(merchantMemory);
@@ -448,7 +452,9 @@ class AppDatabase extends _$AppDatabase {
             "SELECT name FROM pragma_table_info('loans') WHERE name = 'paid_before_count';",
           ).get()).isNotEmpty;
           if (!hasPaidBefore) {
-            await m.addColumn(loans, loans.paidBeforeCount);
+            await customStatement(
+              'ALTER TABLE loans ADD COLUMN paid_before_count INTEGER NOT NULL DEFAULT 0;',
+            );
           }
         }
         if (from < 17) {
