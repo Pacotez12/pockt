@@ -22,6 +22,16 @@ class RestorePreview {
   });
 }
 
+/// Excepción lanzada cuando no es seguro restaurar (por ejemplo con PowerSync activo).
+class RestoreSafetyException implements Exception {
+  final String message;
+
+  const RestoreSafetyException(this.message);
+
+  @override
+  String toString() => 'RestoreSafetyException: $message';
+}
+
 /// Orquesta la vista previa y la restauración de copias .pockt,
 /// asegurando una copia previa de seguridad local y vuelta atrás ante fallos.
 class RestoreService {
@@ -29,6 +39,7 @@ class RestoreService {
   final Future<File> Function() dbFileResolver;
   final Future<void> Function()? closeDatabase;
   final Future<void> Function()? reopenDatabase;
+  final Future<void> Function()? beforeRestore;
   final int argonMemoryInKiB;
   final int argonIterations;
 
@@ -37,6 +48,7 @@ class RestoreService {
     required this.dbFileResolver,
     this.closeDatabase,
     this.reopenDatabase,
+    this.beforeRestore,
     this.argonMemoryInKiB = 64 * 1024,
     this.argonIterations = 3,
   });
@@ -113,6 +125,11 @@ class RestoreService {
 
   /// Restaura desde un `.pockt` ya en memoria, con la misma vuelta atrás.
   Future<void> restoreBytes(List<int> backupBytes, String password) async {
+    // 0. Bloqueo de seguridad preventivo: antes de descifrar o resolver/cerrar archivos
+    if (beforeRestore != null) {
+      await beforeRestore!();
+    }
+
     // 1. Descifrar primero: con contraseña incorrecta no se toca ningún archivo.
     final sqliteBytes = await decodeBackup(
       backupBytes,
@@ -209,6 +226,13 @@ final restoreServiceProvider = Provider<RestoreService>((ref) {
     dbFileResolver: () async {
       final docDir = await getApplicationDocumentsDirectory();
       return File('${docDir.path}/pockt.sqlite');
+    },
+    beforeRestore: () async {
+      throw const RestoreSafetyException(
+        'La restauración de copias de seguridad está suspendida '
+        'tras la migración a PowerSync para prevenir la corrupción de la base de datos '
+        'y carreras con los procesos en segundo plano de sincronización.',
+      );
     },
     closeDatabase: () async {
       final db = ref.read(databaseProvider);

@@ -155,6 +155,7 @@ void main() {
     'PGRST301',
     '40001',
     '08006',
+    '42501',
   ]) {
     test('retryable or unclassified error $code does not complete', () async {
       final error = PostgrestException(message: 'retry', code: code);
@@ -165,7 +166,7 @@ void main() {
     });
   }
 
-  for (final code in ['22003', '22P02', '23502', '23503', '23505', '42501']) {
+  for (final code in ['22003', '22P02', '23502', '23503', '23505']) {
     test('invalid data $code is logged and queue continues', () async {
       final logs = <String?>[];
       final previousPrint = debugPrint;
@@ -218,6 +219,17 @@ void main() {
   test('without a session credentials are null', () async {
     backend.accessToken = null;
     expect(await connector.fetchCredentials(), isNull);
+    expect(backend.calls, isEmpty);
+  });
+
+  test('without a session uploadData throws and preserves transaction', () async {
+    backend.accessToken = null;
+    await enqueue(database, [entry(UpdateType.delete)]);
+    await expectLater(
+      connector.uploadData(database),
+      throwsA(isA<AuthException>()),
+    );
+    expect(await database.getNextCrudTransaction(), isNotNull);
     expect(backend.calls, isEmpty);
   });
 }

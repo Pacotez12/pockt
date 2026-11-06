@@ -72,7 +72,14 @@ Future<PowerSyncDatabase> _createAndInitPowerSync({
       legacyDbPath ?? (path == null ? await defaultLegacyDriftPath() : null);
   if (legacyPath != null && File(legacyPath).existsSync()) {
     if (!await isMigrationMarkSaved(db)) {
-      await migrateLegacyDriftDb(oldDbPath: legacyPath, target: db);
+      try {
+        await migrateLegacyDriftDb(oldDbPath: legacyPath, target: db);
+      } catch (e) {
+        try {
+          await db.close();
+        } catch (_) {}
+        rethrow;
+      }
     }
   }
 

@@ -258,7 +258,17 @@ class SyncController {
       _reevaluateConnection();
     });
 
-    _authSub = authService.authStateChanges.listen((session) {
+    _authSub = authService.authStateChanges.listen((session) async {
+      final prevUserId = _currentSession?.user.id;
+      final newUserId = session?.user.id;
+      if (prevUserId != null && newUserId != null && prevUserId != newUserId) {
+        if (_isConnectingOrConnected) {
+          _isConnectingOrConnected = false;
+          try {
+            await _database.disconnect();
+          } catch (_) {}
+        }
+      }
       _currentSession = session;
       _reevaluateConnection();
     });
@@ -277,6 +287,28 @@ class SyncController {
         conn != null;
 
     if (shouldConnect) {
+      final currentUserId = _currentSession!.user.id;
+      final boundUserId = await settingsRepository.get(SettingsKeys.syncUserId);
+
+      if (boundUserId != null &&
+          boundUserId.isNotEmpty &&
+          boundUserId != currentUserId) {
+        if (_isConnectingOrConnected) {
+          _isConnectingOrConnected = false;
+          try {
+            await _database.disconnect();
+          } catch (_) {}
+        }
+        _emitState(const SyncState.error(
+          'Cambio de cuenta detectado. No se permite sincronizar con otra cuenta en la misma base local.',
+        ));
+        return;
+      }
+
+      if (boundUserId == null || boundUserId.isEmpty) {
+        await settingsRepository.set(SettingsKeys.syncUserId, currentUserId);
+      }
+
       if (!_isConnectingOrConnected) {
         _isConnectingOrConnected = true;
         try {

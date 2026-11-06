@@ -669,6 +669,33 @@ Moneda y Monto: | PYG 120,000 |
     );
 
     test(
+      '(i) si migrateLegacyDriftDb falla, openPocktPowerSync cierra la base de datos antes de propagar el error',
+      () async {
+        final corruptLegacyFile = File(p.join(tempDir.path, 'corrupt_legacy.db'));
+        corruptLegacyFile.writeAsStringSync('not a sqlite database');
+
+        final targetDbPath = p.join(tempDir.path, 'powersync_leak_test.db');
+
+        await expectLater(
+          openPocktPowerSync(
+            path: targetDbPath,
+            legacyDbPath: corruptLegacyFile.path,
+          ),
+          throwsA(anything),
+        );
+
+        // Si se cerró adecuadamente, deberíamos poder abrir PowerSyncDatabase en la misma ruta sin conflictos
+        final db = ps.PowerSyncDatabase(
+          schema: pocktPowerSyncSchema,
+          path: targetDbPath,
+        );
+        await db.initialize();
+        expect(db.closed, isFalse);
+        await db.close();
+      },
+    );
+
+    test(
       '(i) insertar companions con solo campos obligatorios en PowerSync no deja columnas default en null y se leen con sus valores esperados',
       () async {
         final psPath = p.join(tempDir.path, 'powersync_defaults_all.db');

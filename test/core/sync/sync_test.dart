@@ -618,5 +618,47 @@ void main() {
       expect(fakeSyncDb.disconnectCallCount, equals(disconnectsBefore + 1));
       expect(fakeSyncDb.connectCallCount, equals(connectsBefore + 1));
     });
+
+    test('11) protección conservadora: cambio a otro usuario impide conectar y emite error', () async {
+      // Simular que la base ya estaba sincronizada por user-123
+      await settingsRepo.set(SettingsKeys.syncUserId, 'user-123');
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      // Nueva sesión con otro usuario diferente
+      final otherUser = User(
+        id: 'attacker-or-other-user-456',
+        appMetadata: {},
+        userMetadata: {},
+        aud: 'authenticated',
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      final otherSession = Session(
+        accessToken: 'other-token',
+        tokenType: 'bearer',
+        user: otherUser,
+      );
+
+      when(() => mockAuth.currentSession).thenReturn(otherSession);
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // No debe conectar con la cuenta del otro usuario y debe reportar error
+      expect(fakeSyncDb.connectCalled, isFalse);
+      expect(controller.currentSyncState, isA<SyncError>());
+    });
   });
 }

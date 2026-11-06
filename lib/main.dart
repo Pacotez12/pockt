@@ -4,6 +4,7 @@ import 'package:pockt/app.dart';
 import 'package:pockt/core/background/background_tasks.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/sync/auth_options.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/demo/demo_seed.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,6 +24,7 @@ Future<void> bootstrap() async {
         url: supabaseUrl,
         // ignore: deprecated_member_use
         anonKey: supabaseAnonKey,
+        authOptions: pocktAuthOptions,
       );
     } catch (e) {
       debugPrint('No se pudo inicializar Supabase: $e');

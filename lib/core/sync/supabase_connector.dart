@@ -74,6 +74,10 @@ class PocktSupabaseConnector extends PowerSyncBackendConnector {
     final transaction = await database.getNextCrudTransaction();
     if (transaction == null) return;
 
+    if (backend.accessToken == null) {
+      throw const AuthException('No hay sesión activa para sincronizar datos.');
+    }
+
     for (final op in transaction.crud) {
       final data = {...?op.opData}..remove('user_id');
       try {
@@ -92,7 +96,7 @@ class PocktSupabaseConnector extends PowerSyncBackendConnector {
         final code = error.code;
         final invalidData =
             code != null &&
-            (code.startsWith('22') || code.startsWith('23') || code == '42501');
+            (code.startsWith('22') || code.startsWith('23'));
         if (!invalidData) rethrow;
         // Keep row contents and server messages out of logs.
         debugPrint('PowerSync: rejected ${op.op.name} on ${op.table} ($code)');

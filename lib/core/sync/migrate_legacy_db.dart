@@ -138,8 +138,13 @@ Future<MigrationReport?> migrateLegacyDriftDb({
 
     // Copia de seguridad del archivo original, antes de tocarlo
     final backupFile = File('$oldDbPath.pre-sync.bak');
-    if (!backupFile.existsSync()) {
-      await originalFile.copy(backupFile.path);
+    if (!backupFile.existsSync() || backupFile.lengthSync() == 0) {
+      final tempBackup = File('$oldDbPath.pre-sync.bak.tmp');
+      if (tempBackup.existsSync()) {
+        await tempBackup.delete();
+      }
+      await originalFile.copy(tempBackup.path);
+      await tempBackup.rename(backupFile.path);
     }
 
     // Asegurar que la base vieja de Drift esté migrada a v17 bajo el lock
