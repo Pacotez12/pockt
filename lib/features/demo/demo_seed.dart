@@ -19,15 +19,16 @@ Future<void> seedDemoData(
   AppDatabase db, {
   required DateTime nowLocal,
 }) async {
-  // 1. SOLO si no hay movimientos:
-  final existingTx =
-      (await (db.select(db.transactions)..limit(1)).get()).isNotEmpty;
-  if (existingTx) {
-    return;
-  }
+  await db.transaction(() async {
+    // 1. SOLO si no hay movimientos:
+    final existingTx =
+        (await (db.select(db.transactions)..limit(1)).get()).isNotEmpty;
+    if (existingTx) {
+      return;
+    }
 
-  final cats = await db.select(db.categories).get();
-  final catByName = {for (final c in cats) c.name: c};
+    final cats = await db.select(db.categories).get();
+    final catByName = {for (final c in cats) c.name: c};
 
   final comida = catByName['Comida']!;
   final transporte = catByName['Transporte']!;
@@ -346,4 +347,5 @@ Future<void> seedDemoData(
       date: DateTime(nowLocal.year, nowLocal.month - i, 10, 11),
     );
   }
+  });
 }

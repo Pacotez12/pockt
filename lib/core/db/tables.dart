@@ -34,8 +34,8 @@ class Loans extends Table {
   IntColumn get dueDay => integer().nullable()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get closedAt => dateTime().nullable()();
-  IntColumn get reminderDays => integer().withDefault(const Constant(2))();
-  IntColumn get paidBeforeCount => integer().withDefault(const Constant(0))();
+  IntColumn get reminderDays => integer().clientDefault(() => 2)();
+  IntColumn get paidBeforeCount => integer().clientDefault(() => 0)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -62,7 +62,7 @@ class Categories extends Table {
   IntColumn get colorLight => integer()();
   TextColumn get kind => textEnum<CategoryKind>()();
   IntColumn get sortOrder => integer()();
-  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+  BoolColumn get archived => boolean().clientDefault(() => false)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -74,7 +74,7 @@ class Events extends Table {
   TextColumn get icon => text()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get endDate => dateTime().nullable()();
-  BoolColumn get isActive => boolean().withDefault(const Constant(false))();
+  BoolColumn get isActive => boolean().clientDefault(() => false)();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -87,8 +87,8 @@ class EntryShortcuts extends Table {
   TextColumn get note => text().nullable()();
   IntColumn get amount => integer()();
   TextColumn get categoryId => text().references(Categories, #id)();
-  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
-  BoolColumn get isDismissed => boolean().withDefault(const Constant(false))();
+  BoolColumn get isPinned => boolean().clientDefault(() => false)();
+  BoolColumn get isDismissed => boolean().clientDefault(() => false)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
@@ -100,7 +100,7 @@ class Transactions extends Table {
   TextColumn get id => text()();
   TextColumn get type => textEnum<TxType>()();
   IntColumn get amount => integer()();
-  TextColumn get currency => text().withDefault(const Constant('PYG'))();
+  TextColumn get currency => text().clientDefault(() => 'PYG')();
   TextColumn get categoryId => text().references(Categories, #id)();
   TextColumn get merchant => text().nullable()();
   TextColumn get note => text().nullable()();
@@ -113,7 +113,7 @@ class Transactions extends Table {
   TextColumn get loanId => text().nullable().references(Loans, #id)();
 
   /// Pago extra / adelanto de un préstamo (no cuenta como cuota regular).
-  BoolColumn get isExtra => boolean().withDefault(const Constant(false))();
+  BoolColumn get isExtra => boolean().clientDefault(() => false)();
 
   /// Evento especial al que se asigna el gasto (Plan 5c / spec §7d).
   TextColumn get eventId => text().nullable().references(Events, #id)();
@@ -127,7 +127,7 @@ class SuggestedTransactions extends Table {
   TextColumn get id => text()();
   TextColumn get type => textEnum<TxType>()();
   IntColumn get amount => integer()();
-  TextColumn get currency => text().withDefault(const Constant('PYG'))();
+  TextColumn get currency => text().clientDefault(() => 'PYG')();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
   TextColumn get merchant => text().nullable()();
   DateTimeColumn get occurredAt => dateTime()();
@@ -161,7 +161,7 @@ class RecurringRules extends Table {
   IntColumn get dayOfWeek => integer().nullable()();
   IntColumn get monthOfYear => integer().nullable()();
   DateTimeColumn get nextDueDate => dateTime()();
-  BoolColumn get active => boolean().withDefault(const Constant(true))();
+  BoolColumn get active => boolean().clientDefault(() => true)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -245,7 +245,7 @@ class MerchantMemory extends Table {
   TextColumn get categoryId => text().references(Categories, #id)();
   IntColumn get uses => integer()();
   DateTimeColumn get lastUsedAt => dateTime()();
-  BoolColumn get autoConfirm => boolean().withDefault(const Constant(false))();
+  BoolColumn get autoConfirm => boolean().clientDefault(() => false)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -258,7 +258,7 @@ class Goals extends Table {
   IntColumn get targetAmount => integer()();
   DateTimeColumn get targetDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
-  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+  BoolColumn get archived => boolean().clientDefault(() => false)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -283,7 +283,7 @@ class CounterpartyRules extends Table {
   TextColumn get action => textEnum<CounterpartyAction>()();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
   TextColumn get loanId => text().nullable().references(Loans, #id)();
-  BoolColumn get autoApply => boolean().withDefault(const Constant(false))();
+  BoolColumn get autoApply => boolean().clientDefault(() => false)();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

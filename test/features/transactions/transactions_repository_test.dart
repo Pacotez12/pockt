@@ -1,10 +1,16 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/sync/powersync_schema.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/transactions/data/categories_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:powersync/powersync.dart' as ps;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -228,5 +234,57 @@ void main() {
     final cutDay = DateTime(2026, 9, 30);
     expect(await txRepo.watchTotalSince(cutDay, TxType.income).first, 3500000);
     expect(await txRepo.watchTotalSince(cutDay, TxType.expense).first, 2455000);
+  });
+
+  test(
+      'múltiples movimientos con el mismo comercio sobre base PowerSync actualizan merchantMemory sin fallar',
+      () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    final tempDir = Directory.systemTemp.createTempSync('tx_repo_ps_test_');
+    addTearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+
+    final psDbPath = p.join(tempDir.path, 'tx_powersync.db');
+    final psDb = ps.PowerSyncDatabase(
+      schema: pocktPowerSyncSchema,
+      path: psDbPath,
+    );
+    await psDb.initialize();
+    addTearDown(psDb.close);
+
+    final psAppDb = AppDatabase.powerSync(psDb);
+    addTearDown(psAppDb.close);
+
+    final cats = await psAppDb.select(psAppDb.categories).get();
+    final comida = cats.firstWhere((c) => c.name == 'Comida').id;
+
+    final psTxRepo = TransactionsRepository(psAppDb);
+
+    // Primer movimiento con comercio
+    await psTxRepo.add(
+      type: TxType.expense,
+      amount: 50000,
+      categoryId: comida,
+      occurredAt: DateTime(2026, 10, 1, 10, 0),
+      merchant: 'Superseis',
+    );
+
+    // Segundo movimiento con el mismo comercio (debe actualizar uses a 2 sin error de null en auto_confirm)
+    await psTxRepo.add(
+      type: TxType.expense,
+      amount: 75000,
+      categoryId: comida,
+      occurredAt: DateTime(2026, 10, 2, 11, 0),
+      merchant: 'Superseis',
+    );
+
+    final memory = await psAppDb.select(psAppDb.merchantMemory).get();
+    expect(memory.length, equals(1));
+    expect(memory.first.merchantKey, equals('superseis'));
+    expect(memory.first.uses, equals(2));
+    expect(memory.first.autoConfirm, isFalse);
   });
 }

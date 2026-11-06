@@ -645,5 +645,302 @@ Moneda y Monto: | PYG 120,000 |
         expect(db.closed, isFalse);
       },
     );
+
+    test(
+      '(i) insertar companions con solo campos obligatorios en PowerSync no deja columnas default en null y se leen con sus valores esperados',
+      () async {
+        final psPath = p.join(tempDir.path, 'powersync_defaults_all.db');
+        final psDb = ps.PowerSyncDatabase(
+          schema: pocktPowerSyncSchema,
+          path: psPath,
+        );
+        await psDb.initialize();
+        addTearDown(psDb.close);
+
+        final db = AppDatabase.powerSync(psDb);
+        addTearDown(db.close);
+
+        final now = DateTime.utc(2026, 1, 1);
+
+        // 1. Categories (archived default: false)
+        await db.into(db.categories).insert(
+              CategoriesCompanion.insert(
+                id: 'cat-defaults',
+                name: 'Cat Defaults',
+                icon: 'tag',
+                colorDark: 0,
+                colorLight: 0,
+                kind: CategoryKind.expense,
+                sortOrder: 999,
+              ),
+            );
+        final cat = await (db.select(db.categories)
+              ..where((t) => t.id.equals('cat-defaults')))
+            .getSingle();
+        expect(cat.archived, isFalse);
+
+        // 2. Loans (reminderDays default: 2, paidBeforeCount default: 0)
+        await db.into(db.loans).insert(
+              LoansCompanion.insert(
+                id: 'loan-defaults',
+                direction: LoanDirection.owe,
+                kind: LoanKind.loan,
+                name: 'Loan Defaults',
+                totalAmount: 100000,
+                startDate: now,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        final loan = await (db.select(db.loans)
+              ..where((t) => t.id.equals('loan-defaults')))
+            .getSingle();
+        expect(loan.reminderDays, equals(2));
+        expect(loan.paidBeforeCount, equals(0));
+
+        // 3. LoanInstallments (no defaults)
+        await db.into(db.loanInstallments).insert(
+              LoanInstallmentsCompanion.insert(
+                id: 'li-defaults',
+                loanId: 'loan-defaults',
+                number: 1,
+                dueDate: now,
+                amount: 50000,
+              ),
+            );
+        final li = await (db.select(db.loanInstallments)
+              ..where((t) => t.id.equals('li-defaults')))
+            .getSingle();
+        expect(li.amount, equals(50000));
+
+        // 4. Events (isActive default: false)
+        await db.into(db.events).insert(
+              EventsCompanion.insert(
+                id: 'event-defaults',
+                name: 'Event Defaults',
+                icon: 'party',
+                startDate: now,
+                createdAt: now,
+              ),
+            );
+        final event = await (db.select(db.events)
+              ..where((t) => t.id.equals('event-defaults')))
+            .getSingle();
+        expect(event.isActive, isFalse);
+
+        // 5. EntryShortcuts (isPinned default: false, isDismissed default: false)
+        await db.into(db.entryShortcuts).insert(
+              EntryShortcutsCompanion.insert(
+                id: 'shortcut-defaults',
+                amount: 25000,
+                categoryId: 'cat-defaults',
+                createdAt: now,
+              ),
+            );
+        final shortcut = await (db.select(db.entryShortcuts)
+              ..where((t) => t.id.equals('shortcut-defaults')))
+            .getSingle();
+        expect(shortcut.isPinned, isFalse);
+        expect(shortcut.isDismissed, isFalse);
+
+        // 6. Transactions (currency default: 'PYG', isExtra default: false)
+        await db.into(db.transactions).insert(
+              TransactionsCompanion.insert(
+                id: 'tx-defaults',
+                type: TxType.expense,
+                amount: 10000,
+                categoryId: 'cat-defaults',
+                occurredAt: now,
+                createdAt: now,
+                updatedAt: now,
+                source: TxSource.manual,
+              ),
+            );
+        final tx = await (db.select(db.transactions)
+              ..where((t) => t.id.equals('tx-defaults')))
+            .getSingle();
+        expect(tx.currency, equals('PYG'));
+        expect(tx.isExtra, isFalse);
+
+        // 7. SuggestedTransactions (currency default: 'PYG')
+        await db.into(db.suggestedTransactions).insert(
+              SuggestedTransactionsCompanion.insert(
+                id: 'sug-defaults',
+                type: TxType.expense,
+                amount: 15000,
+                occurredAt: now,
+                source: TxSource.capture,
+                status: 'pending',
+                createdAt: now,
+              ),
+            );
+        final sug = await (db.select(db.suggestedTransactions)
+              ..where((t) => t.id.equals('sug-defaults')))
+            .getSingle();
+        expect(sug.currency, equals('PYG'));
+
+        // 8. RecurringRules (active default: true)
+        await db.into(db.recurringRules).insert(
+              RecurringRulesCompanion.insert(
+                id: 'rec-defaults',
+                name: 'Rec Defaults',
+                type: TxType.expense,
+                amount: 30000,
+                categoryId: 'cat-defaults',
+                frequency: 'monthly',
+                nextDueDate: now,
+              ),
+            );
+        final rec = await (db.select(db.recurringRules)
+              ..where((t) => t.id.equals('rec-defaults')))
+            .getSingle();
+        expect(rec.active, isTrue);
+
+        // 9. IncomeSchedules (no defaults)
+        await db.into(db.incomeSchedules).insert(
+              IncomeSchedulesCompanion.insert(
+                id: 'sched-defaults',
+                mode: 'monthly',
+                payDays: '5',
+                payDayRules: '[]',
+                paySplitPercents: '[]',
+                categoryId: 'cat-defaults',
+                effectiveFrom: now,
+              ),
+            );
+        final sched = await (db.select(db.incomeSchedules)
+              ..where((t) => t.id.equals('sched-defaults')))
+            .getSingle();
+        expect(sched.mode, equals('monthly'));
+
+        // 10. SalaryDeductions (no defaults)
+        await db.into(db.salaryDeductions).insert(
+              SalaryDeductionsCompanion.insert(
+                id: 'ded-defaults',
+                scheduleId: 'sched-defaults',
+                name: 'IPS',
+                kind: 'percentage',
+                value: 9,
+              ),
+            );
+        final ded = await (db.select(db.salaryDeductions)
+              ..where((t) => t.id.equals('ded-defaults')))
+            .getSingle();
+        expect(ded.value, equals(9));
+
+        // 11. Budgets (no defaults)
+        await db.into(db.budgets).insert(
+              BudgetsCompanion.insert(
+                id: 'bud-defaults',
+                categoryId: 'cat-defaults',
+                monthlyLimit: 1000000,
+              ),
+            );
+        final bud = await (db.select(db.budgets)
+              ..where((t) => t.id.equals('bud-defaults')))
+            .getSingle();
+        expect(bud.monthlyLimit, equals(1000000));
+
+        // 12. DayMarks (no defaults)
+        await db.into(db.dayMarks).insert(
+              DayMarksCompanion.insert(
+                id: 'dm-defaults',
+                date: '2026-01-01',
+                noSpend: true,
+              ),
+            );
+        final dm = await (db.select(db.dayMarks)
+              ..where((t) => t.id.equals('dm-defaults')))
+            .getSingle();
+        expect(dm.noSpend, isTrue);
+
+        // 13. Settings (no defaults)
+        await db.into(db.settings).insert(
+              SettingsCompanion.insert(
+                id: 'set-defaults',
+                key: 'k',
+                value: 'v',
+              ),
+            );
+        final st = await (db.select(db.settings)
+              ..where((t) => t.id.equals('set-defaults')))
+            .getSingle();
+        expect(st.value, equals('v'));
+
+        // 14. CategoryKeywords (no defaults)
+        await db.into(db.categoryKeywords).insert(
+              CategoryKeywordsCompanion.insert(
+                id: 'ck-defaults',
+                categoryId: 'cat-defaults',
+                keyword: 'kw-test',
+                source: KeywordSource.seed,
+              ),
+            );
+        final ck = await (db.select(db.categoryKeywords)
+              ..where((t) => t.id.equals('ck-defaults')))
+            .getSingle();
+        expect(ck.keyword, equals('kw-test'));
+
+        // 15. MerchantMemory (autoConfirm default: false)
+        await db.into(db.merchantMemory).insert(
+              MerchantMemoryCompanion.insert(
+                id: 'mm-defaults',
+                merchantKey: 'biggie',
+                categoryId: 'cat-defaults',
+                uses: 1,
+                lastUsedAt: now,
+              ),
+            );
+        final mm = await (db.select(db.merchantMemory)
+              ..where((t) => t.id.equals('mm-defaults')))
+            .getSingle();
+        expect(mm.autoConfirm, isFalse);
+
+        // 16. Goals (archived default: false)
+        await db.into(db.goals).insert(
+              GoalsCompanion.insert(
+                id: 'goal-defaults',
+                name: 'Goal Defaults',
+                icon: 'star',
+                targetAmount: 500000,
+                createdAt: now,
+              ),
+            );
+        final goal = await (db.select(db.goals)
+              ..where((t) => t.id.equals('goal-defaults')))
+            .getSingle();
+        expect(goal.archived, isFalse);
+
+        // 17. GoalContributions (no defaults)
+        await db.into(db.goalContributions).insert(
+              GoalContributionsCompanion.insert(
+                id: 'gc-defaults',
+                goalId: 'goal-defaults',
+                amount: 10000,
+                date: now,
+                createdAt: now,
+              ),
+            );
+        final gc = await (db.select(db.goalContributions)
+              ..where((t) => t.id.equals('gc-defaults')))
+            .getSingle();
+        expect(gc.amount, equals(10000));
+
+        // 18. CounterpartyRules (autoApply default: false)
+        await db.into(db.counterpartyRules).insert(
+              CounterpartyRulesCompanion.insert(
+                id: 'cpr-defaults',
+                nameKey: 'JUAN TEST',
+                direction: TransferDirection.incoming,
+                action: CounterpartyAction.income,
+                updatedAt: now,
+              ),
+            );
+        final cpr = await (db.select(db.counterpartyRules)
+              ..where((t) => t.id.equals('cpr-defaults')))
+            .getSingle();
+        expect(cpr.autoApply, isFalse);
+      },
+    );
   });
 }

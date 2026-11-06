@@ -91,7 +91,7 @@ class $CategoriesTable extends Categories
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("archived" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -645,7 +645,7 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(2),
+    clientDefault: () => 2,
   );
   static const VerificationMeta _paidBeforeCountMeta = const VerificationMeta(
     'paidBeforeCount',
@@ -657,7 +657,7 @@ class $LoansTable extends Loans with TableInfo<$LoansTable, Loan> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    clientDefault: () => 0,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -1471,7 +1471,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_active" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -1901,7 +1901,7 @@ class $TransactionsTable extends Transactions
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('PYG'),
+    clientDefault: () => 'PYG',
   );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
@@ -2026,7 +2026,7 @@ class $TransactionsTable extends Transactions
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_extra" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   static const VerificationMeta _eventIdMeta = const VerificationMeta(
     'eventId',
@@ -2881,7 +2881,7 @@ class $SuggestedTransactionsTable extends SuggestedTransactions
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('PYG'),
+    clientDefault: () => 'PYG',
   );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
@@ -3851,7 +3851,7 @@ class $RecurringRulesTable extends RecurringRules
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("active" IN (0, 1))',
     ),
-    defaultValue: const Constant(true),
+    clientDefault: () => true,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -6244,7 +6244,7 @@ class $MerchantMemoryTable extends MerchantMemory
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("auto_confirm" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -7388,7 +7388,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("archived" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -8253,7 +8253,7 @@ class $EntryShortcutsTable extends EntryShortcuts
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_pinned" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   static const VerificationMeta _isDismissedMeta = const VerificationMeta(
     'isDismissed',
@@ -8268,7 +8268,7 @@ class $EntryShortcutsTable extends EntryShortcuts
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("is_dismissed" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -8837,7 +8837,7 @@ class $CounterpartyRulesTable extends CounterpartyRules
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("auto_apply" IN (0, 1))',
     ),
-    defaultValue: const Constant(false),
+    clientDefault: () => false,
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',

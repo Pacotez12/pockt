@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:pockt/core/db/app_database.dart';
+import 'package:pockt/core/sync/powersync_schema.dart';
 import 'package:pockt/features/goals/data/goals_repository.dart';
+import 'package:powersync/powersync.dart' as ps;
 
 void main() {
   late AppDatabase db;
@@ -200,5 +205,41 @@ void main() {
         .watchContributionsTotalSince(periodStart)
         .first;
     expect(totalStream, equals(400000));
+  });
+
+  test('crear meta sobre base PowerSync no deja archived en null y permite leerla',
+      () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    final tempDir =
+        Directory.systemTemp.createTempSync('goals_ps_test_');
+    addTearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+
+    final psDbPath = p.join(tempDir.path, 'goals_powersync.db');
+    final psDb = ps.PowerSyncDatabase(
+      schema: pocktPowerSyncSchema,
+      path: psDbPath,
+    );
+    await psDb.initialize();
+    addTearDown(psDb.close);
+
+    final psAppDb = AppDatabase.powerSync(psDb);
+    addTearDown(psAppDb.close);
+
+    final psGoalsRepo = GoalsRepository(psAppDb);
+    final goalId = await psGoalsRepo.createGoal(
+      name: 'Viaje PowerSync',
+      icon: 'airplane',
+      targetAmount: 5000000,
+    );
+
+    final goals = await psGoalsRepo.watchActive().first;
+    expect(goals.length, equals(1));
+    expect(goals.first.id, equals(goalId));
+    expect(goals.first.name, equals('Viaje PowerSync'));
+    expect(goals.first.archived, isFalse);
   });
 }

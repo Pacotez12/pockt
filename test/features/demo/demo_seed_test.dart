@@ -1,14 +1,21 @@
-import 'package:drift/drift.dart' show DatabaseConnection;
+import 'dart:io';
+
+import 'package:drift/drift.dart'
+    show DatabaseConnection, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/sync/migrate_legacy_db.dart';
+import 'package:pockt/core/sync/powersync_schema.dart';
 import 'package:pockt/core/time/local_time.dart';
 import 'package:pockt/features/budgets/data/budgets_repository.dart';
 import 'package:pockt/features/demo/demo_seed.dart';
 import 'package:pockt/features/income/data/income_schedule_repository.dart';
 import 'package:pockt/features/recurring/data/suggestions_repository.dart';
 import 'package:pockt/features/transactions/data/transactions_repository.dart';
+import 'package:powersync/powersync.dart' as ps;
 
 void main() {
   late AppDatabase testDb;
@@ -167,5 +174,106 @@ void main() {
     expect(recurringCountSecond, equals(recurringCountInitial));
     expect(sugCountSecond, equals(sugCountInitial));
     expect(scheduleCountSecond, equals(scheduleCountInitial));
+  });
+
+  test(
+      'seedDemoData sobre PowerSync deja los mismos conteos por tabla que sobre Drift en memoria',
+      () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    // 1. Cargar datos en base Drift en memoria (testDb)
+    await seedDemoData(testDb, nowLocal: nowLocal);
+
+    // 2. Medir conteos por tabla en Drift
+    final expectedCounts = <String, int>{};
+    for (final table in allPocktTables) {
+      final res = await testDb
+          .customSelect('SELECT count(*) as c FROM "$table"')
+          .getSingle();
+      expectedCounts[table] = res.read<int>('c');
+    }
+
+    // 3. Crear base PowerSync temporal
+    final tempDir =
+        Directory.systemTemp.createTempSync('demo_seed_powersync_');
+    addTearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+
+    final psDbPath = p.join(tempDir.path, 'demo_powersync.db');
+    final psDb = ps.PowerSyncDatabase(
+      schema: pocktPowerSyncSchema,
+      path: psDbPath,
+    );
+    await psDb.initialize();
+    addTearDown(psDb.close);
+
+    final powerSyncDb = AppDatabase.powerSync(psDb);
+    addTearDown(powerSyncDb.close);
+
+    // 4. Sembrar demo en PowerSync
+    await seedDemoData(powerSyncDb, nowLocal: nowLocal);
+
+    // Deserializar cada tabla para verificar que ningún campo non-null quedó en null
+    await powerSyncDb.select(powerSyncDb.categories).get();
+    await powerSyncDb.select(powerSyncDb.transactions).get();
+    await powerSyncDb.select(powerSyncDb.suggestedTransactions).get();
+    await powerSyncDb.select(powerSyncDb.recurringRules).get();
+    await powerSyncDb.select(powerSyncDb.incomeSchedules).get();
+    await powerSyncDb.select(powerSyncDb.budgets).get();
+    await powerSyncDb.select(powerSyncDb.dayMarks).get();
+    await powerSyncDb.select(powerSyncDb.settings).get();
+    await powerSyncDb.select(powerSyncDb.categoryKeywords).get();
+    await powerSyncDb.select(powerSyncDb.merchantMemory).get();
+    await powerSyncDb.select(powerSyncDb.salaryDeductions).get();
+    await powerSyncDb.select(powerSyncDb.loans).get();
+    await powerSyncDb.select(powerSyncDb.loanInstallments).get();
+    await powerSyncDb.select(powerSyncDb.goals).get();
+    await powerSyncDb.select(powerSyncDb.goalContributions).get();
+    await powerSyncDb.select(powerSyncDb.entryShortcuts).get();
+    await powerSyncDb.select(powerSyncDb.events).get();
+    await powerSyncDb.select(powerSyncDb.counterpartyRules).get();
+
+    // 5. Comparar conteos
+    final actualCounts = <String, int>{};
+    for (final table in allPocktTables) {
+      final res = await powerSyncDb
+          .customSelect('SELECT count(*) as c FROM "$table"')
+          .getSingle();
+      actualCounts[table] = res.read<int>('c');
+    }
+
+    expect(actualCounts, equals(expectedCounts));
+  });
+
+  test(
+      'seedDemoData es atómica: si ocurre un error a mitad de camino, se revierte todo',
+      () async {
+    // Disparador para que falle cuando intente insertar el primer presupuesto
+    await testDb.customStatement(
+      'CREATE TRIGGER fail_on_budget BEFORE INSERT ON budgets '
+      "BEGIN SELECT RAISE(ABORT, 'simulated budget failure'); END;",
+    );
+
+    expect(
+      () => seedDemoData(testDb, nowLocal: nowLocal),
+      throwsA(anything),
+    );
+
+    // Debe revertir todo: 0 transacciones, 0 esquemas, 0 presupuestos, 0 memorias
+    final txCount =
+        (await testDb.select(testDb.transactions).get()).length;
+    final scheduleCount =
+        (await testDb.select(testDb.incomeSchedules).get()).length;
+    final budgetCount =
+        (await testDb.select(testDb.budgets).get()).length;
+    final memoryCount =
+        (await testDb.select(testDb.merchantMemory).get()).length;
+
+    expect(txCount, equals(0));
+    expect(scheduleCount, equals(0));
+    expect(budgetCount, equals(0));
+    expect(memoryCount, equals(0));
   });
 }
