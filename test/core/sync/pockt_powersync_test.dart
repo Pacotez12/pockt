@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
@@ -45,6 +46,27 @@ void main() {
   });
 
   group('Tarea 2.3: PowerSync y Migración Legacy', () {
+    test('.pre-sync.bak es la base v16 original, antes de subirla a v17',
+        () async {
+      final fixtureFile = File('test/fixtures/pockt_v16_demo.db');
+      final oldDbPath = p.join(tempDir.path, 'pockt_legacy.db');
+      fixtureFile.copySync(oldDbPath);
+
+      final target = ps.PowerSyncDatabase(
+        schema: pocktPowerSyncSchema,
+        path: p.join(tempDir.path, 'powersync_target.db'),
+      );
+      await target.initialize();
+      addTearDown(target.close);
+
+      await migrateLegacyDriftDb(oldDbPath: oldDbPath, target: target);
+
+      expect(
+        File('$oldDbPath.pre-sync.bak').readAsBytesSync(),
+        equals(fixtureFile.readAsBytesSync()),
+      );
+    });
+
     test(
       '(a) migración de la base v17 de demo: reportes iguales, .pre-sync.bak existe, marca guardada y segunda corrida no hace nada',
       () async {
@@ -940,6 +962,74 @@ Moneda y Monto: | PYG 120,000 |
               ..where((t) => t.id.equals('cpr-defaults')))
             .getSingle();
         expect(cpr.autoApply, isFalse);
+      },
+    );
+
+    test(
+      '(j) aperturas concurrentes desde instancias distintas sobre el mismo archivo migran una sola vez',
+      () async {
+        final fixtureFile = File('test/fixtures/pockt_v16_demo.db');
+        final oldDbPath = p.join(tempDir.path, 'pockt_legacy_concurrent.db');
+        fixtureFile.copySync(oldDbPath);
+
+        final targetDbPath = p.join(tempDir.path, 'powersync_concurrent.db');
+
+        // Tres aperturas concurrentes (simulando la app y tareas de Workmanager en isolates distintos)
+        final dbs = await Future.wait([
+          openPocktPowerSync(path: targetDbPath, legacyDbPath: oldDbPath),
+          openPocktPowerSync(path: targetDbPath, legacyDbPath: oldDbPath),
+          openPocktPowerSync(path: targetDbPath, legacyDbPath: oldDbPath),
+        ]);
+        addTearDown(() async {
+          for (final db in dbs) {
+            try {
+              await db.close();
+            } catch (_) {}
+          }
+        });
+
+        // 1. Marca de migración guardada
+        expect(await isMigrationMarkSaved(dbs.first), isTrue);
+
+        // 2. ps_crud: exactamente una operación por fila migrada en tablas sincronizadas y ningún DELETE
+        final crudRows = await dbs.first.getAll('SELECT data FROM ps_crud ORDER BY id ASC');
+        final crudOps = crudRows.map((r) => jsonDecode(r['data'] as String) as Map<String, dynamic>).toList();
+
+        final deleteOps = crudOps.where((op) => op['op'] == 'DELETE').toList();
+        expect(deleteOps, isEmpty, reason: 'Una migración única no debe generar operaciones DELETE en ps_crud');
+
+        // Contar filas sincronizadas esperadas en la base legacy
+        final originSqlite = sqlite.sqlite3.open(oldDbPath);
+        var expectedSyncedRows = 0;
+        final syncedTables = [
+          'categories',
+          'transactions',
+          'loans',
+          'loan_installments',
+          'goals',
+          'goal_contributions',
+          'budgets',
+          'recurring_rules',
+          'income_schedules',
+          'salary_deductions',
+          'events',
+          'settings',
+        ];
+        for (final table in syncedTables) {
+          final countRes = originSqlite.select('SELECT count(*) as c FROM "$table"');
+          expectedSyncedRows += countRes.first['c'] as int;
+        }
+        originSqlite.close();
+
+        expect(
+          crudOps.length,
+          equals(expectedSyncedRows),
+          reason: 'ps_crud debe tener exactamente una operación por fila migrada ($expectedSyncedRows)',
+        );
+
+        // 3. Conteos en destino coinciden con origen
+        final targetTx = await dbs.first.get('SELECT count(*) as c FROM transactions');
+        expect(targetTx['c'], equals(60));
       },
     );
   });
