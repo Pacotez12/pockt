@@ -60,3 +60,7 @@ spike/**/supabase/.branches/
 backend/**/.env
 backend/supabase/.temp/
 backend/supabase/.branches/
+
+# Web: valores locales
+web/**/.env*
+!web/.env.example
