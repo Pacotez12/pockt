@@ -14,6 +14,10 @@ export function TopNav() {
   const { logout } = useAuth();
   const { theme, setTheme } = useTheme();
 
+  const handleCreateMovement = () => {
+    window.dispatchEvent(new CustomEvent('pockt:open-create-movement'));
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 24);
@@ -204,12 +208,11 @@ export function TopNav() {
             )}
           </div>
 
-          {/* Primary CTA button: "Cargar" (disabled until stage 4 with tooltip) */}
-          <button
-            type="button"
-            disabled
-            title="Carga de movimientos disponible en la etapa 4"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-[13px] text-white opacity-60 cursor-not-allowed select-none shadow-sm"
+          {/* Primary CTA button: "Cargar" */}
+          <Link
+            to="/movimientos?crear=1"
+            onClick={handleCreateMovement}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-[13px] text-white select-none shadow-sm active:scale-95 transition-transform cursor-pointer"
             style={{
               background: 'linear-gradient(90deg, var(--brand-start), var(--brand-end))',
             }}
@@ -225,7 +228,7 @@ export function TopNav() {
               <path d="M12 5v14M5 12h14" />
             </svg>
             <span>Cargar</span>
-          </button>
+          </Link>
 
           {/* Mobile hamburger button (< 768px) */}
           <button

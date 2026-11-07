@@ -32,7 +32,7 @@ describe('TopNav', () => {
     vi.clearAllMocks();
   });
 
-  it('renders logo, navigation links, and "+ Cargar" button disabled with tooltip', () => {
+  it('renders logo, navigation links, and "+ Cargar" action button', () => {
     renderTopNav('/movimientos');
 
     expect(screen.getByText('Pockt')).toBeInTheDocument();
@@ -42,9 +42,9 @@ describe('TopNav', () => {
     expect(screen.getByRole('link', { name: 'Préstamos' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Metas' })).toBeInTheDocument();
 
-    const ctaButton = screen.getByRole('button', { name: /Cargar/i });
-    expect(ctaButton).toBeDisabled();
-    expect(ctaButton).toHaveAttribute('title', expect.stringContaining('etapa 4'));
+    const ctaLink = screen.getByRole('link', { name: /Cargar/i });
+    expect(ctaLink).toBeInTheDocument();
+    expect(ctaLink).toHaveAttribute('href', '/movimientos?crear=1');
   });
 
   it('highlights the active link according to current location', () => {
