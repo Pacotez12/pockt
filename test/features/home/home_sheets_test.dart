@@ -178,6 +178,67 @@ void main() {
       expect(find.byType(LoansScreen), findsOneWidget);
     });
 
+    testWidgets('HomeLoansSheet muestra la cuota que toca según el cronograma (nextInstallment) en préstamos con cuotas variables', (tester) async {
+      final loanVariable = Loan(
+        id: 'l-variable-36',
+        direction: LoanDirection.owe,
+        kind: LoanKind.installments,
+        name: 'Préstamo Auto 36 cuotas',
+        totalAmount: 36000000,
+        installmentAmount: null, // cronograma variable: no hay monto fijo en loan.installmentAmount
+        installmentsTotal: 36,
+        dueDay: 15,
+        paidBeforeCount: 0,
+        startDate: DateTime(2026, 1, 1),
+        reminderDays: 2,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+      final nextInst = LoanInstallment(
+        id: 'l-variable-36:1',
+        loanId: 'l-variable-36',
+        number: 1,
+        dueDate: DateTime(2026, 1, 15),
+        amount: 1200000, // Cuota 1: 1.200.000
+      );
+      final progressVariable = LoanProgress(
+        paid: 0,
+        balance: 36000000,
+        percent: 0.0,
+        installmentsPaid: 0,
+        installmentsRemaining: 36,
+        isClosed: false,
+        daysUntilNextDue: 10,
+        nextInstallment: nextInst,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            activeLoansWithProgressProvider.overrideWith(
+              (ref) => Stream.value([
+                LoanWithProgress(loan: loanVariable, progress: progressVariable),
+              ]),
+            ),
+          ],
+          child: MaterialApp(
+            theme: buildDarkTheme(),
+            home: Scaffold(
+              body: HomeLoansSheet(routeAnimation: null),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Préstamo Auto 36 cuotas'), findsOneWidget);
+      // Debe mostrar la próxima cuota impaga (1.200.000), NUNCA el total del préstamo (36.000.000)
+      expect(find.text('Cuota Gs. 1.200.000'), findsOneWidget);
+      expect(find.text('Cuota Gs. 36.000.000'), findsNothing);
+      expect(find.text('0 de 36'), findsOneWidget);
+    });
+
     testWidgets('HomeGoalsSheet muestra total ahorrado, metas y permite navegar a Ver todo y detalle', (tester) async {
       final goal1 = Goal(
         id: 'g-1',

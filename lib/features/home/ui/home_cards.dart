@@ -243,7 +243,9 @@ class HomeLoansCard extends ConsumerWidget {
                       }
 
                       final installment =
-                          item.loan.installmentAmount ?? item.progress.balance;
+                          item.progress.nextInstallment?.amount ??
+                              item.loan.installmentAmount ??
+                              item.progress.balance;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),

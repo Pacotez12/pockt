@@ -391,7 +391,9 @@ class _HomeLoansSheetState extends ConsumerState<HomeLoansSheet> {
     final progress = item.progress;
 
     final dueBadge = loan.dueDay != null ? 'Día ${loan.dueDay}' : '';
-    final installment = loan.installmentAmount ?? progress.balance;
+    final installment = progress.nextInstallment?.amount ??
+        loan.installmentAmount ??
+        progress.balance;
     final ratio = progress.percent.clamp(0.0, 1.0);
 
     final subtext = (loan.installmentsTotal != null && loan.installmentsTotal! > 0)

@@ -164,7 +164,9 @@ PlannedReminder? planLoanReminder({
     targetM,
   );
 
-  final installment = loan.installmentAmount ?? progress.balance;
+  final installment = progress.nextInstallment?.amount ??
+      loan.installmentAmount ??
+      progress.balance;
   final amountFormatted = formatGs(installment);
 
   final title = 'Vence cuota: ${loan.name}';
