@@ -61,6 +61,8 @@ backend/**/.env
 backend/supabase/.temp/
 backend/supabase/.branches/
 
-# Web: valores locales
+# Web: valores locales y build
 web/**/.env*
 !web/.env.example
+web/node_modules/
+web/dist/
