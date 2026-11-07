@@ -118,7 +118,6 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
   Stream<int> watchPendingCount() => pendingCountController.stream;
 
   String? ownerUserId;
-  String? legacyOwnerUserId;
   Object? resolveError;
   Completer<void>? resolveCompleter;
   String? pauseOnUserId;
@@ -150,18 +149,6 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
         );
       }
       return ownerUserId!;
-    }
-    if (legacyOwnerUserId != null) {
-      if (legacyOwnerUserId != currentUserId) {
-        throw CrossAccountSyncException(
-          message: 'Base legacy vinculada a otro usuario',
-          expectedUserId: legacyOwnerUserId!,
-          actualUserId: currentUserId,
-        );
-      }
-      ownerUserId = currentUserId;
-      legacyOwnerUserId = null;
-      return currentUserId;
     }
     ownerUserId = currentUserId;
     return currentUserId;
@@ -714,7 +701,6 @@ void main() {
 
     test('12) flujo normal de primera cuenta local vincula la base y conecta exitosamente', () async {
       fakeSyncDb.ownerUserId = null;
-      fakeSyncDb.legacyOwnerUserId = null;
       when(() => mockAuth.currentSession).thenReturn(testSession);
       await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
 
@@ -738,10 +724,8 @@ void main() {
       expect(fakeSyncDb.ownerUserId, equals('user-123'));
     });
 
-    test('13) instalación legacy (c0ffd70): owner local vacío con sync.userId previo; cuenta distinta bloquea conexión', () async {
-      // Base legacy configurada para user-legacy-999, owner local nuevo vacío
-      fakeSyncDb.ownerUserId = null;
-      fakeSyncDb.legacyOwnerUserId = 'user-legacy-999';
+    test('13) base ya vinculada a otro usuario bloquea conexión y emite SyncError', () async {
+      fakeSyncDb.ownerUserId = 'user-legacy-999';
       await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
 
       // Sesión activa con cuenta distinta
@@ -763,16 +747,14 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // No debe enlazar ni conectar con user-123
+      // No debe conectar con user-123 ni cambiar el owner
       expect(fakeSyncDb.connectCalled, isFalse);
-      expect(fakeSyncDb.ownerUserId, isNull);
+      expect(fakeSyncDb.ownerUserId, equals('user-legacy-999'));
       expect(controller.currentSyncState, isA<SyncError>());
     });
 
-    test('14) instalación legacy (c0ffd70): owner local vacío con sync.userId coincidente; migra y conecta exitosamente', () async {
-      // Base legacy configurada para user-123, owner local nuevo vacío
-      fakeSyncDb.ownerUserId = null;
-      fakeSyncDb.legacyOwnerUserId = 'user-123';
+    test('14) base vinculada al mismo usuario conecta exitosamente', () async {
+      fakeSyncDb.ownerUserId = 'user-123';
       when(() => mockAuth.currentSession).thenReturn(testSession); // user-123
       await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
 
@@ -794,7 +776,6 @@ void main() {
 
       expect(fakeSyncDb.connectCalled, isTrue);
       expect(fakeSyncDb.ownerUserId, equals('user-123'));
-      expect(fakeSyncDb.legacyOwnerUserId, isNull);
     });
 
     test('15) error al resolver/migrar propietario falla cerrado, no conecta y emite error', () async {

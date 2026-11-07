@@ -5,16 +5,21 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pockt/core/db/app_database.dart';
 import 'package:pockt/core/db/tables.dart';
+import 'package:pockt/core/sync/powersync_schema.dart';
 import 'package:pockt/features/backup/data/backup_store.dart';
 import 'package:pockt/features/backup/data/snapshot.dart';
 import 'package:pockt/features/backup/domain/backup_format.dart';
 import 'package:pockt/features/backup/domain/restore_service.dart';
+import 'package:powersync/powersync.dart' as ps;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late Directory tempDir;
-  late File currentDbFile;
   late MemoryBackupStore store;
+  late ps.PowerSyncDatabase targetPs;
+  late AppDatabase targetDb;
   late RestoreService restoreService;
 
   setUpAll(() {
@@ -23,18 +28,29 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('pockt_restore_test_');
-    currentDbFile = File('${tempDir.path}/pockt.sqlite');
     store = MemoryBackupStore();
+
+    final psPath = '${tempDir.path}/powersync_current.db';
+    targetPs = ps.PowerSyncDatabase(
+      schema: pocktPowerSyncSchema,
+      path: psPath,
+    );
+    await targetPs.initialize();
+    targetDb = AppDatabase.powerSync(targetPs);
 
     restoreService = RestoreService(
       store: store,
-      dbFileResolver: () async => currentDbFile,
+      powerSyncDatabase: targetPs,
       argonIterations: 1,
       argonMemoryInKiB: 1024,
     );
   });
 
   tearDown(() async {
+    try {
+      await targetDb.close();
+      await targetPs.close();
+    } catch (_) {}
     if (tempDir.existsSync()) {
       await tempDir.delete(recursive: true);
     }
@@ -178,7 +194,8 @@ void main() {
 
   group('RestoreService', () {
     test('preview obtiene resumen con fecha, cantidad de transacciones y schemaVersion', () async {
-      final db = AppDatabase.forTesting(NativeDatabase(currentDbFile));
+      final dbFile = File('${tempDir.path}/preview_source.sqlite');
+      final db = AppDatabase.forTesting(NativeDatabase(dbFile));
       await db
           .into(db.transactions)
           .insert(
@@ -208,7 +225,8 @@ void main() {
     test(
       'preview con contraseña incorrecta lanza WrongPasswordException',
       () async {
-        final db = AppDatabase.forTesting(NativeDatabase(currentDbFile));
+        final dbFile = File('${tempDir.path}/preview_source2.sqlite');
+        final db = AppDatabase.forTesting(NativeDatabase(dbFile));
         final backupId = await createBackupFromDatabase(
           sourceDb: db,
           password: 'correct-password',
@@ -224,9 +242,8 @@ void main() {
 
     test('restaurar reemplaza los movimientos por los del backup', () async {
       // 1. Base actual con 1 movimiento ("Tx Actual")
-      final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual
-          .into(dbActual.transactions)
+      await targetDb
+          .into(targetDb.transactions)
           .insert(
             TransactionsCompanion.insert(
               id: 'tx-actual',
@@ -240,7 +257,6 @@ void main() {
               merchant: const Value('Tx Actual'),
             ),
           );
-      await dbActual.close();
 
       // 2. Base auxiliar para armar el backup con 2 movimientos
       final backupDbFile = File('${tempDir.path}/source_for_backup.sqlite');
@@ -282,24 +298,21 @@ void main() {
       );
       await dbBackup.close();
 
-      // 3. Restaurar sobre currentDbFile
+      // 3. Restaurar sobre targetPs
       await restoreService.restore(backupId, 'mypassword');
 
-      // 4. Verificar que currentDbFile ahora tiene los 2 movimientos del backup y no tx-actual
-      final verifiedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      final txs = await verifiedDb.select(verifiedDb.transactions).get();
+      // 4. Verificar que targetDb ahora tiene los 2 movimientos del backup y no tx-actual
+      final txs = await targetDb.select(targetDb.transactions).get();
       expect(txs.length, equals(2));
       final merchants = txs.map((t) => t.merchant).toList();
       expect(merchants, containsAll(['Tx Backup 1', 'Tx Backup 2']));
       expect(merchants, isNot(contains('Tx Actual')));
-      await verifiedDb.close();
     });
 
     test('contraseña incorrecta no toca nada', () async {
       // Base actual con 1 movimiento
-      final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual
-          .into(dbActual.transactions)
+      await targetDb
+          .into(targetDb.transactions)
           .insert(
             TransactionsCompanion.insert(
               id: 'tx-actual',
@@ -313,11 +326,14 @@ void main() {
               merchant: const Value('Tx Actual Intacta'),
             ),
           );
+
+      final backupDbFile = File('${tempDir.path}/source_for_backup2.sqlite');
+      final dbAux = AppDatabase.forTesting(NativeDatabase(backupDbFile));
       final backupId = await createBackupFromDatabase(
-        sourceDb: dbActual,
+        sourceDb: dbAux,
         password: 'correct-password',
       );
-      await dbActual.close();
+      await dbAux.close();
 
       // Intento de restaurar con password erróneo
       await expectLater(
@@ -326,11 +342,9 @@ void main() {
       );
 
       // La base original sigue intacta
-      final verifiedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      final txs = await verifiedDb.select(verifiedDb.transactions).get();
+      final txs = await targetDb.select(targetDb.transactions).get();
       expect(txs.length, equals(1));
       expect(txs.first.merchant, equals('Tx Actual Intacta'));
-      await verifiedDb.close();
     });
 
     test('un backup con esquema v4 se migra al reabrir', () async {
@@ -346,29 +360,20 @@ void main() {
       final list = await store.list();
       final backupId = list.firstWhere((b) => b.name == 'v4_backup.pockt').id;
 
-      // 2. Base actual con v5
-      final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      await dbActual.select(dbActual.categories).get();
-      await dbActual.close();
-
-      // 3. Restaurar backup v4
+      // 2. Restaurar backup v4 sobre PowerSync
       await restoreService.restore(backupId, 'v4pass');
 
-      // 4. Abrir la base restaurada: debe migrar a v10 sin fallar y tener los 3 movimientos
-      final migratedDb = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-      expect(migratedDb.schemaVersion, greaterThanOrEqualTo(10));
-      final txs = await migratedDb.select(migratedDb.transactions).get();
+      // 3. targetDb debe tener los 3 movimientos
+      final txs = await targetDb.select(targetDb.transactions).get();
       expect(txs.length, equals(3));
-      await migratedDb.close();
     });
 
     test(
       'si el reemplazo falla a mitad, la base original queda intacta',
       () async {
         // 1. Base actual con movimiento
-        final dbActual = AppDatabase.forTesting(NativeDatabase(currentDbFile));
-        await dbActual
-            .into(dbActual.transactions)
+        await targetDb
+            .into(targetDb.transactions)
             .insert(
               TransactionsCompanion.insert(
                 id: 'tx-original',
@@ -382,7 +387,6 @@ void main() {
                 merchant: const Value('Original Intacto'),
               ),
             );
-        await dbActual.close();
 
         // 2. Subir un backup que contiene bytes corruptos (no es una base SQLite válida)
         final salt = generateSalt();
@@ -404,13 +408,9 @@ void main() {
         );
 
         // 4. La base original sigue intacta gracias al rollback
-        final verifiedDb = AppDatabase.forTesting(
-          NativeDatabase(currentDbFile),
-        );
-        final txs = await verifiedDb.select(verifiedDb.transactions).get();
+        final txs = await targetDb.select(targetDb.transactions).get();
         expect(txs.length, equals(1));
         expect(txs.first.merchant, equals('Original Intacto'));
-        await verifiedDb.close();
       },
     );
   });

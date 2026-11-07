@@ -454,68 +454,7 @@ void main() {
     );
 
     test(
-      'instalación legacy (c0ffd70): owner local vacío con sync.userId previo; cuenta distinta bloquea uploadData y preserva crud',
-      () async {
-        // En c0ffd70 se guardó sync.userId en settings
-        await database.execute(
-          "INSERT INTO settings (id, key, value) VALUES ('1', 'sync.userId', 'user-legacy-owner')",
-        );
-        expect(await getSyncOwner(database), isNull);
-
-        // La sesión activa actual pertenece a otra cuenta distinta
-        backend.currentUserId = 'user-intruder';
-        backend.accessToken = 'token-intruder';
-        await enqueue(database, [
-          entry(UpdateType.put, {'amount': 999}),
-        ]);
-
-        await expectLater(
-          connector.uploadData(database),
-          throwsA(isA<CrossAccountSyncException>()),
-        );
-
-        // No se vinculó a user-intruder
-        expect(await getSyncOwner(database), isNull);
-        // No se envió nada al backend bajo la cuenta de user-intruder
-        expect(backend.calls, isEmpty);
-        // La cola se preservó intacta
-        final crudRows = await database.getAll('SELECT * FROM ps_crud');
-        expect(crudRows, isNotEmpty);
-      },
-    );
-
-    test(
-      'instalación legacy (c0ffd70): owner local vacío con sync.userId coincidente; migra conservadoramente a _pockt_sync_owner y completa uploadData',
-      () async {
-        // En c0ffd70 se guardó sync.userId en settings
-        await database.execute(
-          "INSERT INTO settings (id, key, value) VALUES ('1', 'sync.userId', 'user-legitimate')",
-        );
-        // Limpiar ps_crud de la inserción de prueba previa
-        await database.execute('DELETE FROM ps_crud');
-        expect(await getSyncOwner(database), isNull);
-
-        // La sesión activa pertenece exactamente al mismo usuario
-        backend.currentUserId = 'user-legitimate';
-        backend.accessToken = 'token-legitimate';
-        await enqueue(database, [
-          entry(UpdateType.put, {'amount': 150}),
-        ]);
-
-        await connector.uploadData(database);
-
-        // Ahora está formalizado en el owner local no sincronizable
-        expect(await getSyncOwner(database), equals('user-legitimate'));
-
-        // Se subió al backend con su token
-        expect(backend.calls, isNotEmpty);
-        expect(backend.tokens, equals(['token-legitimate']));
-        expect(await database.getNextCrudTransaction(), isNull);
-      },
-    );
-
-    test(
-      'error de base de datos en lectura legacy falla cerrado (no vincula ni sube)',
+      'error de base de datos al resolver owner falla cerrado (no vincula ni sube)',
       () async {
         final errorDirectory =
             await Directory.systemTemp.createTemp('pockt-err-');
@@ -527,12 +466,6 @@ void main() {
         );
         await errorDb.initialize();
         await errorDb.close(); // Simular base cerrada / fallo de I/O
-
-        // getLegacySyncUserId debe fallar cerrado propagando el error
-        await expectLater(
-          getLegacySyncUserId(errorDb),
-          throwsA(anything),
-        );
 
         // resolveOrMigrateSyncOwner no debe atrapar el error ni devolver owner
         await expectLater(

@@ -1,12 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pockt/core/db/app_database.dart';
-import 'package:pockt/core/db/providers.dart';
+import 'package:pockt/core/sync/migrate_legacy_db.dart';
+import 'package:pockt/core/sync/pockt_powersync.dart';
 import 'package:pockt/features/backup/data/backup_store.dart';
 import 'package:pockt/features/backup/domain/backup_format.dart';
+import 'package:powersync/powersync.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 /// Resumen de metadatos de una copia de seguridad para vista previa (Plan 4, Task 5).
@@ -32,23 +32,29 @@ class RestoreSafetyException implements Exception {
   String toString() => 'RestoreSafetyException: $message';
 }
 
-/// Orquesta la vista previa y la restauración de copias .pockt,
-/// asegurando una copia previa de seguridad local y vuelta atrás ante fallos.
+/// Orquesta la vista previa y la restauración de copias .pockt
+/// sobre la base de datos activa PowerSync.
 class RestoreService {
   final BackupStore store;
-  final Future<File> Function() dbFileResolver;
+  final Future<PowerSyncDatabase> Function()? powerSyncResolver;
+  final PowerSyncDatabase? powerSyncDatabase;
+  final Future<File> Function()? dbFileResolver;
   final Future<void> Function()? closeDatabase;
   final Future<void> Function()? reopenDatabase;
   final Future<void> Function()? beforeRestore;
+  final String? simulateFailureAtTable;
   final int argonMemoryInKiB;
   final int argonIterations;
 
   RestoreService({
     required this.store,
-    required this.dbFileResolver,
+    this.powerSyncResolver,
+    this.powerSyncDatabase,
+    this.dbFileResolver,
     this.closeDatabase,
     this.reopenDatabase,
     this.beforeRestore,
+    this.simulateFailureAtTable,
     this.argonMemoryInKiB = 64 * 1024,
     this.argonIterations = 3,
   });
@@ -69,7 +75,7 @@ class RestoreService {
   }
 
   /// Vista previa de un `.pockt` ya en memoria (por ejemplo elegido con el
-  /// selector de archivos).
+  /// selector de archivos). Acepta formato legacy Drift y formato PowerSync.
   Future<RestorePreview> previewBytes(
     List<int> backupBytes,
     String password, {
@@ -91,11 +97,24 @@ class RestoreService {
       await tempFile.writeAsBytes(sqliteBytes);
       final rawDb = sqlite.sqlite3.open(tempFile.path, mode: sqlite.OpenMode.readOnly);
       try {
-        final versionResult = rawDb.select('PRAGMA user_version;');
-        final schemaVersion = versionResult.first.values.first as int;
+        final isPowerSync = rawDb.select(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ps_data__transactions'",
+        ).isNotEmpty;
 
-        final txCountResult = rawDb.select('SELECT COUNT(*) FROM transactions;');
-        final txCount = txCountResult.first.values.first as int;
+        final versionResult = rawDb.select('PRAGMA user_version;');
+        var schemaVersion = versionResult.first.values.first as int;
+
+        final int txCount;
+        if (isPowerSync) {
+          if (schemaVersion == 0) schemaVersion = 17;
+          final txCountResult =
+              rawDb.select('SELECT COUNT(*) FROM ps_data__transactions;');
+          txCount = txCountResult.first.values.first as int;
+        } else {
+          final txCountResult =
+              rawDb.select('SELECT COUNT(*) FROM transactions;');
+          txCount = txCountResult.first.values.first as int;
+        }
 
         return RestorePreview(
           createdAt: createdAt,
@@ -114,23 +133,29 @@ class RestoreService {
 
   /// Restaura la base de datos a partir de una copia de seguridad:
   /// 1. Descarga y descifra (lanza WrongPasswordException si la clave no coincide, sin tocar archivos).
-  /// 2. Cierra la conexión de base de datos actual (si se especificó).
-  /// 3. Crea una copia local de respaldo de seguridad previa de la base actual.
-  /// 4. Reemplaza el archivo por la versión restaurada.
-  /// 5. Abre y valida la base restaurada (ejecutando migraciones si el schemaVersion es anterior).
-  /// 6. Si cualquier paso falla, revierte inmediatamente a la copia previa y relanza la excepción.
+  /// 2. Lee los datos en solo lectura (subiendo a v17 si es una base legacy v1..v16).
+  /// 3. En UNA transacción de escritura sobre PowerSync, reemplaza las 18 tablas (12 sync + 6 local).
   Future<void> restore(String backupId, String password) async {
-    await restoreBytes(await store.download(backupId), password);
+    await restoreBytes(
+      await store.download(backupId),
+      password,
+    );
   }
 
-  /// Restaura desde un `.pockt` ya en memoria, con la misma vuelta atrás.
-  Future<void> restoreBytes(List<int> backupBytes, String password) async {
-    // 0. Bloqueo de seguridad preventivo: antes de descifrar o resolver/cerrar archivos
+  /// Restaura desde un `.pockt` ya en memoria sobre la base PowerSync.
+  Future<void> restoreBytes(
+    List<int> backupBytes,
+    String password, {
+    String? simulateFailureAtTable,
+  }) async {
+    // 0. Bloqueo de seguridad preventivo opcional
     if (beforeRestore != null) {
       await beforeRestore!();
     }
 
-    // 1. Descifrar primero: con contraseña incorrecta no se toca ningún archivo.
+    final failureTable = simulateFailureAtTable ?? this.simulateFailureAtTable;
+
+    // 1. Descifrar primero: con contraseña incorrecta falla aquí sin tocar la base.
     final sqliteBytes = await decodeBackup(
       backupBytes,
       keyFor: (salt) => deriveKey(
@@ -141,79 +166,113 @@ class RestoreService {
       ),
     );
 
-    final targetFile = await dbFileResolver();
-    final backupCopy = File('${targetFile.path}.restore_safety_backup');
-    final walFile = File('${targetFile.path}-wal');
-    final shmFile = File('${targetFile.path}-shm');
-    final walBackupCopy = File('${targetFile.path}.restore_safety_backup-wal');
-    final shmBackupCopy = File('${targetFile.path}.restore_safety_backup-shm');
+    final target = powerSyncDatabase ??
+        (powerSyncResolver != null
+            ? await powerSyncResolver!()
+            : await openPocktPowerSync());
 
-    // 2. Cerrar la base actual antes de tocar archivos
-    if (closeDatabase != null) {
-      await closeDatabase!();
-    }
-
-    // 3. Crear copia de seguridad previa de la base actual
-    bool hasOriginal = false;
-    if (await targetFile.exists()) {
-      await targetFile.copy(backupCopy.path);
-      hasOriginal = true;
-      if (await walFile.exists()) {
-        await walFile.copy(walBackupCopy.path);
-      }
-      if (await shmFile.exists()) {
-        await shmBackupCopy.exists();
-        await shmFile.copy(shmBackupCopy.path);
-      }
-    }
+    // 2. Extraer datos en archivo temporal
+    final tempDir = await Directory.systemTemp.createTemp('pockt_restore_');
+    final tempFile = File('${tempDir.path}/restore.sqlite');
 
     try {
-      // 4. Escribir los bytes restaurados y reemplazar
-      final tempFile = File('${targetFile.path}.restoring');
       await tempFile.writeAsBytes(sqliteBytes);
-      if (await walFile.exists()) await walFile.delete();
-      if (await shmFile.exists()) await shmFile.delete();
-      await tempFile.copy(targetFile.path);
-      if (await tempFile.exists()) await tempFile.delete();
 
-      // 5. Validar y reabrir la base restaurada
-      final testDb = AppDatabase.forTesting(NativeDatabase(targetFile));
-      try {
-        await testDb.customSelect('SELECT count(*) FROM categories').get();
-      } finally {
-        await testDb.close();
-      }
+      // Detectar formato
+      final testDb = sqlite.sqlite3.open(tempFile.path, mode: sqlite.OpenMode.readOnly);
+      final isPowerSync = testDb.select(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ps_data__transactions'",
+      ).isNotEmpty;
+      testDb.close();
 
-      if (reopenDatabase != null) {
-        await reopenDatabase!();
-      }
+      final extractedRowsByTable = <String, List<Map<String, dynamic>>>{};
 
-      // Éxito: limpiar copias temporales
-      if (await backupCopy.exists()) await backupCopy.delete();
-      if (await walBackupCopy.exists()) await walBackupCopy.delete();
-      if (await shmBackupCopy.exists()) await shmBackupCopy.delete();
-    } catch (e) {
-      // 6. Vuelta atrás (rollback)
-      if (hasOriginal && await backupCopy.exists()) {
-        await backupCopy.copy(targetFile.path);
-        if (await walBackupCopy.exists()) {
-          await walBackupCopy.copy(walFile.path);
-        }
-        if (await shmBackupCopy.exists()) {
-          await shmBackupCopy.copy(shmFile.path);
-        }
-      }
-      if (await backupCopy.exists()) await backupCopy.delete();
-      if (await walBackupCopy.exists()) await walBackupCopy.delete();
-      if (await shmBackupCopy.exists()) await shmBackupCopy.delete();
-
-      if (reopenDatabase != null) {
+      if (isPowerSync) {
+        // Formato (b): Copia PowerSync. Leer ps_data__* y ps_data_local__*
+        final psSqlite = sqlite.sqlite3.open(tempFile.path, mode: sqlite.OpenMode.readOnly);
         try {
-          await reopenDatabase!();
-        } catch (_) {}
+          for (final table in allPocktTables) {
+            final checkTable = psSqlite.select(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('ps_data__$table', 'ps_data_local__$table')",
+            );
+            if (checkTable.isEmpty) continue;
+            final storageTable = checkTable.first['name'] as String;
+            final rows = psSqlite.select('SELECT id, data FROM "$storageTable"');
+            final mappedList = <Map<String, dynamic>>[];
+            for (final row in rows) {
+              final id = row['id'] as String;
+              final dataStr = row['data'] as String?;
+              final Map<String, dynamic> dataMap =
+                  (dataStr != null && dataStr.isNotEmpty)
+                      ? (jsonDecode(dataStr) as Map<String, dynamic>)
+                      : <String, dynamic>{};
+              dataMap['id'] = id;
+              mappedList.add(dataMap);
+            }
+            extractedRowsByTable[table] = mappedList;
+          }
+        } finally {
+          psSqlite.close();
+        }
+      } else {
+        // Formato (a): Copia Drift v1..v17. Subir a v17 en archivo temporal si es anterior.
+        await ensureLegacyDbMigrated(tempFile.path);
+
+        final legacySqlite = sqlite.sqlite3.open(tempFile.path, mode: sqlite.OpenMode.readOnly);
+        try {
+          for (final table in allPocktTables) {
+            final checkTable = legacySqlite.select(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '$table'",
+            );
+            if (checkTable.isEmpty) continue;
+
+            final originPragma = legacySqlite.select('PRAGMA table_info("$table")');
+            final originColumns = originPragma.map((r) => r['name'] as String).toList();
+            final rows = legacySqlite.select('SELECT * FROM "$table"');
+            final mappedList = rows.map((r) {
+              final map = <String, dynamic>{};
+              for (final col in originColumns) {
+                map[col] = r[col];
+              }
+              return map;
+            }).toList();
+            extractedRowsByTable[table] = mappedList;
+          }
+        } finally {
+          legacySqlite.close();
+        }
       }
 
-      rethrow;
+      // 3. En UNA transacción de escritura en PowerSync:
+      //    Reemplazar el contenido de las 18 tablas (12 sync + 6 local).
+      //    Si algo falla a mitad, SQLite hace rollback y nada cambia.
+      //    No tocar _pockt_sync_owner ni _pockt_migration.
+      await target.writeTransaction((tx) async {
+        // Borrar datos actuales de las 18 tablas en orden inverso
+        for (final table in allPocktTables.reversed) {
+          await tx.execute('DELETE FROM "$table"');
+        }
+
+        // Insertar contenido de la copia
+        for (final table in allPocktTables) {
+          if (failureTable == table) {
+            throw Exception('Simulated cut midway at table $table');
+          }
+
+          final rows = extractedRowsByTable[table];
+          if (rows != null && rows.isNotEmpty) {
+            await copyRowsToPowerSyncTable(
+              tx: tx,
+              table: table,
+              rows: rows,
+            );
+          }
+        }
+      });
+    } finally {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
     }
   }
 }
@@ -223,23 +282,6 @@ final restoreServiceProvider = Provider<RestoreService>((ref) {
   final store = ref.watch(backupStoreProvider);
   return RestoreService(
     store: store,
-    dbFileResolver: () async {
-      final docDir = await getApplicationDocumentsDirectory();
-      return File('${docDir.path}/pockt.sqlite');
-    },
-    beforeRestore: () async {
-      throw const RestoreSafetyException(
-        'La restauración de copias de seguridad está suspendida '
-        'tras la migración a PowerSync para prevenir la corrupción de la base de datos '
-        'y carreras con los procesos en segundo plano de sincronización.',
-      );
-    },
-    closeDatabase: () async {
-      final db = ref.read(databaseProvider);
-      await db.close();
-    },
-    reopenDatabase: () async {
-      ref.invalidate(databaseProvider);
-    },
+    powerSyncResolver: openPocktPowerSync,
   );
 });

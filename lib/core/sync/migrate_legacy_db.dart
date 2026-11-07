@@ -99,6 +99,50 @@ Future<bool> isMigrationMarkSaved(SqliteReadContext target) async {
   }
 }
 
+/// Inserta filas en [table] adaptándolas al esquema destino de PowerSync.
+/// Deriva la columna `id` si estuviera ausente y descarta columnas inexistentes en destino.
+Future<void> copyRowsToPowerSyncTable({
+  required SqliteWriteContext tx,
+  required String table,
+  required Iterable<Map<String, dynamic>> rows,
+}) async {
+  if (rows.isEmpty) return;
+  final targetColsRaw = await tx.getAll('PRAGMA table_info("$table")');
+  final targetColumns =
+      targetColsRaw.map((r) => r['name'] as String).toSet();
+
+  for (final rawRow in rows) {
+    final Map<String, dynamic> rowData = Map<String, dynamic>.from(rawRow);
+
+    // Derivar id si no estuviera presente (p. ej. esquemas anteriores a v17)
+    if (table == 'loan_installments') {
+      rowData['id'] ??= '${rowData['loan_id']}:${rowData['number']}';
+    } else if (table == 'settings') {
+      rowData['id'] ??= rowData['key'];
+    } else if (table == 'day_marks') {
+      rowData['id'] ??= rowData['date'];
+    } else if (table == 'merchant_memory') {
+      rowData['id'] ??=
+          '${rowData['merchant_key']}|${rowData['category_id']}';
+    }
+
+    final insertKeys =
+        rowData.keys.where((k) => targetColumns.contains(k)).toList();
+    final colList = insertKeys.map((k) => '"$k"').join(', ');
+    final placeholders = List.filled(insertKeys.length, '?').join(', ');
+    final values = insertKeys.map((k) {
+      final v = rowData[k];
+      if (v is bool) return v ? 1 : 0;
+      return v;
+    }).toList();
+
+    await tx.execute(
+      'INSERT INTO "$table" ($colList) VALUES ($placeholders)',
+      values,
+    );
+  }
+}
+
 /// Migra los datos de una base de datos Drift existente a una instancia de [PowerSyncDatabase].
 ///
 /// 1. Comprueba si ya fue migrada. Si ya lo fue, retorna null sin hacer nada.
@@ -199,39 +243,19 @@ Future<MigrationReport?> migrateLegacyDriftDb({
 
         if (rows.isEmpty) continue;
 
-        final targetColsRaw = await tx.getAll('PRAGMA table_info("$table")');
-        final targetColumns =
-            targetColsRaw.map((r) => r['name'] as String).toSet();
-
-        for (final row in rows) {
-          final Map<String, dynamic> rowData = {};
+        final mappedRows = rows.map((r) {
+          final map = <String, dynamic>{};
           for (final col in originColumns) {
-            rowData[col] = row[col];
+            map[col] = r[col];
           }
+          return map;
+        });
 
-          // Derivar id si no estuviera presente (p. ej. esquemas anteriores a v17)
-          if (table == 'loan_installments') {
-            rowData['id'] ??= '${rowData['loan_id']}:${rowData['number']}';
-          } else if (table == 'settings') {
-            rowData['id'] ??= rowData['key'];
-          } else if (table == 'day_marks') {
-            rowData['id'] ??= rowData['date'];
-          } else if (table == 'merchant_memory') {
-            rowData['id'] ??=
-                '${rowData['merchant_key']}|${rowData['category_id']}';
-          }
-
-          final insertKeys =
-              rowData.keys.where((k) => targetColumns.contains(k)).toList();
-          final colList = insertKeys.map((k) => '"$k"').join(', ');
-          final placeholders = List.filled(insertKeys.length, '?').join(', ');
-          final values = insertKeys.map((k) => rowData[k]).toList();
-
-          await tx.execute(
-            'INSERT INTO "$table" ($colList) VALUES ($placeholders)',
-            values,
-          );
-        }
+        await copyRowsToPowerSyncTable(
+          tx: tx,
+          table: table,
+          rows: mappedRows,
+        );
       }
 
       // Guardar la marca de migración dentro de la misma transacción
