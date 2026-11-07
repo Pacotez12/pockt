@@ -68,7 +68,6 @@ abstract class SettingsKeys {
 
   // Sincronización con la nube (Plan 12 / spec §3)
   static const syncEnabled = 'sync.enabled';
-  static const syncUserId = 'sync.userId';
 }
 
 /// Repositorio clave-valor tipado sobre la tabla `settings` de Drift.

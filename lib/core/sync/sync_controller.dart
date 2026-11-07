@@ -6,6 +6,7 @@ import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/sync/auth_service.dart';
 import 'package:pockt/core/sync/pockt_powersync.dart';
 import 'package:pockt/core/sync/supabase_connector.dart';
+import 'package:pockt/core/sync/sync_owner.dart' as sync_owner;
 import 'package:powersync/powersync.dart' as ps;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -122,6 +123,9 @@ abstract interface class SyncDatabaseClient {
   Stream<ps.SyncStatus> get statusStream;
   ps.SyncStatus get currentStatus;
   Stream<int> watchPendingCount();
+  Future<String?> getSyncOwner();
+  Future<void> setSyncOwner(String userId);
+  Future<String> resolveOrMigrateSyncOwner(String currentUserId);
 }
 
 /// Adaptador para una instancia de [PowerSyncDatabase].
@@ -152,6 +156,17 @@ class PowerSyncDatabaseClient implements SyncDatabaseClient {
         .watch('SELECT count(*) as count FROM ps_crud')
         .map((rs) => (rs.firstOrNull?['count'] as num?)?.toInt() ?? 0);
   }
+
+  @override
+  Future<String?> getSyncOwner() => sync_owner.getSyncOwner(db);
+
+  @override
+  Future<void> setSyncOwner(String userId) =>
+      sync_owner.setSyncOwner(db, userId);
+
+  @override
+  Future<String> resolveOrMigrateSyncOwner(String currentUserId) =>
+      sync_owner.resolveOrMigrateSyncOwner(db, currentUserId);
 }
 
 /// Adaptador perezoso que resuelve [openPocktPowerSync] bajo demanda.
@@ -202,6 +217,24 @@ class LazyPowerSyncDatabaseClient implements SyncDatabaseClient {
         .watch('SELECT count(*) as count FROM ps_crud')
         .map((rs) => (rs.firstOrNull?['count'] as num?)?.toInt() ?? 0);
   }
+
+  @override
+  Future<String?> getSyncOwner() async {
+    final db = await _db();
+    return sync_owner.getSyncOwner(db);
+  }
+
+  @override
+  Future<void> setSyncOwner(String userId) async {
+    final db = await _db();
+    await sync_owner.setSyncOwner(db, userId);
+  }
+
+  @override
+  Future<String> resolveOrMigrateSyncOwner(String currentUserId) async {
+    final db = await _db();
+    return sync_owner.resolveOrMigrateSyncOwner(db, currentUserId);
+  }
 }
 
 /// Controlador central de sincronización.
@@ -224,6 +257,7 @@ class SyncController {
   ps.SyncStatus _lastStatus;
   int _lastPendingCount = 0;
   SyncState _currentState = const SyncState.off();
+  int _connectionGeneration = 0;
 
   SyncController({
     required SyncDatabaseClient database,
@@ -280,44 +314,14 @@ class SyncController {
   }
 
   Future<void> _reevaluateConnection() async {
+    final generation = ++_connectionGeneration;
     final conn = connector;
     final shouldConnect = isSyncAvailable &&
         _syncEnabled &&
         _currentSession != null &&
         conn != null;
 
-    if (shouldConnect) {
-      final currentUserId = _currentSession!.user.id;
-      final boundUserId = await settingsRepository.get(SettingsKeys.syncUserId);
-
-      if (boundUserId != null &&
-          boundUserId.isNotEmpty &&
-          boundUserId != currentUserId) {
-        if (_isConnectingOrConnected) {
-          _isConnectingOrConnected = false;
-          try {
-            await _database.disconnect();
-          } catch (_) {}
-        }
-        _emitState(const SyncState.error(
-          'Cambio de cuenta detectado. No se permite sincronizar con otra cuenta en la misma base local.',
-        ));
-        return;
-      }
-
-      if (boundUserId == null || boundUserId.isEmpty) {
-        await settingsRepository.set(SettingsKeys.syncUserId, currentUserId);
-      }
-
-      if (!_isConnectingOrConnected) {
-        _isConnectingOrConnected = true;
-        try {
-          await _database.connect(connector: conn);
-        } catch (e) {
-          debugPrint('Error al conectar PowerSync: $e');
-        }
-      }
-    } else {
+    if (!shouldConnect) {
       if (_isConnectingOrConnected) {
         _isConnectingOrConnected = false;
         try {
@@ -326,11 +330,64 @@ class SyncController {
           debugPrint('Error al desconectar PowerSync: $e');
         }
       }
+      if (generation != _connectionGeneration) return;
       _emitState(const SyncState.off());
       return;
     }
 
-    _calculateAndEmitState();
+    final targetUserId = _currentSession!.user.id;
+    final targetSession = _currentSession!;
+
+    try {
+      await _database.resolveOrMigrateSyncOwner(targetUserId);
+    } catch (e) {
+      if (generation != _connectionGeneration) return;
+      if (_isConnectingOrConnected) {
+        _isConnectingOrConnected = false;
+        try {
+          await _database.disconnect();
+        } catch (_) {}
+      }
+      _emitState(SyncState.error(
+        e is sync_owner.CrossAccountSyncException
+            ? 'Cambio de cuenta detectado. No se permite sincronizar con otra cuenta en la misma base local.'
+            : 'Error al verificar la base de datos local: $e',
+      ));
+      return;
+    }
+
+    // Revalidación estricta tras el await: verificar generación y consistencia de estado
+    if (generation != _connectionGeneration) return;
+    if (!_syncEnabled ||
+        _currentSession == null ||
+        _currentSession!.user.id != targetUserId ||
+        _currentSession != targetSession) {
+      if (_currentSession == null || !_syncEnabled) {
+        if (_isConnectingOrConnected) {
+          _isConnectingOrConnected = false;
+          try {
+            await _database.disconnect();
+          } catch (_) {}
+        }
+        _emitState(const SyncState.off());
+      }
+      return;
+    }
+
+    if (!_isConnectingOrConnected) {
+      _isConnectingOrConnected = true;
+      try {
+        await _database.connect(connector: conn);
+      } catch (e) {
+        if (generation == _connectionGeneration) {
+          debugPrint('Error al conectar PowerSync: $e');
+        }
+      }
+    }
+
+    if (generation == _connectionGeneration) {
+      _calculateAndEmitState();
+    }
   }
 
   /// Reintenta la sincronización: desconecta y vuelve a conectar si corresponde.
@@ -422,7 +479,10 @@ final syncControllerProvider = Provider<SyncController>((ref) {
     try {
       final backend =
           PocktSupabaseBackend.fromSupabase(Supabase.instance.client);
-      connector = PocktSupabaseConnector(backend: backend);
+      connector = PocktSupabaseConnector(
+        backend: backend,
+        getOwnerUserId: () => syncClient.getSyncOwner(),
+      );
     } catch (_) {}
   }
 

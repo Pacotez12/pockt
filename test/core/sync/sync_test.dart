@@ -11,6 +11,7 @@ import 'package:pockt/core/db/tables.dart';
 import 'package:pockt/core/settings/settings_repository.dart';
 import 'package:pockt/core/sync/auth_service.dart';
 import 'package:pockt/core/sync/sync_controller.dart';
+import 'package:pockt/core/sync/sync_owner.dart';
 import 'package:powersync/powersync.dart' as ps;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -115,6 +116,56 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
 
   @override
   Stream<int> watchPendingCount() => pendingCountController.stream;
+
+  String? ownerUserId;
+  String? legacyOwnerUserId;
+  Object? resolveError;
+  Completer<void>? resolveCompleter;
+  String? pauseOnUserId;
+
+  @override
+  Future<String?> getSyncOwner() async => ownerUserId;
+
+  @override
+  Future<void> setSyncOwner(String userId) async {
+    ownerUserId = userId;
+  }
+
+  @override
+  Future<String> resolveOrMigrateSyncOwner(String currentUserId) async {
+    final err = resolveError;
+    if (err != null) throw err;
+    if (pauseOnUserId == null || pauseOnUserId == currentUserId) {
+      final comp = resolveCompleter;
+      if (comp != null) {
+        await comp.future;
+      }
+    }
+    if (ownerUserId != null) {
+      if (ownerUserId != currentUserId) {
+        throw CrossAccountSyncException(
+          message: 'Base vinculada a otro usuario',
+          expectedUserId: ownerUserId!,
+          actualUserId: currentUserId,
+        );
+      }
+      return ownerUserId!;
+    }
+    if (legacyOwnerUserId != null) {
+      if (legacyOwnerUserId != currentUserId) {
+        throw CrossAccountSyncException(
+          message: 'Base legacy vinculada a otro usuario',
+          expectedUserId: legacyOwnerUserId!,
+          actualUserId: currentUserId,
+        );
+      }
+      ownerUserId = currentUserId;
+      legacyOwnerUserId = null;
+      return currentUserId;
+    }
+    ownerUserId = currentUserId;
+    return currentUserId;
+  }
 
   void dispose() {
     statusController.close();
@@ -620,8 +671,8 @@ void main() {
     });
 
     test('11) protección conservadora: cambio a otro usuario impide conectar y emite error', () async {
-      // Simular que la base ya estaba sincronizada por user-123
-      await settingsRepo.set(SettingsKeys.syncUserId, 'user-123');
+      // Simular que la base ya estaba vinculada localmente a user-123
+      fakeSyncDb.ownerUserId = 'user-123';
       await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
 
       // Nueva sesión con otro usuario diferente
@@ -657,6 +708,174 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       // No debe conectar con la cuenta del otro usuario y debe reportar error
+      expect(fakeSyncDb.connectCalled, isFalse);
+      expect(controller.currentSyncState, isA<SyncError>());
+    });
+
+    test('12) flujo normal de primera cuenta local vincula la base y conecta exitosamente', () async {
+      fakeSyncDb.ownerUserId = null;
+      fakeSyncDb.legacyOwnerUserId = null;
+      when(() => mockAuth.currentSession).thenReturn(testSession);
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(fakeSyncDb.connectCalled, isTrue);
+      expect(fakeSyncDb.ownerUserId, equals('user-123'));
+    });
+
+    test('13) instalación legacy (c0ffd70): owner local vacío con sync.userId previo; cuenta distinta bloquea conexión', () async {
+      // Base legacy configurada para user-legacy-999, owner local nuevo vacío
+      fakeSyncDb.ownerUserId = null;
+      fakeSyncDb.legacyOwnerUserId = 'user-legacy-999';
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      // Sesión activa con cuenta distinta
+      when(() => mockAuth.currentSession).thenReturn(testSession); // user-123
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // No debe enlazar ni conectar con user-123
+      expect(fakeSyncDb.connectCalled, isFalse);
+      expect(fakeSyncDb.ownerUserId, isNull);
+      expect(controller.currentSyncState, isA<SyncError>());
+    });
+
+    test('14) instalación legacy (c0ffd70): owner local vacío con sync.userId coincidente; migra y conecta exitosamente', () async {
+      // Base legacy configurada para user-123, owner local nuevo vacío
+      fakeSyncDb.ownerUserId = null;
+      fakeSyncDb.legacyOwnerUserId = 'user-123';
+      when(() => mockAuth.currentSession).thenReturn(testSession); // user-123
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(fakeSyncDb.connectCalled, isTrue);
+      expect(fakeSyncDb.ownerUserId, equals('user-123'));
+      expect(fakeSyncDb.legacyOwnerUserId, isNull);
+    });
+
+    test('15) error al resolver/migrar propietario falla cerrado, no conecta y emite error', () async {
+      fakeSyncDb.resolveError = const FormatException('Error de base corrupta');
+      when(() => mockAuth.currentSession).thenReturn(testSession);
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(fakeSyncDb.connectCalled, isFalse);
+      expect(fakeSyncDb.ownerUserId, isNull);
+      expect(controller.currentSyncState, isA<SyncError>());
+    });
+
+    test('16) carrera al reevaluar: si cambia la cuenta mientras espera resolveOrMigrateSyncOwner, la ejecución obsoleta no conecta con sesión desactualizada', () async {
+      final user1Completer = Completer<void>();
+      fakeSyncDb.resolveCompleter = user1Completer;
+      fakeSyncDb.pauseOnUserId = 'user-123';
+      fakeSyncDb.ownerUserId = 'user-123';
+
+      when(() => mockAuth.currentSession).thenReturn(testSession); // user-123
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      // Esperar a que la primera reevaluación empiece y se pause en resolveOrMigrateSyncOwner
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(fakeSyncDb.connectCalled, isFalse);
+
+      // Cambiar de cuenta a user-other mientras la resolución de user-123 está en vuelo
+      final otherUser = User(
+        id: 'user-other',
+        appMetadata: {},
+        userMetadata: {},
+        aud: 'authenticated',
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      final otherSession = Session(
+        accessToken: 'other-token',
+        tokenType: 'bearer',
+        user: otherUser,
+      );
+
+      when(() => mockAuth.currentSession).thenReturn(otherSession);
+      authStateController.add(AuthState(AuthChangeEvent.signedIn, otherSession));
+
+      // Esperar brevemente a que el stream de auth procese y genere una nueva generación
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      // Ahora permitir que la resolución demorada de user-123 continúe
+      user1Completer.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // La ejecución de user-123 quedó invalidada por cambio de generación/sesión
+      // Y la de user-other no se conectó porque la base es de user-123
       expect(fakeSyncDb.connectCalled, isFalse);
       expect(controller.currentSyncState, isA<SyncError>());
     });
