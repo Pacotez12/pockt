@@ -1,0 +1,424 @@
+{
+  "cases": [
+    {
+      "name": "3 categorías normales",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 1500000,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 1000000,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 500000,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 1500000,
+          "percentage": 50,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 1000000,
+          "percentage": 33,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 500000,
+          "percentage": 17,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        }
+      ]
+    },
+    {
+      "name": "exactamente 5 categorías sin Otros",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 400000,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 300000,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 200000,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 100000,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968
+        },
+        {
+          "id": "c_salud",
+          "name": "Salud",
+          "amount": 50000,
+          "colorDark": 4283226468,
+          "colorLight": 4281648985
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 400000,
+          "percentage": 38,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 300000,
+          "percentage": 29,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 200000,
+          "percentage": 19,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 100000,
+          "percentage": 9,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968,
+          "isOther": false
+        },
+        {
+          "id": "c_salud",
+          "name": "Salud",
+          "amount": 50000,
+          "percentage": 5,
+          "colorDark": 4283226468,
+          "colorLight": 4281648985,
+          "isOther": false
+        }
+      ]
+    },
+    {
+      "name": "7 categorías agrupa en top 4 + Otros",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 700000,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 500000,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 400000,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 300000,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968
+        },
+        {
+          "id": "c_salud",
+          "name": "Salud",
+          "amount": 200000,
+          "colorDark": 4283226468,
+          "colorLight": 4281648985
+        },
+        {
+          "id": "c_educacion",
+          "name": "Educación",
+          "amount": 150000,
+          "colorDark": 4294956554,
+          "colorLight": 4294953984
+        },
+        {
+          "id": "c_ropa",
+          "name": "Ropa",
+          "amount": 50000,
+          "colorDark": 4294915935,
+          "colorLight": 4294913365
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 700000,
+          "percentage": 31,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 500000,
+          "percentage": 22,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 400000,
+          "percentage": 17,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 300000,
+          "percentage": 13,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968,
+          "isOther": false
+        },
+        {
+          "id": "other",
+          "name": "Otros",
+          "amount": 400000,
+          "percentage": 17,
+          "colorDark": 4286351254,
+          "colorLight": 4284508788,
+          "isOther": true
+        }
+      ]
+    },
+    {
+      "name": "redondeo de porcentajes con mayor resto (1/3 cada uno suma 100)",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 100,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 100,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 100,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 100,
+          "percentage": 34,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 100,
+          "percentage": 33,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 100,
+          "percentage": 33,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        }
+      ]
+    },
+    {
+      "name": "ignora categorías con monto 0 o negativo",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 800000,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 0,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 200000,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 800000,
+          "percentage": 80,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 200000,
+          "percentage": 20,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        }
+      ]
+    },
+    {
+      "name": "lista vacía o todos en cero devuelve vacío",
+      "input": [],
+      "expected": []
+    },
+    {
+      "name": "porcentajes asimétricos (ej. 48%, 22%, 17%, 13% del boceto)",
+      "input": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 480000,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 170000,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 130000,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 220000,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968
+        }
+      ],
+      "expected": [
+        {
+          "id": "c_comida",
+          "name": "Comida",
+          "amount": 480000,
+          "percentage": 48,
+          "colorDark": 4293173351,
+          "colorLight": 4291396685,
+          "isOther": false
+        },
+        {
+          "id": "c_servicios",
+          "name": "Servicios",
+          "amount": 220000,
+          "percentage": 22,
+          "colorDark": 4287607032,
+          "colorLight": 4285567968,
+          "isOther": false
+        },
+        {
+          "id": "c_ocio",
+          "name": "Ocio",
+          "amount": 170000,
+          "percentage": 17,
+          "colorDark": 4290879465,
+          "colorLight": 4289035988,
+          "isOther": false
+        },
+        {
+          "id": "c_transporte",
+          "name": "Transporte",
+          "amount": 130000,
+          "percentage": 13,
+          "colorDark": 4285250288,
+          "colorLight": 4283277271,
+          "isOther": false
+        }
+      ]
+    }
+  ]
+}

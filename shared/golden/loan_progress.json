@@ -1,0 +1,413 @@
+{
+  "cases": [
+    {
+      "name": "préstamo cuotas con cronograma y pagos regulares",
+      "input": {
+        "loan": {
+          "id": "l1",
+          "name": "Préstamo Auto",
+          "kind": "installments",
+          "direction": "owe",
+          "totalAmount": 12000000,
+          "installmentAmount": 1000000,
+          "installmentsTotal": 12,
+          "dueDay": 20,
+          "startDate": "2026-05-01",
+          "paidBeforeCount": 0,
+          "closedAt": null
+        },
+        "schedule": [
+          {
+            "id": "l1:1",
+            "loanId": "l1",
+            "number": 1,
+            "dueDate": "2026-05-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:2",
+            "loanId": "l1",
+            "number": 2,
+            "dueDate": "2026-06-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:3",
+            "loanId": "l1",
+            "number": 3,
+            "dueDate": "2026-07-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:4",
+            "loanId": "l1",
+            "number": 4,
+            "dueDate": "2026-08-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:5",
+            "loanId": "l1",
+            "number": 5,
+            "dueDate": "2026-09-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:6",
+            "loanId": "l1",
+            "number": 6,
+            "dueDate": "2026-10-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:7",
+            "loanId": "l1",
+            "number": 7,
+            "dueDate": "2026-11-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:8",
+            "loanId": "l1",
+            "number": 8,
+            "dueDate": "2026-12-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:9",
+            "loanId": "l1",
+            "number": 9,
+            "dueDate": "2027-01-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:10",
+            "loanId": "l1",
+            "number": 10,
+            "dueDate": "2027-02-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:11",
+            "loanId": "l1",
+            "number": 11,
+            "dueDate": "2027-03-20",
+            "amount": 1000000
+          },
+          {
+            "id": "l1:12",
+            "loanId": "l1",
+            "number": 12,
+            "dueDate": "2027-04-20",
+            "amount": 1000000
+          }
+        ],
+        "payments": [
+          {
+            "id": "p1",
+            "type": "expense",
+            "amount": 1000000,
+            "occurredAt": "2026-05-19",
+            "isExtra": false
+          },
+          {
+            "id": "p2",
+            "type": "expense",
+            "amount": 1000000,
+            "occurredAt": "2026-06-20",
+            "isExtra": false
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 2000000,
+        "balance": 10000000,
+        "installmentsPaid": 2,
+        "installmentsRemaining": 10,
+        "percent": 0.167,
+        "isClosed": false,
+        "nextDueDate": "2026-07-20",
+        "estimatedEndDate": "2027-04-20",
+        "daysUntilNextDue": -87,
+        "paidBeforeCount": 0,
+        "paidBeforeAmount": 0
+      }
+    },
+    {
+      "name": "préstamo con cuotas previas pagadas (paidBeforeCount > 0)",
+      "input": {
+        "loan": {
+          "id": "l2",
+          "name": "Préstamo Moto",
+          "kind": "installments",
+          "direction": "owe",
+          "totalAmount": 9000000,
+          "installmentAmount": 500000,
+          "installmentsTotal": 18,
+          "dueDay": 25,
+          "startDate": "2026-01-01",
+          "paidBeforeCount": 5,
+          "closedAt": null
+        },
+        "schedule": [],
+        "payments": [
+          {
+            "id": "p3",
+            "type": "expense",
+            "amount": 500000,
+            "occurredAt": "2026-06-24",
+            "isExtra": false
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 3000000,
+        "balance": 6000000,
+        "installmentsPaid": 6,
+        "installmentsRemaining": 12,
+        "percent": 0.333,
+        "isClosed": false,
+        "nextDueDate": "2026-07-25",
+        "estimatedEndDate": "2027-06-25",
+        "daysUntilNextDue": -82,
+        "paidBeforeCount": 5,
+        "paidBeforeAmount": 2500000
+      }
+    },
+    {
+      "name": "préstamo con cronograma variable y adelanto extra (isExtra = true)",
+      "input": {
+        "loan": {
+          "id": "l3",
+          "name": "Préstamo Variable",
+          "kind": "installments",
+          "direction": "owe",
+          "totalAmount": 5000000,
+          "installmentAmount": null,
+          "installmentsTotal": 4,
+          "dueDay": 10,
+          "startDate": "2026-07-01",
+          "paidBeforeCount": 0,
+          "closedAt": null
+        },
+        "schedule": [
+          {
+            "id": "l3:1",
+            "loanId": "l3",
+            "number": 1,
+            "dueDate": "2026-08-10",
+            "amount": 2000000
+          },
+          {
+            "id": "l3:2",
+            "loanId": "l3",
+            "number": 2,
+            "dueDate": "2026-09-10",
+            "amount": 1500000
+          },
+          {
+            "id": "l3:3",
+            "loanId": "l3",
+            "number": 3,
+            "dueDate": "2026-10-10",
+            "amount": 1000000
+          },
+          {
+            "id": "l3:4",
+            "loanId": "l3",
+            "number": 4,
+            "dueDate": "2026-11-10",
+            "amount": 500000
+          }
+        ],
+        "payments": [
+          {
+            "id": "p4",
+            "type": "expense",
+            "amount": 2000000,
+            "occurredAt": "2026-08-09",
+            "isExtra": false
+          },
+          {
+            "id": "p5",
+            "type": "expense",
+            "amount": 1000000,
+            "occurredAt": "2026-08-15",
+            "isExtra": true
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 3000000,
+        "balance": 2000000,
+        "installmentsPaid": 1,
+        "installmentsRemaining": 3,
+        "percent": 0.6,
+        "isClosed": false,
+        "nextDueDate": "2026-09-10",
+        "estimatedEndDate": "2026-11-10",
+        "daysUntilNextDue": -35,
+        "paidBeforeCount": 0,
+        "paidBeforeAmount": 0
+      }
+    },
+    {
+      "name": "préstamo prestado a amigo (direction = lent, pagos son ingresos)",
+      "input": {
+        "loan": {
+          "id": "l4",
+          "name": "Préstamo a Juan",
+          "kind": "loan",
+          "direction": "lent",
+          "totalAmount": 2000000,
+          "installmentAmount": null,
+          "installmentsTotal": null,
+          "dueDay": 15,
+          "startDate": "2026-08-01",
+          "paidBeforeCount": 0,
+          "closedAt": null
+        },
+        "schedule": [],
+        "payments": [
+          {
+            "id": "p6",
+            "type": "income",
+            "amount": 800000,
+            "occurredAt": "2026-09-01",
+            "isExtra": false
+          },
+          {
+            "id": "p7",
+            "type": "expense",
+            "amount": 500000,
+            "occurredAt": "2026-09-05",
+            "isExtra": false
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 800000,
+        "balance": 1200000,
+        "installmentsPaid": 1,
+        "installmentsRemaining": null,
+        "percent": 0.4,
+        "isClosed": false,
+        "nextDueDate": "2026-10-15",
+        "estimatedEndDate": null,
+        "daysUntilNextDue": 0,
+        "paidBeforeCount": 0,
+        "paidBeforeAmount": 0
+      }
+    },
+    {
+      "name": "préstamo cerrado o completado (balance <= 0)",
+      "input": {
+        "loan": {
+          "id": "l5",
+          "name": "Préstamo Saldado",
+          "kind": "installments",
+          "direction": "owe",
+          "totalAmount": 3000000,
+          "installmentAmount": 1000000,
+          "installmentsTotal": 3,
+          "dueDay": 5,
+          "startDate": "2026-01-01",
+          "paidBeforeCount": 0,
+          "closedAt": "2026-04-01"
+        },
+        "schedule": [
+          {
+            "id": "l5:1",
+            "loanId": "l5",
+            "number": 1,
+            "dueDate": "2026-02-05",
+            "amount": 1000000
+          },
+          {
+            "id": "l5:2",
+            "loanId": "l5",
+            "number": 2,
+            "dueDate": "2026-03-05",
+            "amount": 1000000
+          },
+          {
+            "id": "l5:3",
+            "loanId": "l5",
+            "number": 3,
+            "dueDate": "2026-04-05",
+            "amount": 1000000
+          }
+        ],
+        "payments": [
+          {
+            "id": "p8",
+            "type": "expense",
+            "amount": 3000000,
+            "occurredAt": "2026-03-30",
+            "isExtra": false
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 3000000,
+        "balance": 0,
+        "installmentsPaid": 1,
+        "installmentsRemaining": 0,
+        "percent": 1.0,
+        "isClosed": true,
+        "nextDueDate": null,
+        "estimatedEndDate": "2026-04-05",
+        "daysUntilNextDue": null,
+        "paidBeforeCount": 0,
+        "paidBeforeAmount": 0
+      }
+    },
+    {
+      "name": "préstamo sin cronograma con cuota fija y fecha de vencimiento futura",
+      "input": {
+        "loan": {
+          "id": "l6",
+          "name": "Préstamo Personal",
+          "kind": "installments",
+          "direction": "owe",
+          "totalAmount": 6000000,
+          "installmentAmount": 1000000,
+          "installmentsTotal": 6,
+          "dueDay": 28,
+          "startDate": "2026-09-01",
+          "paidBeforeCount": 0,
+          "closedAt": null
+        },
+        "schedule": [],
+        "payments": [
+          {
+            "id": "p9",
+            "type": "expense",
+            "amount": 1000000,
+            "occurredAt": "2026-09-27",
+            "isExtra": false
+          }
+        ],
+        "now": "2026-10-15"
+      },
+      "expected": {
+        "paid": 1000000,
+        "balance": 5000000,
+        "installmentsPaid": 1,
+        "installmentsRemaining": 5,
+        "percent": 0.167,
+        "isClosed": false,
+        "nextDueDate": "2026-10-28",
+        "estimatedEndDate": "2027-02-28",
+        "daysUntilNextDue": 13,
+        "paidBeforeCount": 0,
+        "paidBeforeAmount": 0
+      }
+    }
+  ]
+}

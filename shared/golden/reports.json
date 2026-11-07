@@ -1,0 +1,254 @@
+{
+  "cases": [
+    {
+      "name": "comparación de mes actual vs mes anterior (gasto menor, changePct negativo)",
+      "type": "comparison",
+      "input": {
+        "name": "comparación de mes actual vs mes anterior (gasto menor, changePct negativo)",
+        "type": "comparison",
+        "today": "2026-10-15",
+        "dailyExpenseByLocalDay": {
+          "2026-09-01": 100000,
+          "2026-09-10": 200000,
+          "2026-09-15": 150000,
+          "2026-09-28": 300000,
+          "2026-10-02": 80000,
+          "2026-10-05": 120000,
+          "2026-10-15": 100000
+        }
+      },
+      "expected": {
+        "current": 300000,
+        "previous": 450000,
+        "changePct": -33.3
+      }
+    },
+    {
+      "name": "comparación cuando mes anterior fue cero (changePct null)",
+      "type": "comparison",
+      "input": {
+        "name": "comparación cuando mes anterior fue cero (changePct null)",
+        "type": "comparison",
+        "today": "2026-10-10",
+        "dailyExpenseByLocalDay": {
+          "2026-10-01": 50000,
+          "2026-10-05": 70000
+        }
+      },
+      "expected": {
+        "current": 120000,
+        "previous": 0,
+        "changePct": null
+      }
+    },
+    {
+      "name": "comparación en cambio de año (enero compara con diciembre del año anterior)",
+      "type": "comparison",
+      "input": {
+        "name": "comparación en cambio de año (enero compara con diciembre del año anterior)",
+        "type": "comparison",
+        "today": "2027-01-10",
+        "dailyExpenseByLocalDay": {
+          "2026-12-05": 200000,
+          "2026-12-10": 300000,
+          "2027-01-03": 150000,
+          "2027-01-08": 250000
+        }
+      },
+      "expected": {
+        "current": 400000,
+        "previous": 500000,
+        "changePct": -20.0
+      }
+    },
+    {
+      "name": "gastos hormiga normalización de comercio y selección de grafía más frecuente",
+      "type": "ant_expenses",
+      "input": {
+        "name": "gastos hormiga normalización de comercio y selección de grafía más frecuente",
+        "type": "ant_expenses",
+        "threshold": 30000,
+        "transactions": [
+          {
+            "id": "t1",
+            "type": "expense",
+            "amount": 15000,
+            "merchant": "Biggie Express",
+            "category": "c_comida"
+          },
+          {
+            "id": "t2",
+            "type": "expense",
+            "amount": 20000,
+            "merchant": "biggie express",
+            "category": "c_comida"
+          },
+          {
+            "id": "t3",
+            "type": "expense",
+            "amount": 25000,
+            "merchant": "Biggie Express",
+            "category": "c_comida"
+          },
+          {
+            "id": "t4",
+            "type": "expense",
+            "amount": 50000,
+            "merchant": "Biggie Express",
+            "category": "c_comida"
+          },
+          {
+            "id": "t5",
+            "type": "income",
+            "amount": 10000,
+            "merchant": "Biggie Express",
+            "category": "c_comida"
+          }
+        ]
+      },
+      "expected": {
+        "total": 60000,
+        "count": 3,
+        "annualProjection": 720000,
+        "threshold": 30000,
+        "groups": [
+          {
+            "name": "Biggie Express",
+            "merchant": "Biggie Express",
+            "categoryName": "Comida",
+            "total": 60000,
+            "count": 3,
+            "average": 20000
+          }
+        ]
+      }
+    },
+    {
+      "name": "gastos hormiga sin comercio agrupa por categoría",
+      "type": "ant_expenses",
+      "input": {
+        "name": "gastos hormiga sin comercio agrupa por categoría",
+        "type": "ant_expenses",
+        "threshold": 30000,
+        "transactions": [
+          {
+            "id": "t6",
+            "type": "expense",
+            "amount": 12000,
+            "merchant": null,
+            "category": "c_cafes"
+          },
+          {
+            "id": "t7",
+            "type": "expense",
+            "amount": 18000,
+            "merchant": "",
+            "category": "c_cafes"
+          },
+          {
+            "id": "t8",
+            "type": "expense",
+            "amount": 25000,
+            "merchant": "Bolt",
+            "category": "c_transp"
+          }
+        ]
+      },
+      "expected": {
+        "total": 55000,
+        "count": 3,
+        "annualProjection": 660000,
+        "threshold": 30000,
+        "groups": [
+          {
+            "name": "Cafés y meriendas",
+            "merchant": null,
+            "categoryName": "Cafés y meriendas",
+            "total": 30000,
+            "count": 2,
+            "average": 15000
+          },
+          {
+            "name": "Bolt",
+            "merchant": "Bolt",
+            "categoryName": "Transporte",
+            "total": 25000,
+            "count": 1,
+            "average": 25000
+          }
+        ]
+      }
+    },
+    {
+      "name": "resumen semanal con semana anterior e identificación de top categoría",
+      "type": "weekly_summary",
+      "input": {
+        "name": "resumen semanal con semana anterior e identificación de top categoría",
+        "type": "weekly_summary",
+        "weekStart": "2026-10-05",
+        "weekEnd": "2026-10-11",
+        "currentWeekTxs": [
+          {
+            "id": "w1",
+            "type": "expense",
+            "amount": 80000,
+            "category": "c_comida"
+          },
+          {
+            "id": "w2",
+            "type": "expense",
+            "amount": 120000,
+            "category": "c_comida"
+          },
+          {
+            "id": "w3",
+            "type": "expense",
+            "amount": 50000,
+            "category": "c_transp"
+          }
+        ],
+        "previousWeekTxs": [
+          {
+            "id": "w4",
+            "type": "expense",
+            "amount": 200000,
+            "category": "c_comida"
+          }
+        ]
+      },
+      "expected": {
+        "currentWeekTotal": 250000,
+        "previousWeekTotal": 200000,
+        "percentageDiff": 25,
+        "topCategoryName": "Comida",
+        "topCategoryAmount": 200000
+      }
+    },
+    {
+      "name": "resumen semanal cuando semana anterior fue cero (percentageDiff null)",
+      "type": "weekly_summary",
+      "input": {
+        "name": "resumen semanal cuando semana anterior fue cero (percentageDiff null)",
+        "type": "weekly_summary",
+        "weekStart": "2026-10-12",
+        "weekEnd": "2026-10-18",
+        "currentWeekTxs": [
+          {
+            "id": "w5",
+            "type": "expense",
+            "amount": 150000,
+            "category": "c_comida"
+          }
+        ],
+        "previousWeekTxs": []
+      },
+      "expected": {
+        "currentWeekTotal": 150000,
+        "previousWeekTotal": 0,
+        "percentageDiff": null,
+        "topCategoryName": "Comida",
+        "topCategoryAmount": 150000
+      }
+    }
+  ]
+}

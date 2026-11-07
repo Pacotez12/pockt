@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/lib/theme';
 import { AuthProvider } from '@/lib/auth';
@@ -7,6 +7,10 @@ import { Layout } from '@/components/Layout';
 import { LoginRoute } from '@/routes/login';
 import { InicioRoute } from '@/routes/inicio';
 import { MovimientosRoute } from '@/routes/movimientos';
+// Reportes trae three.js y jspdf: se carga solo al entrar a la ruta.
+const ReportesRoute = lazy(() =>
+  import('@/routes/reportes').then((m) => ({ default: m.ReportesRoute })),
+);
 import { SectionPlaceholderRoute } from '@/routes/section-placeholder';
 import { NotFoundRoute } from '@/routes/not-found';
 
@@ -25,7 +29,11 @@ export function App() {
                 <Route path="/movimientos" element={<MovimientosRoute />} />
                 <Route
                   path="/reportes"
-                  element={<SectionPlaceholderRoute title="Reportes" stage="etapa 5" />}
+                  element={
+                    <Suspense fallback={null}>
+                      <ReportesRoute />
+                    </Suspense>
+                  }
                 />
                 <Route
                   path="/prestamos"

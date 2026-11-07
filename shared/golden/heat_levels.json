@@ -1,0 +1,109 @@
+{
+  "cases": [
+    {
+      "name": "mapa vacío devuelve vacío",
+      "input": {},
+      "expected": {}
+    },
+    {
+      "name": "todos los días con cero o gasto negativo dan nivel 0",
+      "input": {
+        "1": 0,
+        "2": 0,
+        "3": -500,
+        "4": 0
+      },
+      "expected": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      }
+    },
+    {
+      "name": "todos los días positivos con el mismo monto dan nivel 4",
+      "input": {
+        "1": 50000,
+        "2": 50000,
+        "3": 50000,
+        "4": 50000
+      },
+      "expected": {
+        "1": 4,
+        "2": 4,
+        "3": 4,
+        "4": 4
+      }
+    },
+    {
+      "name": "distribución uniforme de 4 montos da niveles 1, 2, 3, 4",
+      "input": {
+        "1": 10000,
+        "2": 25000,
+        "3": 50000,
+        "4": 100000
+      },
+      "expected": {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    {
+      "name": "combinación con días en 0 y días con gastos variados",
+      "input": {
+        "1": 0,
+        "2": 15000,
+        "3": 0,
+        "4": 40000,
+        "5": 80000,
+        "6": 120000,
+        "7": 0,
+        "8": 250000
+      },
+      "expected": {
+        "1": 0,
+        "3": 0,
+        "7": 0,
+        "2": 1,
+        "4": 1,
+        "5": 2,
+        "6": 3,
+        "8": 4
+      }
+    },
+    {
+      "name": "valores repetidos (empates en rangos)",
+      "input": {
+        "1": 20000,
+        "2": 20000,
+        "3": 50000,
+        "4": 50000,
+        "5": 100000,
+        "6": 200000
+      },
+      "expected": {
+        "1": 1,
+        "2": 1,
+        "3": 2,
+        "4": 2,
+        "5": 3,
+        "6": 4
+      }
+    },
+    {
+      "name": "un solo día positivo da nivel 4",
+      "input": {
+        "1": 0,
+        "2": 100000,
+        "3": 0
+      },
+      "expected": {
+        "1": 0,
+        "3": 0,
+        "2": 4
+      }
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "cases": [
+    {
+      "name": "mes calendario común (octubre 2026)",
+      "input": {
+        "day": "2026-10-15",
+        "mode": "calendar"
+      },
+      "expected": {
+        "start": "2026-10-01",
+        "end": "2026-10-31",
+        "daysCount": 31
+      }
+    },
+    {
+      "name": "mes calendario en año bisiesto (febrero 2024)",
+      "input": {
+        "day": "2024-02-14",
+        "mode": "calendar"
+      },
+      "expected": {
+        "start": "2024-02-01",
+        "end": "2024-02-29",
+        "daysCount": 29
+      }
+    },
+    {
+      "name": "mes calendario año no bisiesto (febrero 2025)",
+      "input": {
+        "day": "2025-02-14",
+        "mode": "calendar"
+      },
+      "expected": {
+        "start": "2025-02-01",
+        "end": "2025-02-28",
+        "daysCount": 28
+      }
+    },
+    {
+      "name": "cobro día 25 con fecha antes del cobro (octubre 2026)",
+      "input": {
+        "day": "2026-10-10",
+        "mode": "payday",
+        "payDays": [
+          25
+        ],
+        "payDayRules": [
+          "previous"
+        ]
+      },
+      "expected": {
+        "start": "2026-09-25",
+        "end": "2026-10-22",
+        "daysCount": 28
+      }
+    },
+    {
+      "name": "cobro día 25 en fin de semana, fecha después del cobro (octubre 2026)",
+      "input": {
+        "day": "2026-10-25",
+        "mode": "payday",
+        "payDays": [
+          25
+        ],
+        "payDayRules": [
+          "previous"
+        ]
+      },
+      "expected": {
+        "start": "2026-10-23",
+        "end": "2026-11-24",
+        "daysCount": 33
+      }
+    },
+    {
+      "name": "cobro último día del mes en cambio de año (diciembre 2026)",
+      "input": {
+        "day": "2026-12-31",
+        "mode": "payday",
+        "payDays": [
+          -1
+        ],
+        "payDayRules": [
+          "previous"
+        ]
+      },
+      "expected": {
+        "start": "2026-12-31",
+        "end": "2027-01-28",
+        "daysCount": 29
+      }
+    },
+    {
+      "name": "cobro con lista vacía de payDays hace fallback a calendario",
+      "input": {
+        "day": "2026-07-20",
+        "mode": "payday",
+        "payDays": [],
+        "payDayRules": []
+      },
+      "expected": {
+        "start": "2026-07-01",
+        "end": "2026-07-31",
+        "daysCount": 31
+      }
+    },
+    {
+      "name": "cobro quincenal día 15 y fin de mes (noviembre 2026)",
+      "input": {
+        "day": "2026-11-20",
+        "mode": "payday",
+        "payDays": [
+          15,
+          -1
+        ],
+        "payDayRules": [
+          "previous",
+          "previous"
+        ]
+      },
+      "expected": {
+        "start": "2026-10-30",
+        "end": "2026-11-29",
+        "daysCount": 31
+      }
+    }
+  ]
+}

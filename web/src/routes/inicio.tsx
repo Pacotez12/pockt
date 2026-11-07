@@ -1,69 +1,737 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { useQuery } from '@powersync/react';
+import { useQuery, usePowerSync } from '@powersync/react';
+import { Link } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { CountUp } from '@/components/CountUp';
 import { AuroraShader } from '@/components/AuroraShader';
-import { formatMonthYear, calculateMonthExpenses } from '@/lib/calculations';
-import type { TransactionRow } from '@/lib/powersync/schema';
+import { MovementPanel } from '@/components/movements/MovementPanel';
+import { periodFor } from '@/lib/calc/date_period';
+import { buildCategoryArcSegments } from '@/lib/calc/category_arc_data';
+import { compareToPreviousMonth } from '@/lib/calc/reports';
+import { formatGs } from '@/lib/format';
+
+interface TxRow {
+  id: string;
+  type: string;
+  amount: number;
+  category_id: string;
+  category_name?: string;
+  color_dark?: number;
+  color_light?: number;
+  merchant?: string | null;
+  note?: string | null;
+  occurred_at: number;
+  is_extra?: number;
+  currency?: string;
+}
+
+interface GoalRow {
+  id: string;
+  name: string;
+  target_amount: number;
+  archived: number;
+}
+
+interface GoalContribRow {
+  id: string;
+  goal_id: string;
+  amount: number;
+  date: number;
+}
+
+interface UpcomingDue {
+  id: string;
+  title: string;
+  dateStr: string;
+  timestamp: number;
+}
+
+function parseHexColor(colorInt: number | null | undefined): string {
+  if (colorInt == null) return '#7C8796';
+  const rgb = colorInt & 0x00ffffff;
+  return `#${rgb.toString(16).padStart(6, '0')}`;
+}
 
 export function InicioRoute() {
   const prefersReduced = useReducedMotion();
+  const db = usePowerSync();
 
   useEffect(() => {
     document.title = 'Inicio · Pockt';
   }, []);
 
-  const now = new Date();
-  const { monthName, year, title } = formatMonthYear(now);
+  const now = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => {
+    const y = now.getFullYear().toString().padStart(4, '0');
+    const m = (now.getMonth() + 1).toString().padStart(2, '0');
+    const d = now.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, [now]);
 
-  // Month bounds in seconds
-  const startOfMonth = Math.floor(new Date(year, now.getMonth(), 1, 0, 0, 0, 0).getTime() / 1000);
-  const endOfMonth = Math.floor(new Date(year, now.getMonth() + 1, 1, 0, 0, 0, 0).getTime() / 1000);
-
-  const { data: transactions, isLoading } = useQuery<TransactionRow>(
-    'SELECT * FROM transactions WHERE type = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?',
-    ['expense', startOfMonth, endOfMonth]
+  // Settings
+  const { data: settingsData, isLoading: loadingSettings } = useQuery<{ key: string; value: string }>(
+    "SELECT * FROM settings WHERE key = 'period_month_start'"
   );
 
-  const totalSpent = calculateMonthExpenses(transactions || [], year, now.getMonth() + 1);
+  // Income Schedule
+  const { data: scheduleData, isLoading: loadingSchedule } = useQuery<{
+    pay_days: string;
+    pay_day_rules: string;
+  }>('SELECT * FROM income_schedules ORDER BY effective_from DESC LIMIT 1');
+
+  // Compute period
+  const period = useMemo(() => {
+    const modeSetting = settingsData?.find((s) => s.key === 'period_month_start')?.value;
+    const sched = scheduleData?.[0];
+
+    let payDays: number[] | undefined;
+    let payDayRules: string[] | undefined;
+
+    if (sched) {
+      try {
+        if (sched.pay_days) payDays = JSON.parse(sched.pay_days);
+      } catch (_) {}
+      try {
+        if (sched.pay_day_rules) payDayRules = JSON.parse(sched.pay_day_rules);
+      } catch (_) {}
+    }
+
+    return periodFor(todayStr, {
+      mode: modeSetting,
+      payDays,
+      payDayRules,
+    });
+  }, [settingsData, scheduleData, todayStr]);
+
+  const startSec = useMemo(() => Math.floor(new Date(period.start + 'T00:00:00').getTime() / 1000), [period.start]);
+  const endSec = useMemo(() => Math.floor(new Date(period.end + 'T23:59:59').getTime() / 1000) + 1, [period.end]);
+
+  // Current period transactions
+  const { data: periodTxs, isLoading: loadingTxs } = useQuery<TxRow>(
+    `SELECT t.*, c.name as category_name, c.color_dark, c.color_light
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE t.deleted_at IS NULL AND t.occurred_at >= ? AND t.occurred_at < ?
+     ORDER BY t.occurred_at DESC`,
+    [startSec, endSec]
+  );
+
+  // Six-month transactions for evolution & comparison
+  const sixMonthsAgoSec = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0);
+    return Math.floor(d.getTime() / 1000);
+  }, [now]);
+
+  const { data: sixMonthsTxs, isLoading: loadingSixMonths } = useQuery<TxRow>(
+    `SELECT t.*, c.name as category_name, c.color_dark, c.color_light
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE t.deleted_at IS NULL AND t.occurred_at >= ?
+     ORDER BY t.occurred_at ASC`,
+    [sixMonthsAgoSec]
+  );
+
+  // Goals
+  const { data: goals, isLoading: loadingGoals } = useQuery<GoalRow>(
+    'SELECT * FROM goals WHERE archived = 0'
+  );
+
+  const { data: goalContribs, isLoading: loadingContribs } = useQuery<GoalContribRow>(
+    'SELECT * FROM goal_contributions'
+  );
+
+  // Upcoming loans installments
+  const { data: loanDues, isLoading: loadingLoans } = useQuery<{
+    id: string;
+    loan_id: string;
+    name: string;
+    installment_number: number;
+    installments_total: number;
+    due_date: number;
+    amount: number;
+  }>(
+    `SELECT li.id, li.loan_id, l.name, li.number as installment_number, l.installments_total, li.due_date, li.amount
+     FROM loan_installments li
+     INNER JOIN loans l ON li.loan_id = l.id
+     WHERE l.closed_at IS NULL AND li.due_date >= ? AND li.due_date <= ?
+     ORDER BY li.due_date ASC LIMIT 5`,
+    [Math.floor(now.getTime() / 1000), Math.floor(now.getTime() / 1000) + 30 * 86400]
+  );
+
+  // Upcoming recurring rules
+  const { data: recurringDues, isLoading: loadingRecurring } = useQuery<{
+    id: string;
+    name: string;
+    amount: number;
+    next_due_date: number;
+    active: number;
+  }>(
+    `SELECT * FROM recurring_rules
+     WHERE active = 1 AND next_due_date >= ? AND next_due_date <= ?
+     ORDER BY next_due_date ASC LIMIT 5`,
+    [Math.floor(now.getTime() / 1000), Math.floor(now.getTime() / 1000) + 30 * 86400]
+  );
+
+  // Latest 5 transactions
+  const { data: recentTxs, isLoading: loadingRecent } = useQuery<TxRow>(
+    `SELECT t.*, c.name as category_name, c.color_dark, c.color_light
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE t.deleted_at IS NULL
+     ORDER BY t.occurred_at DESC LIMIT 5`
+  );
+
+  // Categories for MovementPanel
+  const { data: allCategories } = useQuery<{
+    id: string;
+    name: string;
+    icon: string;
+    color_dark: number;
+    color_light: number;
+  }>('SELECT id, name, icon, color_dark, color_light FROM categories WHERE archived = 0 ORDER BY sort_order ASC');
+
+  // Selected movement for editing
+  const [selectedTx, setSelectedTx] = useState<TxRow | null>(null);
+
+  // Calculations
+  const totalSpent = useMemo(() => {
+    return (periodTxs ?? [])
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [periodTxs]);
+
+  const { totalIncome, incomeCount } = useMemo(() => {
+    const incomes = (periodTxs ?? []).filter((t) => t.type === 'income');
+    return {
+      totalIncome: incomes.reduce((sum, t) => sum + t.amount, 0),
+      incomeCount: incomes.length,
+    };
+  }, [periodTxs]);
+
+  const { totalSaved, activeGoalsCount } = useMemo(() => {
+    const activeGoals = goals ?? [];
+    const activeIds = new Set(activeGoals.map((g) => g.id));
+    const saved = (goalContribs ?? [])
+      .filter((c) => activeIds.has(c.goal_id))
+      .reduce((sum, c) => sum + c.amount, 0);
+    return {
+      totalSaved: saved,
+      activeGoalsCount: activeGoals.length,
+    };
+  }, [goals, goalContribs]);
+
+  // Comparison
+  const comparison = useMemo(() => {
+    const dailyMap: Record<string, number> = {};
+    for (const tx of sixMonthsTxs ?? []) {
+      if (tx.type !== 'expense') continue;
+      const d = new Date(tx.occurred_at * 1000);
+      const y = d.getFullYear().toString().padStart(4, '0');
+      const m = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      const key = `${y}-${m}-${day}`;
+      dailyMap[key] = (dailyMap[key] ?? 0) + tx.amount;
+    }
+    return compareToPreviousMonth({
+      today: todayStr,
+      dailyExpenseByLocalDay: dailyMap,
+    });
+  }, [sixMonthsTxs, todayStr]);
+
+  // Categories arc data
+  const arcSegments = useMemo(() => {
+    const catMap = new Map<string, { id: string; name: string; amount: number; colorDark: number; colorLight: number }>();
+    for (const tx of periodTxs ?? []) {
+      if (tx.type !== 'expense') continue;
+      const id = tx.category_id;
+      const cur = catMap.get(id);
+      if (cur) {
+        cur.amount += tx.amount;
+      } else {
+        catMap.set(id, {
+          id,
+          name: tx.category_name ?? 'Categoría',
+          amount: tx.amount,
+          colorDark: tx.color_dark ?? 0xff7c8796,
+          colorLight: tx.color_light ?? 0xff606a74,
+        });
+      }
+    }
+    return buildCategoryArcSegments(Array.from(catMap.values()));
+  }, [periodTxs]);
+
+  // 6 months evolution data
+  const sixMonthsData = useMemo(() => {
+    const months: { label: string; year: number; month: number; income: number; expense: number }[] = [];
+    const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        label: monthNames[d.getMonth()],
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        income: 0,
+        expense: 0,
+      });
+    }
+
+    for (const tx of sixMonthsTxs ?? []) {
+      const d = new Date(tx.occurred_at * 1000);
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const found = months.find((entry) => entry.year === y && entry.month === m);
+      if (found) {
+        if (tx.type === 'expense') found.expense += tx.amount;
+        else if (tx.type === 'income') found.income += tx.amount;
+      }
+    }
+
+    return months;
+  }, [sixMonthsTxs, now]);
+
+  // Upcoming dues merged
+  const upcomingList: UpcomingDue[] = useMemo(() => {
+    const list: UpcomingDue[] = [];
+    for (const l of loanDues ?? []) {
+      const d = new Date(l.due_date * 1000);
+      const dd = d.getDate().toString().padStart(2, '0');
+      const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+      list.push({
+        id: l.id,
+        title: `${l.name} · cuota ${l.installment_number} de ${l.installments_total}`,
+        dateStr: `${dd}/${mm}`,
+        timestamp: l.due_date,
+      });
+    }
+
+    for (const r of recurringDues ?? []) {
+      const d = new Date(r.next_due_date * 1000);
+      const dd = d.getDate().toString().padStart(2, '0');
+      const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+      list.push({
+        id: r.id,
+        title: r.name,
+        dateStr: `${dd}/${mm}`,
+        timestamp: r.next_due_date,
+      });
+    }
+
+    list.sort((a, b) => a.timestamp - b.timestamp);
+    return list.slice(0, 5);
+  }, [loanDues, recurringDues]);
+
+  // Month header name in Spanish
+  const monthLabel = useMemo(() => {
+    const parts = period.start.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const name = d.toLocaleDateString('es-PY', { month: 'long' });
+    const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
+    return `${capitalized} ${parts[0]}`;
+  }, [period.start]);
+
+  const shortMonth = useMemo(() => {
+    const parts = period.start.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const name = d.toLocaleDateString('es-PY', { month: 'long' });
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [period.start]);
+
+  const isLoadingKPIs = loadingSettings || loadingSchedule || loadingTxs || loadingGoals || loadingContribs;
+  const isLoadingCharts = loadingSixMonths || loadingTxs;
+  const isLoadingLists = loadingRecent || loadingLoans || loadingRecurring;
+
+  // Stagger animation variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 14, scale: 0.98 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+  };
 
   return (
-    <div className="space-y-6 relative">
-      {/* Subtle AuroraShader behind Inicio */}
+    <div className="space-y-6 relative max-w-[1180px] mx-auto pb-12">
       <AuroraShader opacity={0.22} interactive={false} />
 
       {/* Header */}
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-[26px] sm:text-[28px] font-extrabold tracking-tight text-text-primary">
-          {title}
+          {monthLabel}
         </h1>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-glass-fill border border-glass-border text-[12.5px] font-medium text-text-secondary">
+          <Calendar className="w-3.5 h-3.5 text-text-tertiary" />
+          {shortMonth}
+        </span>
       </div>
 
-      {/* Main KPI Card */}
-      {isLoading ? (
-        <div data-testid="inicio-skeleton" className="max-w-[420px] w-full">
-          <Skeleton className="h-[140px] w-full rounded-2xl" />
+      {/* Main KPI Grid */}
+      {isLoadingKPIs ? (
+        <div data-testid="inicio-kpi-skeleton" className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <Skeleton className="h-[120px] rounded-2xl" />
+          <Skeleton className="h-[120px] rounded-2xl" />
+          <Skeleton className="h-[120px] rounded-2xl" />
         </div>
       ) : (
-        <motion.div
-          initial={prefersReduced ? false : { opacity: 0, y: 14, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={
-            prefersReduced
-              ? { duration: 0 }
-              : { type: 'spring', stiffness: 280, damping: 24 }
-          }
-          className="max-w-[420px] w-full rounded-2xl p-5 sm:p-6 bg-glass-fill border border-glass-border shadow-sm backdrop-blur-md"
-        >
-          <div className="text-[12.5px] font-medium text-text-secondary">
-            Gastado en {monthName}
-          </div>
-          <div className="text-[32px] sm:text-[36px] font-extrabold tracking-tight text-text-primary mt-2 tabular-nums">
-            <CountUp value={totalSpent} />
-          </div>
-        </motion.div>
+        <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-3.5">
+          {/* Main card: Gastado en <mes> */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24 }}
+            className="rounded-2xl p-5 border border-[rgba(255,138,61,0.4)] bg-[linear-gradient(160deg,rgba(255,138,61,0.13),rgba(255,61,127,0.05))] shadow-sm backdrop-blur-md"
+          >
+            <div className="text-[12.5px] font-medium text-text-secondary">
+              Gastado en {shortMonth.toLowerCase()}
+            </div>
+            <div className="text-[32px] sm:text-[34px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+              <CountUp value={totalSpent} />
+            </div>
+            <div className="text-[12px] font-medium text-pos mt-1">
+              {comparison.changePct != null ? (
+                comparison.changePct < 0 ? (
+                  `${Math.abs(comparison.changePct)} % menos que mes anterior a esta altura`
+                ) : (
+                  `${comparison.changePct} % más que mes anterior a esta altura`
+                )
+              ) : (
+                'Primer mes registrado'
+              )}
+            </div>
+          </motion.div>
+
+          {/* Ingresos */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.05 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
+          >
+            <div className="text-[12.5px] font-medium text-text-secondary">Ingresos</div>
+            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+              <CountUp value={totalIncome} />
+            </div>
+            <div className="text-[12px] text-text-tertiary mt-1">
+              {incomeCount} {incomeCount === 1 ? 'cobro' : 'cobros'}
+            </div>
+          </motion.div>
+
+          {/* Ahorrado en metas */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.1 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
+          >
+            <div className="text-[12.5px] font-medium text-text-secondary">Ahorrado en metas</div>
+            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+              <CountUp value={totalSaved} />
+            </div>
+            <div className="text-[12px] text-text-tertiary mt-1">
+              {activeGoalsCount} {activeGoalsCount === 1 ? 'meta activa' : 'metas activas'}
+            </div>
+          </motion.div>
+        </div>
       )}
+
+      {/* Middle Row: Por categoría & Entradas y salidas */}
+      {isLoadingCharts ? (
+        <div data-testid="inicio-charts-skeleton" className="grid grid-cols-1 md:grid-cols-[1fr_1.7fr] gap-3.5">
+          <Skeleton className="h-[286px] rounded-2xl" />
+          <Skeleton className="h-[286px] rounded-2xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.7fr] gap-3.5">
+          {/* Card: Por categoría */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.15 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md min-h-[286px] flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[14px] text-text-primary">Por categoría</span>
+              <span className="text-[12px] text-text-tertiary">{shortMonth.toLowerCase()}</span>
+            </div>
+
+            {/* Semicircle category arc SVG */}
+            <div className="my-2 flex justify-center">
+              <svg viewBox="0 0 220 120" width="210" height="114" className="block">
+                {arcSegments.length === 0 ? (
+                  <path
+                    d="M 12 110 A 98 98 0 0 1 208 110"
+                    fill="none"
+                    stroke="#2D3139"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                  />
+                ) : (
+                  arcSegments.map((seg, idx) => {
+                    // Compute SVG arc segment from percentage
+                    let cumulativeBefore = 0;
+                    for (let j = 0; j < idx; j++) {
+                      cumulativeBefore += arcSegments[j].percentage;
+                    }
+                    const startAngle = Math.PI - (cumulativeBefore / 100) * Math.PI;
+                    const endAngle = Math.PI - ((cumulativeBefore + seg.percentage) / 100) * Math.PI;
+
+                    const cx = 110;
+                    const cy = 110;
+                    const r = 98;
+
+                    const x1 = cx + r * Math.cos(startAngle);
+                    const y1 = cy - r * Math.sin(startAngle);
+                    const x2 = cx + r * Math.cos(endAngle);
+                    const y2 = cy - r * Math.sin(endAngle);
+
+                    const color = parseHexColor(seg.colorDark);
+                    const isFirst = idx === 0;
+                    const isLast = idx === arcSegments.length - 1;
+
+                    return (
+                      <path
+                        key={seg.id}
+                        d={`M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="12"
+                        strokeLinecap={isFirst || isLast ? 'round' : 'butt'}
+                      />
+                    );
+                  })
+                )}
+              </svg>
+            </div>
+
+            {/* Arc legend */}
+            <div className="text-[12.5px] grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
+              {arcSegments.slice(0, 4).map((seg) => (
+                <div key={seg.id} className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 truncate text-text-secondary">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: parseHexColor(seg.colorDark) }}
+                    />
+                    <span className="truncate">{seg.name}</span>
+                  </span>
+                  <span className="text-text-tertiary tabular-nums ml-1.5">{seg.percentage} %</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Card: Entradas y salidas (6 months) */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.2 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md min-h-[286px] flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[14px] text-text-primary">Entradas y salidas</span>
+              <div className="flex items-center gap-3.5 text-[12px] text-text-tertiary">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.3)]" />
+                  Entradas
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+                  Salidas
+                </span>
+              </div>
+            </div>
+
+            {/* 6 months bar chart SVG */}
+            <div className="mt-2 w-full">
+              <svg viewBox="0 0 640 210" width="100%" height="200" className="overflow-visible">
+                {(() => {
+                  const maxVal = Math.max(
+                    1,
+                    ...sixMonthsData.map((m) => Math.max(m.income, m.expense))
+                  );
+                  const chartH = 140;
+
+                  return sixMonthsData.map((m, idx) => {
+                    const x = 30 + idx * 100;
+                    const inH = Math.max(4, (m.income / maxVal) * chartH);
+                    const exH = Math.max(4, (m.expense / maxVal) * chartH);
+
+                    const inY = 170 - inH;
+                    const exY = 170 - exH;
+
+                    return (
+                      <g key={m.label}>
+                        {/* Income bar */}
+                        <rect
+                          x={x}
+                          y={inY}
+                          width={28}
+                          height={inH}
+                          rx={7}
+                          fill="rgba(255,255,255,0.14)"
+                        />
+                        {/* Expense bar */}
+                        <rect
+                          x={x + 32}
+                          y={exY}
+                          width={28}
+                          height={exH}
+                          rx={7}
+                          fill="#FF8A3D"
+                        />
+                        {/* Month label */}
+                        <text
+                          x={x + 30}
+                          y={196}
+                          textAnchor="middle"
+                          fill="rgba(255,255,255,0.45)"
+                          fontSize="11"
+                          fontFamily="Inter, system-ui, sans-serif"
+                        >
+                          {m.label}
+                        </text>
+                      </g>
+                    );
+                  });
+                })()}
+              </svg>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Bottom Row: Últimos movimientos & Próximos vencimientos */}
+      {isLoadingLists ? (
+        <div data-testid="inicio-lists-skeleton" className="grid grid-cols-1 md:grid-cols-[1.7fr_1fr] gap-3.5">
+          <Skeleton className="h-[220px] rounded-2xl" />
+          <Skeleton className="h-[220px] rounded-2xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[1.7fr_1fr] gap-3.5">
+          {/* Últimos movimientos */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.25 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-bold text-[14px] text-text-primary">Últimos movimientos</span>
+              <Link
+                to="/movimientos"
+                className="text-[12.5px] font-semibold text-brand-primary hover:underline"
+              >
+                Ver todos
+              </Link>
+            </div>
+
+            {(!recentTxs || recentTxs.length === 0) ? (
+              <div className="text-[13px] text-text-tertiary py-8 text-center">
+                Sin movimientos recientes
+              </div>
+            ) : (
+              <table className="w-full text-[13px]">
+                <tbody>
+                  {recentTxs.map((tx) => {
+                    const isExpense = tx.type === 'expense';
+                    const color = parseHexColor(tx.color_dark);
+                    const d = new Date(tx.occurred_at * 1000);
+                    const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
+                    return (
+                      <tr
+                        key={tx.id}
+                        onClick={() => setSelectedTx(tx)}
+                        className="hover:bg-glass-hover cursor-pointer border-b border-glass-border/40 last:border-0 transition-colors"
+                      >
+                        <td className="py-2.5 pr-2">
+                          <span className="flex items-center gap-2 font-medium text-text-primary">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="truncate max-w-[180px]">{tx.merchant || tx.note || tx.category_name || 'Movimiento'}</span>
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-text-tertiary hidden sm:table-cell">
+                          {tx.category_name ?? 'General'}
+                        </td>
+                        <td className="py-2.5 px-2 text-text-tertiary">
+                          {timeStr}
+                        </td>
+                        <td className="py-2.5 pl-2 text-right tabular-nums font-semibold text-text-primary">
+                          {isExpense ? `−${formatGs(tx.amount)}` : `+${formatGs(tx.amount)}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </motion.div>
+
+          {/* Próximos vencimientos */}
+          <motion.div
+            variants={cardVariants}
+            initial={prefersReduced ? false : 'hidden'}
+            animate="visible"
+            transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 280, damping: 24, delay: 0.3 }}
+            className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
+          >
+            <div className="font-bold text-[14px] text-text-primary mb-3">
+              Próximos vencimientos
+            </div>
+
+            {upcomingList.length === 0 ? (
+              <div className="text-[13px] text-text-tertiary py-8 text-center">
+                Sin vencimientos en los próximos 30 días
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcomingList.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between text-[13px]">
+                    <span className="text-text-primary truncate mr-2">{item.title}</span>
+                    <span className="text-text-tertiary shrink-0 font-medium tabular-nums">{item.dateStr}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* MovementPanel for editing selected transaction */}
+      <MovementPanel
+        isOpen={selectedTx != null}
+        movement={
+          selectedTx
+            ? {
+                id: selectedTx.id,
+                type: selectedTx.type as 'expense' | 'income' | 'transfer',
+                amount: selectedTx.amount,
+                category_id: selectedTx.category_id,
+                merchant: selectedTx.merchant,
+                note: selectedTx.note,
+                occurred_at: selectedTx.occurred_at,
+              }
+            : null
+        }
+        db={db}
+        categories={(allCategories ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          kind: 'expense',
+          sort_order: 0,
+          icon: c.icon,
+          color_dark: c.color_dark,
+          color_light: c.color_light,
+        }))}
+        onClose={() => setSelectedTx(null)}
+        onSaved={() => setSelectedTx(null)}
+        onDeleted={() => setSelectedTx(null)}
+      />
     </div>
   );
 }

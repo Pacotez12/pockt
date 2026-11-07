@@ -1,0 +1,137 @@
+{
+  "cases": [
+    {
+      "name": "mensual día 10 cuando hoy es 5 del mismo mes",
+      "input": {
+        "after": "2026-10-05",
+        "frequency": "monthly",
+        "dayOfMonth": 10
+      },
+      "expected": {
+        "next": "2026-10-10"
+      }
+    },
+    {
+      "name": "mensual día 10 cuando hoy es 15 del mismo mes (pasa al mes siguiente)",
+      "input": {
+        "after": "2026-10-15",
+        "frequency": "monthly",
+        "dayOfMonth": 10
+      },
+      "expected": {
+        "next": "2026-11-10"
+      }
+    },
+    {
+      "name": "mensual día 31 en mes de 30 días se ajusta al último día (clamped)",
+      "input": {
+        "after": "2026-10-31",
+        "frequency": "monthly",
+        "dayOfMonth": 31
+      },
+      "expected": {
+        "next": "2026-11-30"
+      }
+    },
+    {
+      "name": "mensual día 31 pasando por febrero (ajusta al 28)",
+      "input": {
+        "after": "2026-01-31",
+        "frequency": "monthly",
+        "dayOfMonth": 31
+      },
+      "expected": {
+        "next": "2026-02-28"
+      }
+    },
+    {
+      "name": "semanal día lunes (weekday 1) hoy es viernes (weekday 5)",
+      "input": {
+        "after": "2026-10-09",
+        "frequency": "weekly",
+        "dayOfWeek": 1
+      },
+      "expected": {
+        "next": "2026-10-12"
+      }
+    },
+    {
+      "name": "semanal día viernes hoy es viernes (debe ser el próximo viernes)",
+      "input": {
+        "after": "2026-10-09",
+        "frequency": "weekly",
+        "dayOfWeek": 5
+      },
+      "expected": {
+        "next": "2026-10-16"
+      }
+    },
+    {
+      "name": "anual 15 de marzo hoy es 10 de enero (mismo año)",
+      "input": {
+        "after": "2026-01-10",
+        "frequency": "yearly",
+        "monthOfYear": 3,
+        "dayOfMonth": 15
+      },
+      "expected": {
+        "next": "2026-03-15"
+      }
+    },
+    {
+      "name": "anual 15 de marzo hoy es 20 de mayo (pasa al año siguiente)",
+      "input": {
+        "after": "2026-05-20",
+        "frequency": "yearly",
+        "monthOfYear": 3,
+        "dayOfMonth": 15
+      },
+      "expected": {
+        "next": "2027-03-15"
+      }
+    },
+    {
+      "name": "anual 29 de febrero en año no bisiesto se ajusta al 28",
+      "input": {
+        "after": "2024-03-01",
+        "frequency": "yearly",
+        "monthOfYear": 2,
+        "dayOfMonth": 29
+      },
+      "expected": {
+        "next": "2025-02-28"
+      }
+    },
+    {
+      "name": "dueOccurrences con varias ocurrencias vencidas",
+      "input": {
+        "type": "dueOccurrences",
+        "nextDueDate": "2026-07-15",
+        "today": "2026-10-15",
+        "frequency": "monthly",
+        "dayOfMonth": 15
+      },
+      "expected": {
+        "dates": [
+          "2026-07-15",
+          "2026-08-15",
+          "2026-09-15",
+          "2026-10-15"
+        ]
+      }
+    },
+    {
+      "name": "dueOccurrences fecha futura devuelve lista vacía",
+      "input": {
+        "type": "dueOccurrences",
+        "nextDueDate": "2026-10-20",
+        "today": "2026-10-15",
+        "frequency": "monthly",
+        "dayOfMonth": 20
+      },
+      "expected": {
+        "dates": []
+      }
+    }
+  ]
+}
