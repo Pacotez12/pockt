@@ -33,6 +33,7 @@ export function TopNav() {
     { name: 'Reportes', path: '/reportes' },
     { name: 'Préstamos', path: '/prestamos' },
     { name: 'Metas', path: '/metas' },
+    { name: 'Presupuestos', path: '/presupuestos' },
   ];
 
   return (
@@ -45,7 +46,7 @@ export function TopNav() {
           isScrolled
             ? {
                 top: 14,
-                width: 'min(880px, calc(100% - 32px))',
+                width: 'min(940px, calc(100% - 32px))',
                 height: 54,
                 paddingLeft: 18,
                 paddingRight: 10,

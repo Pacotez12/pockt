@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/lib/theme';
 import { AuthProvider } from '@/lib/auth';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Layout } from '@/components/Layout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoginRoute } from '@/routes/login';
 import { InicioRoute } from '@/routes/inicio';
 import { MovimientosRoute } from '@/routes/movimientos';
@@ -11,7 +12,10 @@ import { MovimientosRoute } from '@/routes/movimientos';
 const ReportesRoute = lazy(() =>
   import('@/routes/reportes').then((m) => ({ default: m.ReportesRoute })),
 );
-import { SectionPlaceholderRoute } from '@/routes/section-placeholder';
+import { PrestamosRoute } from '@/routes/prestamos';
+import { PrestamoDetalleRoute } from '@/routes/prestamo-detalle';
+import { MetasRoute } from '@/routes/metas';
+import { PresupuestosRoute } from '@/routes/presupuestos';
 import { NotFoundRoute } from '@/routes/not-found';
 
 export function App() {
@@ -20,7 +24,14 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<LoginRoute />} />
+            <Route
+              path="/login"
+              element={
+                <ErrorBoundary>
+                  <LoginRoute />
+                </ErrorBoundary>
+              }
+            />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
@@ -35,14 +46,10 @@ export function App() {
                     </Suspense>
                   }
                 />
-                <Route
-                  path="/prestamos"
-                  element={<SectionPlaceholderRoute title="Préstamos" stage="etapa 6" />}
-                />
-                <Route
-                  path="/metas"
-                  element={<SectionPlaceholderRoute title="Metas" stage="etapa 6" />}
-                />
+                <Route path="/prestamos" element={<PrestamosRoute />} />
+                <Route path="/prestamos/:id" element={<PrestamoDetalleRoute />} />
+                <Route path="/metas" element={<MetasRoute />} />
+                <Route path="/presupuestos" element={<PresupuestosRoute />} />
               </Route>
             </Route>
 

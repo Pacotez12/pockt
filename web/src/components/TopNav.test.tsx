@@ -41,6 +41,7 @@ describe('TopNav', () => {
     expect(screen.getByRole('link', { name: 'Reportes' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Préstamos' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Metas' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Presupuestos' })).toBeInTheDocument();
 
     const ctaLink = screen.getByRole('link', { name: /Cargar/i });
     expect(ctaLink).toBeInTheDocument();
