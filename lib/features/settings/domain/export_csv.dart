@@ -10,12 +10,22 @@ import 'package:share_plus/share_plus.dart';
 
 /// Escapa un campo de texto para el CSV.
 ///
-/// Los campos que empiezan con `=`, `+`, `-` o `@` se prefijan con `'` para que
-/// Excel los trate como texto y no ejecute una fórmula (inyección de fórmulas).
+/// Protege contra inyección de fórmulas (OWASP CSV Injection): si el valor,
+/// después de quitar espacios y caracteres de control al inicio (espacio, \t, \r, \n),
+/// empieza con `=`, `+`, `-` o `@`, o si el valor original empieza con `\t`, `\r` o `|`,
+/// se prefija con `'` para que el visor de planillas no ejecute comandos ni fórmulas.
 String escapeCsvField(String field) {
   var value = field;
-  if (value.isNotEmpty && '=+-@'.contains(value[0])) {
-    value = "'$value";
+  if (value.isNotEmpty) {
+    final stripped = value.replaceFirst(RegExp(r'^[ \t\r\n]+'), '');
+    final startsWithFormula =
+        stripped.isNotEmpty && '=+-@'.contains(stripped[0]);
+    final startsWithControlOrPipe =
+        value.startsWith('\t') || value.startsWith('\r') || value.startsWith('|');
+
+    if (startsWithFormula || startsWithControlOrPipe) {
+      value = "'$value";
+    }
   }
   if (value.contains(';') ||
       value.contains('"') ||

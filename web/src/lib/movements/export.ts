@@ -11,8 +11,16 @@ export interface MovementExportRow {
 
 export function escapeCsvField(field: string): string {
   let value = field;
-  if (value.length > 0 && '=+-@'.includes(value[0])) {
-    value = `'${value}`;
+  if (value.length > 0) {
+    const stripped = value.replace(/^[ \t\r\n]+/, '');
+    const startsWithFormula =
+      stripped.length > 0 && '=+-@'.includes(stripped[0]);
+    const startsWithControlOrPipe =
+      value.startsWith('\t') || value.startsWith('\r') || value.startsWith('|');
+
+    if (startsWithFormula || startsWithControlOrPipe) {
+      value = `'${value}`;
+    }
   }
   if (
     value.includes(';') ||
@@ -88,7 +96,7 @@ export async function toXlsx(rows: MovementExportRow[]): Promise<Uint8Array> {
       tipo: mapTypeToSpanish(row.type),
       monto: Number(row.amount),
       categoria: row.category_name || '',
-      note: row.note || '',
+      nota: row.note || '',
       comercio: row.merchant || '',
     });
 

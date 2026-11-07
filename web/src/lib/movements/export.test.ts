@@ -17,6 +17,15 @@ describe('export movements', () => {
       expect(escapeCsvField('@usuario')).toBe("'@usuario");
     });
 
+    it('protege contra inyecciones OWASP con espacios, caracteres de control o pipe', () => {
+      expect(escapeCsvField(' =1+1')).toBe("' =1+1");
+      expect(escapeCsvField('\t=1+1')).toBe("'\t=1+1");
+      expect(escapeCsvField('\r=cmd')).toBe('"\'\r=cmd"');
+      expect(escapeCsvField('|cmd')).toBe("'|cmd");
+      expect(escapeCsvField('Café')).toBe('Café');
+      expect(escapeCsvField('45000')).toBe('45000');
+    });
+
     it('combina el prefijo con el entrecomillado cuando hace falta', () => {
       expect(escapeCsvField('=HYPERLINK("http://x";"y")')).toBe(
         '"\'=HYPERLINK(""http://x"";""y"")"'
