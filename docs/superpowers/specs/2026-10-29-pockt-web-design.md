@@ -155,6 +155,12 @@ La web no comparte código con la app. Para que los números coincidan:
   review-animations, fixing-accessibility, fixing-motion-performance,
   web-design-guidelines. Cada pantalla nueva se valida en el visual companion
   antes de implementarla.
+- Aprobado 2026-11-07: login con fondo shader WebGL propio y tarjetas
+  flotantes; montos que cuentan, entradas escalonadas y paneles con resorte;
+  en Reportes, "Tus días" como mapa de calor de puntos con cambio a 3D
+  isométrico (three.js, una sola malla instanciada, globo con detalle). En la
+  app, más adelante: toque largo sobre "Tus días" inclina el calendario.
+  Solo librerías gratis (three.js MIT); nada de bibliotecas pagas.
 
 ## 8. Errores y estados
 

@@ -14,6 +14,12 @@ comprobar que los datos llegan y se actualizan solos.
 `.superpowers/brainstorm/171364-1793283290/content/web-shell.html`,
 `web-topnav.html`, `web-pantallas.html` (Inicio, Movimientos),
 `web-pantallas-2.html` (Login, 404, modo claro).
+**Bocetos aprobados 2026-11-07 (mandan sobre los anteriores donde se pisan):**
+`.superpowers/brainstorm/87432-1794075636/content/propuesta-2b-login.html`
+(login nuevo con fondo shader que sigue al mouse y tarjetas flotantes) y
+`propuesta-2-3-fondo-y-movimiento.html` (movimiento: montos que cuentan,
+tarjetas escalonadas, barras con resorte, panel lateral con rebote).
+`propuesta-1b-tus-dias-3d-webgl.html` queda para la etapa 5 (Reportes).
 
 **Stack:** Vite + React + TypeScript + Tailwind + shadcn/ui + Motion,
 `@powersync/web` y `@supabase/supabase-js`, Vitest + Testing Library.
@@ -75,7 +81,10 @@ Versiones exactas fijadas en `package.json` (sin `^`).
 `web/src/routes/login.tsx`, guardia de rutas.
 
 - [ ] Login con Google por OAuth de Supabase (`signInWithOAuth`, redirect a
-  `http://localhost:5173/`), pantalla según el boceto, metadescripción.
+  `http://localhost:5173/`), pantalla según `propuesta-2b-login.html`
+  (título, tres tarjetas flotantes con datos de ejemplo fijos, tarjeta de
+  ingreso con ayuda y aviso de privacidad, ícono real
+  `docs/brand/pockt-icon-rounded.svg`), metadescripción.
 - [ ] Esquema PowerSync web con las 12 tablas y columnas exactas de
   `backend/powersync/sync-streams.yaml`. Test: cada tabla y columna del YAML
   existe en el esquema (parsear el YAML en el test).
@@ -101,12 +110,21 @@ Versiones exactas fijadas en `package.json` (sin `^`).
 - [ ] `SyncStatus` en la barra: Sincronizado / Subiendo / Sin conexión, desde
   `db.currentStatus` y `statusStream`. Test de los tres estados.
 - [ ] `Skeleton` con brillo suave (respeta reducir movimiento).
+- [ ] `AuroraShader`: el shader WebGL propio de `propuesta-2b-login.html`
+  (fbm naranja/rosa/ciruela sobre negro, grano, brillo que sigue al mouse con
+  suavizado), en el login a pleno y detrás del Inicio muy tenue. Pausa con la
+  pestaña oculta, imagen fija con reducir movimiento o sin WebGL, píxeles
+  limitados a 1.5x.
+- [ ] Movimiento reutilizable (Motion): `CountUp` para montos (ease-out ~1 s,
+  arranca en 0, respeta reducir movimiento), entrada escalonada de tarjetas y
+  panel lateral con spring, como en `propuesta-2-3-fondo-y-movimiento.html`.
+  Test de `CountUp` con reducir movimiento (muestra el valor final directo).
 
 ### Tarea 3.4: prueba de datos en vivo
 
 **Archivos:** `web/src/routes/inicio.tsx`, `web/src/routes/movimientos.tsx`.
 
-- [ ] Inicio: solo el encabezado del mes y "Gastado en <mes>" (suma de
+ - [ ] Inicio: solo el encabezado del mes y "Gastado en <mes>" (con `CountUp`) (suma de
   `transactions` tipo `expense` del mes calendario, sin `deleted_at`), con
   skeleton mientras carga. Sin "Podés gastar hoy".
 - [ ] Movimientos: tabla de solo lectura con los últimos 50 movimientos
