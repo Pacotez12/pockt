@@ -88,12 +88,7 @@ export function TopNav() {
           to="/"
           className="flex items-center gap-2 font-extrabold text-[17px] tracking-tight text-text-primary hover:opacity-90 active:scale-95 transition-transform"
         >
-          <i
-            className="w-6 h-6 rounded-lg block shadow-sm shadow-brand-end/20"
-            style={{
-              background: 'linear-gradient(135deg, var(--brand-start), var(--brand-end))',
-            }}
-          />
+          <img src="/pockt-icon.svg" alt="" width={24} height={24} className="w-6 h-6 rounded-lg block" />
           <span>Pockt</span>
         </Link>
 

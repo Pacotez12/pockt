@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/* Sin esto Tailwind v4 no genera bg-glass-fill, border-glass-border, etc.:
+   las tarjetas quedaban transparentes y los bordes en blanco puro. */
+@theme inline {
+  --color-background: var(--background);
+  --color-sheet-surface: var(--sheet-surface);
+  --color-glass-fill: var(--glass-fill);
+  --color-glass-border: var(--glass-border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-brand-start: var(--brand-start);
+  --color-brand-end: var(--brand-end);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-keypad-key: var(--keypad-key);
+}
+
 @layer base {
   :root {
     --background: #000000;
