@@ -2,10 +2,11 @@ import React from 'react';
 import { useStatus } from '@powersync/react';
 import { cn } from '@/lib/utils';
 
-export type SyncDisplayState = 'synced' | 'uploading' | 'offline';
+export type SyncDisplayState = 'synced' | 'uploading' | 'connecting' | 'offline';
 
 export interface SyncStatusData {
   connected?: boolean;
+  connecting?: boolean;
   dataFlowStatus?: {
     uploading?: boolean;
     downloading?: boolean;
@@ -18,6 +19,23 @@ export function resolveSyncStatus(status?: SyncStatusData): {
   label: string;
   tooltip: string;
 } {
+  const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  if (isBrowserOffline) {
+    return {
+      state: 'offline',
+      label: 'Sin conexión',
+      tooltip: 'Sin conexión, los cambios se guardan y se suben al volver',
+    };
+  }
+
+  if (status?.connecting || (!status && !isBrowserOffline)) {
+    return {
+      state: 'connecting',
+      label: 'Conectando',
+      tooltip: 'Conectando con el servidor…',
+    };
+  }
+
   if (!status || !status.connected) {
     return {
       state: 'offline',
@@ -64,7 +82,8 @@ export function SyncStatusView({
         className={cn(
           'w-[7px] h-[7px] rounded-full shrink-0 transition-colors',
           state === 'synced' && 'bg-positive shadow-sm shadow-positive/30',
-          state === 'uploading' && 'bg-warning animate-pulse shadow-sm shadow-warning/30',
+          (state === 'uploading' || state === 'connecting') &&
+            'bg-warning animate-pulse shadow-sm shadow-warning/30',
           state === 'offline' && 'bg-text-tertiary/60'
         )}
       />

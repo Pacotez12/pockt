@@ -385,6 +385,7 @@ export function TusDias({
                     rx={6}
                     fill={color}
                     data-testid="tus-dias-cell"
+                    data-date={day.date.toISOString().split('T')[0]}
                     className="cursor-pointer transition-transform hover:scale-110 origin-center"
                     onClick={() => handleCellClick(day)}
                     onMouseEnter={(e) => handleCellMouseEnter(day, e)}

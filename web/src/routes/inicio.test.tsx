@@ -231,4 +231,100 @@ describe('InicioRoute', () => {
       expect(screen.getByText('Editar movimiento')).toBeInTheDocument();
     });
   });
+
+  it('compares with previous month when data exists instead of saying "Primer mes registrado"', async () => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const curDay = now.getDate();
+    const nowSec = Math.floor(now.getTime() / 1000);
+
+    const prevMonthDate = new Date(curMonth === 0 ? curYear - 1 : curYear, curMonth === 0 ? 11 : curMonth - 1, Math.min(curDay, 28));
+    const prevMonthSec = Math.floor(prevMonthDate.getTime() / 1000);
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('transactions') && sql.includes('occurred_at >=')) {
+        return {
+          data: [
+            { id: '1', type: 'expense', amount: 500000, category_id: 'c-comida', occurred_at: nowSec },
+            { id: '2', type: 'expense', amount: 400000, category_id: 'c-comida', occurred_at: prevMonthSec },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      return { data: [], isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText(/Primer mes registrado/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/mes anterior a esta altura/i)).toBeInTheDocument();
+  });
+
+  it('calculates upcoming loan installments using loan_progress (including a loan without physical installments) and shows amount for each item', async () => {
+    const now = new Date();
+    const nowSec = Math.floor(now.getTime() / 1000);
+
+    const loanDueDay = 25;
+    const loanStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('FROM loans')) {
+        return {
+          data: [
+            {
+              id: 'loan-tienda',
+              direction: 'owe',
+              kind: 'installments',
+              name: 'Tienda Ficticia',
+              total_amount: 3600000,
+              installment_amount: 200000,
+              installments_total: 18,
+              due_day: loanDueDay,
+              start_date: loanStartDate,
+              closed_at: null,
+              paid_before_count: 1,
+            },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      if (sql.includes('FROM loan_installments')) {
+        return { data: [], isLoading: false } as any;
+      }
+      if (sql.includes('loan_id IS NOT NULL')) {
+        return { data: [], isLoading: false } as any;
+      }
+      if (sql.includes('recurring_rules')) {
+        return {
+          data: [
+            {
+              id: 'rec-1',
+              name: 'Netflix',
+              amount: 85000,
+              next_due_date: nowSec + 86400 * 3,
+              active: 1,
+            },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      return { data: [], isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/Tienda Ficticia/i)).toBeInTheDocument();
+    expect(screen.getByText(/Netflix/i)).toBeInTheDocument();
+    expect(screen.getByText(/200\.000/)).toBeInTheDocument();
+    expect(screen.getByText(/85\.000/)).toBeInTheDocument();
+  });
 });

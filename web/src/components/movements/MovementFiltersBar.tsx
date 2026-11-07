@@ -125,6 +125,8 @@ export function MovementFiltersBar({
                 ? 'Este año'
                 : filters.period === 'all'
                 ? 'Histórico'
+                : filters.period === 'custom'
+                ? 'Personalizado'
                 : 'Este mes'}
             </span>
           </button>

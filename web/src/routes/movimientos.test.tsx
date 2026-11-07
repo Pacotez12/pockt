@@ -179,4 +179,32 @@ describe('MovimientosRoute', () => {
     expect(exportOps.toCsv).toHaveBeenCalled();
     expect(exportOps.downloadBlob).toHaveBeenCalled();
   });
+
+  it('filters movements by exact date range when "desde" and "hasta" are in URL', async () => {
+    let capturedSql = '';
+    let capturedParams: any[] = [];
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any, params: any) => {
+      if (typeof sql === 'string' && sql.includes('FROM transactions')) {
+        capturedSql = sql;
+        capturedParams = params || [];
+        return { data: mockMovements, isLoading: false } as any;
+      }
+      return { data: mockCategories, isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/movimientos?desde=2026-11-06&hasta=2026-11-06']}>
+        <MovimientosRoute />
+      </MemoryRouter>
+    );
+
+    expect(capturedSql).toContain('t.occurred_at >= ?');
+    expect(capturedSql).toContain('t.occurred_at <= ?');
+
+    const expectedStart = Math.floor(new Date(2026, 10, 6, 0, 0, 0, 0).getTime() / 1000);
+    const expectedEnd = Math.floor(new Date(2026, 10, 6, 23, 59, 59, 999).getTime() / 1000);
+    expect(capturedParams).toContain(expectedStart);
+    expect(capturedParams).toContain(expectedEnd);
+  });
 });

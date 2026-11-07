@@ -6,6 +6,7 @@ import { formatGs, formatThousands } from '@/lib/format';
 import { CountUp } from '@/components/CountUp';
 import { Skeleton } from '@/components/Skeleton';
 import { TusDias, type DayData } from '@/components/reports/TusDias';
+import { DayDetailPanel, type DayDetailTransaction } from '@/components/reports/DayDetailPanel';
 import { MovementPanel } from '@/components/movements/MovementPanel';
 import {
   calculateAntExpenses,
@@ -29,6 +30,8 @@ interface TxRow {
   category_name?: string | null;
   color_dark?: number | string | null;
   color_light?: number | string | null;
+  loan_id?: string | null;
+  source?: string | null;
 }
 
 interface RecurringRow {
@@ -73,6 +76,7 @@ export function ReportesRoute() {
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
 
   useEffect(() => {
     document.title = 'Reportes · Pockt';
@@ -131,7 +135,7 @@ export function ReportesRoute() {
   );
 
   const { data: rawTxs, isLoading: loadingTxs } = useQuery<TxRow>(
-    `SELECT t.id, t.type, t.amount, t.occurred_at, t.merchant, t.note,
+    `SELECT t.id, t.type, t.amount, t.occurred_at, t.merchant, t.note, t.loan_id, t.source,
             t.category_id, c.name as category_name, c.color_dark, c.color_light
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
@@ -463,13 +467,45 @@ export function ReportesRoute() {
   };
 
   const handleSelectDay = (day: DayData) => {
-    const dayStartSec = Math.floor(new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), 0, 0, 0).getTime() / 1000);
-    const dayEndSec = dayStartSec + 86400;
-    const dayTx = txs.find((t) => t.occurred_at >= dayStartSec && t.occurred_at < dayEndSec);
-    if (dayTx) {
-      setSelectedTxId(dayTx.id);
-    }
+    setSelectedDay(day);
   };
+
+  const selectedDayKey = useMemo(() => {
+    if (!selectedDay) return null;
+    const y = selectedDay.date.getFullYear();
+    const m = String(selectedDay.date.getMonth() + 1).padStart(2, '0');
+    const d = String(selectedDay.date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, [selectedDay]);
+
+  const selectedDayTransactions = useMemo<DayDetailTransaction[]>(() => {
+    if (!selectedDay) return [];
+    const day = selectedDay.date;
+    const dayStartSec = Math.floor(
+      new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0).getTime() / 1000
+    );
+    const dayEndSec = dayStartSec + 86400;
+    return txs
+      .filter((t) => {
+        const ms = t.occurred_at > 1e11 ? t.occurred_at : t.occurred_at * 1000;
+        const sec = Math.floor(ms / 1000);
+        return sec >= dayStartSec && sec < dayEndSec;
+      })
+      .map((t) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        category_id: t.category_id,
+        category_name: t.category_name,
+        category_color_dark: typeof t.color_dark === 'number' ? t.color_dark : null,
+        category_color_light: typeof t.color_light === 'number' ? t.color_light : null,
+        merchant: t.merchant,
+        note: t.note,
+        occurred_at: t.occurred_at,
+        loan_id: t.loan_id,
+        source: t.source,
+      }));
+  }, [selectedDay, txs]);
 
   return (
     <div className="space-y-6 select-none">
@@ -833,6 +869,15 @@ export function ReportesRoute() {
         </div>
       </div>
 
+      {/* Day Detail Panel */}
+      <DayDetailPanel
+        isOpen={selectedDay !== null}
+        dateKey={selectedDayKey}
+        transactions={selectedDayTransactions}
+        onClose={() => setSelectedDay(null)}
+        onSelectTransaction={(tx) => setSelectedTxId(tx.id)}
+      />
+
       {/* Movement Edit/Detail Panel if selected */}
       {selectedTxId && (
         <MovementPanel
@@ -849,6 +894,7 @@ export function ReportesRoute() {
                     merchant: tx.merchant,
                     note: tx.note,
                     occurred_at: tx.occurred_at,
+                    loan_id: tx.loan_id,
                   }
                 : null;
             })()
@@ -860,8 +906,8 @@ export function ReportesRoute() {
             kind: c.kind ?? 'expense',
             sort_order: c.sort_order ?? 0,
             icon: c.icon ?? undefined,
-            color_dark: c.color_dark,
-            color_light: c.color_light,
+            color_dark: typeof c.color_dark === 'number' ? c.color_dark : null,
+            color_light: typeof c.color_light === 'number' ? c.color_light : null,
           }))}
           onClose={() => setSelectedTxId(null)}
           onSaved={() => setSelectedTxId(null)}

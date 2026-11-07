@@ -10,6 +10,13 @@ import { MovementPanel } from '@/components/movements/MovementPanel';
 import { periodFor } from '@/lib/calc/date_period';
 import { buildCategoryArcSegments } from '@/lib/calc/category_arc_data';
 import { compareToPreviousMonth } from '@/lib/calc/reports';
+import {
+  calculateLoanProgress,
+  effectiveSchedule,
+  LoanInput,
+  LoanInstallmentInput,
+  LoanPaymentInput,
+} from '@/lib/calc/loan_progress';
 import { formatGs } from '@/lib/format';
 
 interface TxRow {
@@ -46,6 +53,7 @@ interface UpcomingDue {
   title: string;
   dateStr: string;
   timestamp: number;
+  amount: number;
 }
 
 function parseHexColor(colorInt: number | null | undefined): string {
@@ -142,23 +150,38 @@ export function InicioRoute() {
     'SELECT * FROM goal_contributions'
   );
 
-  // Upcoming loans installments
-  const { data: loanDues, isLoading: loadingLoans } = useQuery<{
+  // Loans, installments, and payments for upcoming loan dues
+  const { data: loansData, isLoading: loadingLoans } = useQuery<{
+    id: string;
+    direction: 'owe' | 'lent';
+    kind: string;
+    name: string;
+    total_amount: number;
+    installment_amount?: number | null;
+    installments_total?: number | null;
+    due_day?: number | null;
+    start_date: number | string;
+    closed_at?: number | null;
+    paid_before_count?: number | null;
+  }>('SELECT * FROM loans WHERE closed_at IS NULL');
+
+  const { data: loanInstallmentsData, isLoading: loadingInstallments } = useQuery<{
     id: string;
     loan_id: string;
-    name: string;
-    installment_number: number;
-    installments_total: number;
-    due_date: number;
+    number: number;
+    due_date: number | string;
     amount: number;
-  }>(
-    `SELECT li.id, li.loan_id, l.name, li.number as installment_number, l.installments_total, li.due_date, li.amount
-     FROM loan_installments li
-     INNER JOIN loans l ON li.loan_id = l.id
-     WHERE l.closed_at IS NULL AND li.due_date >= ? AND li.due_date <= ?
-     ORDER BY li.due_date ASC LIMIT 5`,
-    [Math.floor(now.getTime() / 1000), Math.floor(now.getTime() / 1000) + 30 * 86400]
-  );
+  }>('SELECT * FROM loan_installments ORDER BY number ASC');
+
+  const { data: loanPaymentsData, isLoading: loadingPayments } = useQuery<{
+    id: string;
+    loan_id?: string | null;
+    type: string;
+    amount: number;
+    occurred_at: number;
+    is_extra?: number | null;
+    deleted_at?: number | null;
+  }>('SELECT id, loan_id, type, amount, occurred_at, is_extra, deleted_at FROM transactions WHERE loan_id IS NOT NULL AND deleted_at IS NULL');
 
   // Upcoming recurring rules
   const { data: recurringDues, isLoading: loadingRecurring } = useQuery<{
@@ -195,6 +218,37 @@ export function InicioRoute() {
   // Selected movement for editing
   const [selectedTx, setSelectedTx] = useState<TxRow | null>(null);
 
+  // Helper for formatting YMD
+  function toYMD(val: number | string | Date | null | undefined): string {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const y = val.getFullYear().toString().padStart(4, '0');
+      const m = (val.getMonth() + 1).toString().padStart(2, '0');
+      const d = val.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    if (typeof val === 'number') {
+      const ms = val > 1e11 ? val : val * 1000;
+      const d = new Date(ms);
+      const y = d.getFullYear().toString().padStart(4, '0');
+      const m = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    const str = String(val);
+    if (str.includes('-')) return str.split('T')[0];
+    const num = Number(str);
+    if (!isNaN(num) && num > 0) {
+      const ms = num > 1e11 ? num : num * 1000;
+      const d = new Date(ms);
+      const y = d.getFullYear().toString().padStart(4, '0');
+      const m = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    return str;
+  }
+
   // Calculations
   const totalSpent = useMemo(() => {
     return (periodTxs ?? [])
@@ -227,7 +281,8 @@ export function InicioRoute() {
     const dailyMap: Record<string, number> = {};
     for (const tx of sixMonthsTxs ?? []) {
       if (tx.type !== 'expense') continue;
-      const d = new Date(tx.occurred_at * 1000);
+      const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+      const d = new Date(ms);
       const y = d.getFullYear().toString().padStart(4, '0');
       const m = (d.getMonth() + 1).toString().padStart(2, '0');
       const day = d.getDate().toString().padStart(2, '0');
@@ -239,6 +294,26 @@ export function InicioRoute() {
       dailyExpenseByLocalDay: dailyMap,
     });
   }, [sixMonthsTxs, todayStr]);
+
+  const prevMonthName = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return d.toLocaleDateString('es-PY', { month: 'long' }).toLowerCase();
+  }, [now]);
+
+  const prevMonthTotal = useMemo(() => {
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+    let total = 0;
+    for (const tx of sixMonthsTxs ?? []) {
+      if (tx.type !== 'expense') continue;
+      const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+      const d = new Date(ms);
+      if (d.getFullYear() === prevYear && (d.getMonth() + 1) === prevMonth) {
+        total += tx.amount;
+      }
+    }
+    return total;
+  }, [sixMonthsTxs, now]);
 
   // Categories arc data
   const arcSegments = useMemo(() => {
@@ -279,7 +354,8 @@ export function InicioRoute() {
     }
 
     for (const tx of sixMonthsTxs ?? []) {
-      const d = new Date(tx.occurred_at * 1000);
+      const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+      const d = new Date(ms);
       const y = d.getFullYear();
       const m = d.getMonth() + 1;
       const found = months.find((entry) => entry.year === y && entry.month === m);
@@ -292,19 +368,99 @@ export function InicioRoute() {
     return months;
   }, [sixMonthsTxs, now]);
 
-  // Upcoming dues merged
+  // Upcoming dues merged (loans using loan_progress + recurring rules)
   const upcomingList: UpcomingDue[] = useMemo(() => {
     const list: UpcomingDue[] = [];
-    for (const l of loanDues ?? []) {
-      const d = new Date(l.due_date * 1000);
-      const dd = d.getDate().toString().padStart(2, '0');
-      const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-      list.push({
-        id: l.id,
-        title: `${l.name} · cuota ${l.installment_number} de ${l.installments_total}`,
-        dateStr: `${dd}/${mm}`,
-        timestamp: l.due_date,
+
+    const instMap = new Map<string, Array<{ id: string; loan_id: string; number: number; due_date: number | string; amount: number }>>();
+    for (const inst of loanInstallmentsData ?? []) {
+      const l = instMap.get(inst.loan_id) ?? [];
+      l.push(inst);
+      instMap.set(inst.loan_id, l);
+    }
+
+    const payMap = new Map<string, Array<{ id: string; loan_id?: string | null; type: string; amount: number; occurred_at: number; is_extra?: number | null; deleted_at?: number | null }>>();
+    for (const pay of loanPaymentsData ?? []) {
+      if (!pay.loan_id) continue;
+      const l = payMap.get(pay.loan_id) ?? [];
+      l.push(pay);
+      payMap.set(pay.loan_id, l);
+    }
+
+    for (const loan of loansData ?? []) {
+      const loanInsts = instMap.get(loan.id) ?? [];
+      const loanPays = payMap.get(loan.id) ?? [];
+
+      const scheduleInputs: LoanInstallmentInput[] = loanInsts.map((i) => ({
+        id: i.id,
+        loanId: i.loan_id,
+        number: i.number,
+        dueDate: toYMD(i.due_date),
+        amount: i.amount,
+      }));
+
+      const paymentInputs: LoanPaymentInput[] = loanPays.map((p) => ({
+        id: p.id,
+        type: p.type,
+        amount: p.amount,
+        occurredAt: toYMD(p.occurred_at),
+        isExtra: p.is_extra === 1,
+        deletedAt: p.deleted_at ? toYMD(p.deleted_at) : null,
+      }));
+
+      const loanInput: LoanInput = {
+        id: loan.id,
+        name: loan.name,
+        kind: loan.kind,
+        direction: loan.direction,
+        totalAmount: loan.total_amount,
+        installmentAmount: loan.installment_amount,
+        installmentsTotal: loan.installments_total,
+        dueDay: loan.due_day,
+        startDate: toYMD(loan.start_date),
+        paidBeforeCount: loan.paid_before_count ?? 0,
+        closedAt: loan.closed_at ? toYMD(loan.closed_at) : null,
+      };
+
+      const progress = calculateLoanProgress({
+        loan: loanInput,
+        schedule: scheduleInputs,
+        payments: paymentInputs,
+        now,
       });
+
+      if (progress.isClosed || !progress.nextDueDate) continue;
+
+      const [y, m, d] = progress.nextDueDate.split('-').map(Number);
+      const dueDateObj = new Date(y, m - 1, d);
+      const dueSec = Math.floor(dueDateObj.getTime() / 1000);
+      const nowSec = Math.floor(now.getTime() / 1000);
+      const thirtyDaysSec = nowSec + 30 * 86400;
+
+      // Within next 30 days
+      if (dueSec >= nowSec - 86400 && dueSec <= thirtyDaysSec) {
+        const eff = effectiveSchedule(loanInput, scheduleInputs);
+        let nextAmount: number;
+        if (eff && eff.length > progress.installmentsPaid) {
+          nextAmount = eff[progress.installmentsPaid].amount;
+        } else {
+          nextAmount = loan.installment_amount ?? progress.balance;
+        }
+
+        const totalCount = eff ? eff.length : (loan.installments_total ?? null);
+        const installmentNum = progress.installmentsPaid + 1;
+        const title = totalCount
+          ? `${loan.name} · cuota ${installmentNum} de ${totalCount}`
+          : loan.name;
+
+        list.push({
+          id: `loan-${loan.id}-${installmentNum}`,
+          title,
+          dateStr: `${d.toString().padStart(2, '0')}/${m.toString().padStart(2, '0')}`,
+          timestamp: dueSec,
+          amount: nextAmount,
+        });
+      }
     }
 
     for (const r of recurringDues ?? []) {
@@ -312,16 +468,17 @@ export function InicioRoute() {
       const dd = d.getDate().toString().padStart(2, '0');
       const mm = (d.getMonth() + 1).toString().padStart(2, '0');
       list.push({
-        id: r.id,
+        id: `rec-${r.id}`,
         title: r.name,
         dateStr: `${dd}/${mm}`,
         timestamp: r.next_due_date,
+        amount: r.amount,
       });
     }
 
     list.sort((a, b) => a.timestamp - b.timestamp);
     return list.slice(0, 5);
-  }, [loanDues, recurringDues]);
+  }, [loansData, loanInstallmentsData, loanPaymentsData, recurringDues, now]);
 
   // Month header name in Spanish
   const monthLabel = useMemo(() => {
@@ -339,9 +496,9 @@ export function InicioRoute() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [period.start]);
 
-  const isLoadingKPIs = loadingSettings || loadingSchedule || loadingTxs || loadingGoals || loadingContribs;
+  const isLoadingKPIs = loadingSettings || loadingSchedule || loadingTxs || loadingGoals || loadingContribs || loadingSixMonths;
   const isLoadingCharts = loadingSixMonths || loadingTxs;
-  const isLoadingLists = loadingRecent || loadingLoans || loadingRecurring;
+  const isLoadingLists = loadingRecent || loadingLoans || loadingInstallments || loadingPayments || loadingRecurring;
 
   // Stagger animation variants
   const cardVariants = {
@@ -391,9 +548,13 @@ export function InicioRoute() {
               {comparison.changePct != null ? (
                 comparison.changePct < 0 ? (
                   `${Math.abs(comparison.changePct)} % menos que mes anterior a esta altura`
-                ) : (
+                ) : comparison.changePct > 0 ? (
                   `${comparison.changePct} % más que mes anterior a esta altura`
+                ) : (
+                  'Lo mismo que mes anterior a esta altura'
                 )
+              ) : prevMonthTotal > 0 ? (
+                `Sin gastos en ${prevMonthName} a esta altura`
               ) : (
                 'Primer mes registrado'
               )}
@@ -693,9 +854,12 @@ export function InicioRoute() {
             ) : (
               <div className="space-y-3">
                 {upcomingList.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-[13px]">
-                    <span className="text-text-primary truncate mr-2">{item.title}</span>
-                    <span className="text-text-tertiary shrink-0 font-medium tabular-nums">{item.dateStr}</span>
+                  <div key={item.id} className="flex items-center justify-between text-[13px] gap-2">
+                    <span className="text-text-primary truncate min-w-0 flex-1">{item.title}</span>
+                    <div className="flex items-center gap-2.5 shrink-0 tabular-nums">
+                      <span className="font-semibold text-text-primary">{formatGs(item.amount)}</span>
+                      <span className="text-text-tertiary text-[12px] font-medium">{item.dateStr}</span>
+                    </div>
                   </div>
                 ))}
               </div>

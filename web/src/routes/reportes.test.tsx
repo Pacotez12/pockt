@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import * as powersyncReact from '@powersync/react';
 import { ReportesRoute } from './reportes';
@@ -232,6 +232,91 @@ describe('ReportesRoute', () => {
       // Should find Gs. 4.000.000 in TusDias container
       const container = screen.getByTestId('tus-dias-container');
       expect(container).toHaveTextContent(/4\.000\.000/);
+    });
+  });
+
+  it('tapping a day with 3 movements opens DayDetailPanel listing all 3, and tapping a row opens MovementPanel', async () => {
+    const today = new Date();
+    const todayStartSec = Math.floor(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0).getTime() / 1000);
+
+    const threeDayTxs = [
+      {
+        id: 'tx-day-1',
+        type: 'expense',
+        amount: 85000,
+        occurred_at: todayStartSec + 3600 * 9,
+        merchant: 'Biggie Express',
+        note: 'Desayuno',
+        category_id: 'cat-1',
+        category_name: 'Comida',
+        color_dark: '#E4A067',
+      },
+      {
+        id: 'tx-day-2',
+        type: 'expense',
+        amount: 45000,
+        occurred_at: todayStartSec + 3600 * 13,
+        merchant: 'Café Martínez',
+        note: 'Café con amigos',
+        category_id: 'cat-1',
+        category_name: 'Comida',
+        color_dark: '#E4A067',
+      },
+      {
+        id: 'tx-day-3',
+        type: 'income',
+        amount: 1500000,
+        occurred_at: todayStartSec + 3600 * 17,
+        merchant: 'Cliente freelance',
+        note: 'Diseño web',
+        category_id: 'cat-3',
+        category_name: 'Ingresos',
+        color_dark: '#30D158',
+      },
+    ];
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('transactions')) {
+        return { data: threeDayTxs, isLoading: false, error: undefined } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    const dateKey = `${y}-${m}-${d}`;
+
+    // Get the day cell in TusDias matching today's date
+    const todayCell = document.querySelector(`rect[data-date="${dateKey}"]`);
+    expect(todayCell).toBeInTheDocument();
+
+    fireEvent.click(todayCell!);
+
+    // DayDetailPanel should open and list all 3 movements
+    await waitFor(() => {
+      const panel = screen.getByRole('dialog');
+      expect(within(panel).getByText('Biggie Express')).toBeInTheDocument();
+      expect(within(panel).getByText('Café Martínez')).toBeInTheDocument();
+      expect(within(panel).getByText('Cliente freelance')).toBeInTheDocument();
+    });
+
+    // Check link to Movimientos with desde and hasta
+    const panel = screen.getByRole('dialog');
+    const link = within(panel).getByRole('link', { name: /Ver en Movimientos/i });
+    expect(link).toHaveAttribute('href', `/movimientos?desde=${dateKey}&hasta=${dateKey}`);
+
+    // Tapping a row opens MovementPanel with "Editar movimiento"
+    fireEvent.click(within(panel).getByText('Biggie Express'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar movimiento')).toBeInTheDocument();
     });
   });
 });

@@ -51,4 +51,37 @@ describe('SyncStatusView', () => {
     const container = screen.getByTitle('Sin conexión, los cambios se guardan y se suben al volver');
     expect(container).toBeInTheDocument();
   });
+
+  it('renders "Conectando" while connecting', () => {
+    render(
+      <SyncStatusView
+        status={{
+          connected: false,
+          connecting: true,
+        }}
+      />
+    );
+
+    expect(screen.getByText('Conectando')).toBeInTheDocument();
+    const dot = screen.getByTestId('sync-dot');
+    expect(dot).toHaveClass('bg-warning');
+  });
+
+  it('renders "Sin conexión" when browser is offline even if connecting was set', () => {
+    const originalOnLine = navigator.onLine;
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+
+    render(
+      <SyncStatusView
+        status={{
+          connected: false,
+          connecting: true,
+        }}
+      />
+    );
+
+    expect(screen.getByText('Sin conexión')).toBeInTheDocument();
+
+    Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true });
+  });
 });

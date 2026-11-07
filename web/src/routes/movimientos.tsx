@@ -23,11 +23,25 @@ import {
 } from '@/lib/movements/export';
 import { restoreMovement } from '@/lib/movements/write';
 
-function getPeriodTimestamps(period?: string): {
+function getPeriodTimestamps(period?: string, desde?: string, hasta?: string): {
   startDate?: number;
   endDate?: number;
   allDates?: boolean;
 } {
+  if (desde || hasta) {
+    let startDate: number | undefined;
+    let endDate: number | undefined;
+    if (desde) {
+      const [y, m, d] = desde.split('-').map(Number);
+      startDate = Math.floor(new Date(y, m - 1, d, 0, 0, 0, 0).getTime() / 1000);
+    }
+    if (hasta) {
+      const [y, m, d] = hasta.split('-').map(Number);
+      endDate = Math.floor(new Date(y, m - 1, d, 23, 59, 59, 999).getTime() / 1000);
+    }
+    return { startDate, endDate };
+  }
+
   const now = new Date();
   if (period === 'last_month') {
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
@@ -63,7 +77,9 @@ export function MovimientosRoute() {
 
   // Read URL search params
   const search = searchParams.get('q') || '';
-  const period = (searchParams.get('period') as any) || 'this_month';
+  const desde = searchParams.get('desde') || undefined;
+  const hasta = searchParams.get('hasta') || undefined;
+  const period = (searchParams.get('period') as any) || (desde || hasta ? 'custom' : 'this_month');
   const categoryId = searchParams.get('cat') || undefined;
   const type = (searchParams.get('tipo') as any) || undefined;
   const source = (searchParams.get('origen') as any) || undefined;
@@ -162,7 +178,7 @@ export function MovimientosRoute() {
   };
 
   // Build query
-  const dateRange = getPeriodTimestamps(period);
+  const dateRange = getPeriodTimestamps(period, desde, hasta);
   const queryConfig = useMemo(() => {
     return buildMovementsQuery({
       startDate: dateRange.startDate,

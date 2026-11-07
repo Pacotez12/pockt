@@ -98,4 +98,26 @@ describe('MovementsTable', () => {
 
     expect(screen.getByText(/no hay movimientos/i)).toBeInTheDocument();
   });
+
+  it('renders mobile flex row layout and hides thead on mobile', () => {
+    render(
+      <MovementsTable
+        movements={mockMovements as any}
+        isLoading={false}
+        onSelectMovement={vi.fn()}
+      />
+    );
+
+    const thead = document.querySelector('thead');
+    expect(thead).toHaveClass('hidden', 'sm:table-header-group');
+
+    const firstRow = screen.getByText('Supermercado Los Jardines').closest('tr');
+    expect(firstRow).toHaveClass('flex', 'items-center', 'justify-between');
+
+    const descCell = screen.getByText('Supermercado Los Jardines').closest('td');
+    expect(descCell).toHaveClass('flex-1', 'min-w-0');
+
+    const amountCell = firstRow?.querySelector('td:last-child');
+    expect(amountCell).toHaveClass('shrink-0', 'text-right');
+  });
 });
