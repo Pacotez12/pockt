@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 export interface AuroraShaderProps {
@@ -19,6 +20,7 @@ precision highp float;
 uniform vec2 r;
 uniform float t;
 uniform vec2 mo;
+uniform float u_light;
 
 float h(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -63,10 +65,19 @@ void main() {
   float m2 = smoothstep(0.48, 1.0, fbm(p * 0.9 - vec2(tt * 0.8, 0.0) + w)) * smoothstep(1.2, 0.1, length((uv - vec2(0.2, 0.18)) * vec2(as, 1.0) * 0.7));
   float md = smoothstep(0.45, 0.0, length((uv - mo) * vec2(as, 1.0)));
 
-  vec3 col = plum * q * 0.35 + orange * m1 * 0.8 + pink * m2 * 0.65 + mix(orange, pink, uv.x) * md * 0.16;
-  col += (h(gl_FragCoord.xy + fract(t) * 100.0) - 0.5) * 0.05;
-
-  gl_FragColor = vec4(col, 1.0);
+  if (u_light > 0.5) {
+    // Light mode: clean warm off-white base with soft pastel warm orange/pink tints
+    vec3 baseCol = vec3(0.97, 0.97, 0.975);
+    vec3 warmAccent = mix(orange, pink, uv.x);
+    float glow = clamp(m1 * 0.12 + m2 * 0.10 + md * 0.04, 0.0, 1.0);
+    vec3 col = mix(baseCol, warmAccent, glow);
+    gl_FragColor = vec4(col, 1.0);
+  } else {
+    // Dark mode
+    vec3 col = plum * q * 0.35 + orange * m1 * 0.8 + pink * m2 * 0.65 + mix(orange, pink, uv.x) * md * 0.16;
+    col += (h(gl_FragCoord.xy + fract(t) * 100.0) - 0.5) * 0.05;
+    gl_FragColor = vec4(col, 1.0);
+  }
 }
 `;
 
@@ -75,6 +86,8 @@ export function AuroraShader({
   interactive = true,
   className,
 }: AuroraShaderProps) {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === 'light';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -131,6 +144,7 @@ export function AuroraShader({
     const ur = gl.getUniformLocation(pr, 'r');
     const ut = gl.getUniformLocation(pr, 't');
     const um = gl.getUniformLocation(pr, 'mo');
+    const ul = gl.getUniformLocation(pr, 'u_light');
 
     const reduce =
       typeof window !== 'undefined' &&
@@ -175,6 +189,7 @@ export function AuroraShader({
       gl.uniform2f(ur, canvas.width, canvas.height);
       gl.uniform1f(ut, reduce ? 20.0 : ms / 1000 + 20.0);
       gl.uniform2f(um, sx, sy);
+      gl.uniform1f(ul, isLight ? 1.0 : 0.0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       if (!reduce && !document.hidden) {
@@ -210,25 +225,29 @@ export function AuroraShader({
         // cleanup safe
       }
     };
-  }, [interactive]);
+  }, [interactive, isLight]);
+
+  const effectiveOpacity = isLight ? Math.min(opacity, 0.45) : opacity;
 
   return (
     <div
       aria-hidden="true"
       className={cn('fixed inset-0 pointer-events-none -z-10 overflow-hidden', className)}
-      style={{ opacity }}
+      style={{ opacity: effectiveOpacity }}
     >
       <canvas
         ref={canvasRef}
         className="w-full h-full block"
-        style={{ background: '#000000' }}
+        style={{ background: isLight ? '#F7F7F8' : '#000000' }}
       />
       {/* Vignette overlay */}
       <div
+        data-testid="aurora-vignette"
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            'radial-gradient(ellipse at 30% 50%, transparent 30%, rgba(0, 0, 0, 0.55) 100%)',
+          background: isLight
+            ? 'none'
+            : 'radial-gradient(ellipse at 30% 50%, transparent 30%, rgba(0, 0, 0, 0.55) 100%)',
         }}
       />
     </div>

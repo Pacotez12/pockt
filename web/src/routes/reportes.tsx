@@ -1,14 +1,22 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, usePowerSync } from '@powersync/react';
-import { formatGs } from '@/lib/format';
+import { Download } from 'lucide-react';
+import { formatGs, formatThousands } from '@/lib/format';
 import { CountUp } from '@/components/CountUp';
 import { Skeleton } from '@/components/Skeleton';
 import { TusDias, type DayData } from '@/components/reports/TusDias';
 import { MovementPanel } from '@/components/movements/MovementPanel';
-import { calculateAntExpenses } from '@/lib/calc/reports';
+import {
+  calculateAntExpenses,
+  calculateCategoryMonthlyTrend,
+  formatNetSavingsSubtitle,
+  buildMonotoneCubicPath,
+} from '@/lib/calc/reports';
 import { toCsv, toXlsx, downloadBlob, type MovementExportRow } from '@/lib/movements/export';
 import { generateReportPdf, type ReportPdfData } from '@/lib/reports/pdf';
+import { useTheme } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 interface TxRow {
   id: string;
@@ -19,8 +27,8 @@ interface TxRow {
   note?: string | null;
   category_id?: string | null;
   category_name?: string | null;
-  color_dark?: string | null;
-  color_light?: string | null;
+  color_dark?: number | string | null;
+  color_light?: number | string | null;
 }
 
 interface RecurringRow {
@@ -45,8 +53,21 @@ const MONTH_NAMES = [
   'diciembre',
 ];
 
+function parseHexColor(colorInt: number | string | null | undefined): string {
+  if (colorInt == null) return '#E4A067';
+  if (typeof colorInt === 'string' && colorInt.startsWith('#')) return colorInt;
+  if (typeof colorInt === 'number') {
+    const rgb = colorInt & 0x00ffffff;
+    return `#${rgb.toString(16).padStart(6, '0')}`;
+  }
+  return '#E4A067';
+}
+
+
+
 export function ReportesRoute() {
   const db = usePowerSync();
+  const { resolvedTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const periodParam = (searchParams.get('period') as 'mes' | 'ano' | 'custom') || 'mes';
 
@@ -223,13 +244,14 @@ export function ReportesRoute() {
     return { amount: sum, count };
   }, [recurring]);
 
-  // Top categories
+  // Top categories for period
   const topCategories = useMemo(() => {
-    const map = new Map<string, { amount: number; color?: string }>();
+    const map = new Map<string, { amount: number; color?: number | string | null }>();
     for (const t of periodTxs) {
       if (t.type === 'expense') {
         const catName = t.category_name || 'Otros';
-        const cur = map.get(catName) || { amount: 0, color: t.color_dark || '#E4A067' };
+        const color = resolvedTheme === 'dark' ? t.color_dark : t.color_light;
+        const cur = map.get(catName) || { amount: 0, color: color ?? t.color_dark };
         cur.amount += t.amount;
         map.set(catName, cur);
       }
@@ -240,12 +262,33 @@ export function ReportesRoute() {
         name,
         amount: val.amount,
         percentage: totalExpenses > 0 ? (val.amount / totalExpenses) * 100 : 0,
-        color: val.color,
+        color: parseHexColor(val.color),
       }))
       .sort((a, b) => b.amount - a.amount);
 
     return arr;
-  }, [periodTxs, totalExpenses]);
+  }, [periodTxs, totalExpenses, resolvedTheme]);
+
+  // Reference date for the 6-month trend: finishes on the period's chosen month
+  const trendRefDate = useMemo(() => {
+    if (periodParam === 'mes') {
+      return new Date(selectedYear, selectedMonth, 1);
+    }
+    if (periodParam === 'ano') {
+      const m = selectedYear === currentYear ? currentMonth : 11;
+      return new Date(selectedYear, m, 1);
+    }
+    return new Date((endSec - 1) * 1000);
+  }, [periodParam, selectedYear, selectedMonth, currentYear, currentMonth, endSec]);
+
+  // Real Category Trend: spending per month of top 3 categories in last 6 months
+  const categoryTrend = useMemo(() => {
+    return calculateCategoryMonthlyTrend({
+      transactions: txs,
+      referenceDate: trendRefDate,
+      monthsCount: 6,
+    });
+  }, [txs, trendRefDate]);
 
   // Top merchants
   const topMerchants = useMemo(() => {
@@ -352,6 +395,11 @@ export function ReportesRoute() {
     return days;
   }, [txs, endSec]);
 
+  // Total spent across the 182 days displayed in Tus días
+  const tusDiasTotal = useMemo(() => {
+    return tusDiasData.reduce((acc, d) => acc + (d.amount || 0), 0);
+  }, [tusDiasData]);
+
   // Handlers for switching period
   const handlePeriodChange = (newPeriod: 'mes' | 'ano' | 'custom') => {
     const params = new URLSearchParams(searchParams);
@@ -406,18 +454,16 @@ export function ReportesRoute() {
           topMerchants: antExpenses.topMerchants,
         },
       };
-
-      const blob = await generateReportPdf(pdfData);
-      downloadBlob(blob, `pockt-resumen-${periodLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      await generateReportPdf(pdfData);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
   const handleSelectDay = (day: DayData) => {
-    const dayStartSec = Math.floor(
-      new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate()).getTime() / 1000
-    );
+    const dayStartSec = Math.floor(new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), 0, 0, 0).getTime() / 1000);
     const dayEndSec = dayStartSec + 86400;
     const dayTx = txs.find((t) => t.occurred_at >= dayStartSec && t.occurred_at < dayEndSec);
     if (dayTx) {
@@ -426,39 +472,39 @@ export function ReportesRoute() {
   };
 
   return (
-    <div className="p-8 max-w-[1240px] mx-auto space-y-6">
+    <div className="space-y-6 select-none">
       {/* Header with Title and Period Segmented Control */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[26px] font-extrabold text-white tracking-tight">Reportes</h1>
-          <div className="text-[13px] text-white/50 mt-0.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">
+            Reportes
+          </h1>
+          <div className="text-xs sm:text-[13px] text-text-tertiary mt-1">
             {periodLabel} · Balance y análisis de gastos
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="seg w-[280px]">
-            <button
-              type="button"
-              className={periodParam === 'mes' ? 'on' : ''}
-              onClick={() => handlePeriodChange('mes')}
-            >
-              Mes
-            </button>
-            <button
-              type="button"
-              className={periodParam === 'ano' ? 'on' : ''}
-              onClick={() => handlePeriodChange('ano')}
-            >
-              Año
-            </button>
-            <button
-              type="button"
-              className={periodParam === 'custom' ? 'on' : ''}
-              onClick={() => handlePeriodChange('custom')}
-            >
-              Personalizado
-            </button>
+          <div className="seg inline-flex p-1 rounded-xl bg-glass-fill border border-glass-border">
+            {(['mes', 'ano', 'custom'] as const).map((mode) => {
+              const labels = { mes: 'Mes', ano: 'Año', custom: 'Personalizado' };
+              const isActive = periodParam === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn(
+                    'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start',
+                    isActive
+                      ? 'on bg-white/10 text-text-primary shadow-sm'
+                      : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
+                  )}
+                  onClick={() => handlePeriodChange(mode)}
+                >
+                  {labels[mode]}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -466,14 +512,14 @@ export function ReportesRoute() {
       {/* 4 KPIs Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* KPI 1: Gastado */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl">
-          <div className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
+          <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
             Gastado en {periodLabel}
           </div>
-          <div className="text-2xl lg:text-[28px] font-extrabold text-white mt-2">
+          <div className="text-2xl lg:text-[28px] font-extrabold text-text-primary tabular-nums mt-2">
             {isLoading ? <Skeleton className="h-8 w-32" /> : <CountUp value={totalExpenses} />}
           </div>
-          <div className="text-xs text-white/40 mt-1">
+          <div className="text-xs text-text-tertiary mt-1">
             {periodParam === 'ano'
               ? `promedio ${formatGs(Math.round(totalExpenses / 12))} por mes`
               : `${periodTxs.filter((t) => t.type === 'expense').length} movimientos`}
@@ -481,50 +527,49 @@ export function ReportesRoute() {
         </div>
 
         {/* KPI 2: Ahorro neto */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl">
-          <div className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
+          <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
             Ahorro neto
           </div>
           <div
-            className={`text-2xl lg:text-[28px] font-extrabold mt-2 ${
-              netSavings >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'
-            }`}
+            className={cn(
+              'text-2xl lg:text-[28px] font-extrabold tabular-nums mt-2',
+              netSavings >= 0 ? 'text-positive' : 'text-danger'
+            )}
           >
             {isLoading ? <Skeleton className="h-8 w-32" /> : <CountUp value={netSavings} />}
           </div>
-          <div className="text-xs text-white/40 mt-1">
-            {totalIncome > 0
-              ? `${Math.max(0, Math.round((netSavings / totalIncome) * 100))} % de lo que entró`
-              : 'Sin ingresos registrados'}
+          <div className="text-xs text-text-tertiary mt-1">
+            {formatNetSavingsSubtitle(netSavings, totalIncome)}
           </div>
         </div>
 
         {/* KPI 3: Mes más caro */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl">
-          <div className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
+          <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
             Mes más caro
           </div>
-          <div className="text-2xl lg:text-[28px] font-extrabold text-white mt-2">
+          <div className="text-2xl lg:text-[28px] font-extrabold text-text-primary mt-2">
             {isLoading ? <Skeleton className="h-8 w-32" /> : highestMonth.name}
           </div>
-          <div className="text-xs text-white/40 mt-1">
+          <div className="text-xs text-text-tertiary mt-1">
             {highestMonth.amount > 0 ? formatGs(highestMonth.amount) : 'Sin gastos registrados'}
           </div>
         </div>
 
         {/* KPI 4: Suscripciones al año */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl">
-          <div className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
+          <div className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
             Suscripciones al año
           </div>
-          <div className="text-2xl lg:text-[28px] font-extrabold text-white mt-2">
+          <div className="text-2xl lg:text-[28px] font-extrabold text-text-primary tabular-nums mt-2">
             {isLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
               <CountUp value={annualSubscriptions.amount} />
             )}
           </div>
-          <div className="text-xs text-white/40 mt-1">
+          <div className="text-xs text-text-tertiary mt-1">
             {annualSubscriptions.count}{' '}
             {annualSubscriptions.count === 1 ? 'recurrente activo' : 'recurrentes activos'}
           </div>
@@ -533,53 +578,115 @@ export function ReportesRoute() {
 
       {/* Row 2: Tendencia por categoría (1.6fr) & Dónde gastás más (1fr) */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-3.5">
-        {/* Tendencia por categoría */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl flex flex-col min-h-[300px]">
+        {/* Tendencia por categoría con datos reales */}
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm flex flex-col min-h-[300px]">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-bold text-white">Tendencia por categoría</h2>
-            <span className="text-xs text-white/40">{periodLabel}</span>
+            <h2 className="text-base font-bold text-text-primary">Tendencia por categoría</h2>
+            <span className="text-xs text-text-tertiary">últimos 6 meses</span>
           </div>
 
           {isLoading ? (
             <Skeleton className="h-48 w-full mt-auto" />
-          ) : topCategories.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-white/40 text-sm">
-              Sin gastos en este período
+          ) : !categoryTrend.hasData || categoryTrend.series.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-text-tertiary text-xs">
+              Sin gastos suficientes en los últimos 6 meses para mostrar la tendencia.
             </div>
           ) : (
             <div className="flex-1 flex flex-col justify-between">
-              <svg
-                viewBox="0 0 640 180"
-                className="w-full h-44 overflow-visible"
-                fill="none"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                {topCategories.slice(0, 3).map((cat, idx) => {
-                  const strokeColors = ['#E4A067', '#C19FE9', '#6BBAF0'];
-                  const color = strokeColors[idx % strokeColors.length];
-                  const yBase = 120 + idx * 25;
-                  const d = `M 10 ${yBase} C 90 ${yBase - 20}, 160 ${yBase - 35}, 240 ${yBase - 15} S 400 ${yBase - 40}, 500 ${yBase - 25} S 580 ${yBase - 30}, 630 ${yBase - 10}`;
-                  return (
-                    <g key={cat.name}>
-                      <path d={d} stroke={color} strokeWidth="2.5" opacity="0.85" />
-                    </g>
-                  );
-                })}
-              </svg>
+              {/* SVG Curve Chart */}
+              <div className="w-full">
+                <svg
+                  viewBox="0 0 600 160"
+                  className="w-full h-44 overflow-visible"
+                  fill="none"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {/* Horizontal gridlines */}
+                  <line x1={30} y1={20} x2={570} y2={20} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+                  <line x1={30} y1={70} x2={570} y2={70} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+                  <line x1={30} y1={120} x2={570} y2={120} stroke="rgba(255,255,255,0.08)" />
 
-              <div className="flex flex-wrap gap-4 pt-3 border-t border-white/5 text-xs text-white/60">
-                {topCategories.slice(0, 3).map((cat, idx) => {
-                  const dotColors = ['#E4A067', '#C19FE9', '#6BBAF0'];
+                  {/* Series curves and dots */}
+                  {categoryTrend.series.map((s) => {
+                    const color = parseHexColor(
+                      resolvedTheme === 'dark' ? s.colorDark : s.colorLight
+                    );
+
+                    const padX = 30;
+                    const padY = 20;
+                    const plotW = 540;
+                    const plotH = 100;
+                    const stepX = plotW / (categoryTrend.months.length - 1);
+
+                    const points = s.points.map((val, pIdx) => {
+                      const x = padX + pIdx * stepX;
+                      const y = padY + plotH - (val / categoryTrend.maxAmount) * plotH;
+                      return { x, y };
+                    });
+
+                    const d = buildMonotoneCubicPath(points, { baselineY: 120, topY: 20 });
+
+                    return (
+                      <g key={s.categoryId}>
+                        <path
+                          d={d}
+                          stroke={color}
+                          strokeWidth="2.5"
+                          opacity={0.9}
+                          className="transition-all duration-300"
+                        />
+                        {points.map((p, pIdx) => (
+                          <circle
+                            key={pIdx}
+                            cx={p.x}
+                            cy={p.y}
+                            r={3.5}
+                            fill={color}
+                            className="transition-transform hover:scale-125"
+                          />
+                        ))}
+                      </g>
+                    );
+                  })}
+
+                  {/* Month labels at bottom */}
+                  {categoryTrend.months.map((m, mIdx) => {
+                    const padX = 30;
+                    const plotW = 540;
+                    const stepX = plotW / (categoryTrend.months.length - 1);
+                    const x = padX + mIdx * stepX;
+                    return (
+                      <text
+                        key={m.key}
+                        x={x}
+                        y={145}
+                        textAnchor="middle"
+                        className="text-[11px] fill-text-tertiary select-none"
+                      >
+                        {m.label}
+                      </text>
+                    );
+                  })}
+                </svg>
+              </div>
+
+              {/* Legend with real category names and totals */}
+              <div className="flex flex-wrap gap-4 pt-3 border-t border-glass-border text-xs text-text-secondary mt-2">
+                {categoryTrend.series.map((s) => {
+                  const color = parseHexColor(
+                    resolvedTheme === 'dark' ? s.colorDark : s.colorLight
+                  );
                   return (
-                    <div key={cat.name} className="flex items-center gap-1.5">
+                    <div key={s.categoryId} className="flex items-center gap-1.5">
                       <span
-                        className="w-2.5 h-2.5 rounded-full inline-block"
-                        style={{ backgroundColor: dotColors[idx % dotColors.length] }}
+                        className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm"
+                        style={{ backgroundColor: color }}
                       />
-                      <span>{cat.name}</span>
-                      <span className="text-white/40 font-mono">
-                        ({cat.percentage.toFixed(0)}%)
+                      <span className="font-medium text-text-primary">{s.categoryName}</span>
+                      <span className="text-text-tertiary tabular-nums">
+                        ({formatGs(s.total)})
                       </span>
                     </div>
                   );
@@ -590,10 +697,10 @@ export function ReportesRoute() {
         </div>
 
         {/* Dónde gastás más (Ranking de comercios) */}
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl flex flex-col min-h-[300px]">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm flex flex-col min-h-[300px]">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-base font-bold text-white">Dónde gastás más</h2>
-            <span className="text-xs text-white/40">ranking</span>
+            <h2 className="text-base font-bold text-text-primary">Dónde gastás más</h2>
+            <span className="text-xs text-text-tertiary">ranking</span>
           </div>
 
           {isLoading ? (
@@ -603,7 +710,7 @@ export function ReportesRoute() {
               <Skeleton className="h-8 w-full" />
             </div>
           ) : topMerchants.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-white/40 text-sm">
+            <div className="flex-1 flex items-center justify-center text-text-tertiary text-xs">
               Sin comercios en este período
             </div>
           ) : (
@@ -613,9 +720,9 @@ export function ReportesRoute() {
                 const barColor = barColors[idx % barColors.length];
                 return (
                   <div key={m.name} className="text-xs">
-                    <div className="flex justify-between items-center text-white mb-1">
+                    <div className="flex justify-between items-center text-text-primary mb-1">
                       <span className="font-medium truncate max-w-[180px]">{m.name}</span>
-                      <span className="font-mono text-white/80">{formatGs(m.amount)}</span>
+                      <span className="text-text-secondary tabular-nums">{formatGs(m.amount)}</span>
                     </div>
                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                       <div
@@ -636,11 +743,11 @@ export function ReportesRoute() {
 
       {/* Row 3: Gastos hormiga */}
       {antExpenses.count > 0 && (
-        <div className="card p-5 bg-black border border-white/10 rounded-2xl">
+        <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <h2 className="text-base font-bold text-white">Gastos hormiga</h2>
-              <div className="text-xs text-white/50 mt-0.5">
+              <h2 className="text-base font-bold text-text-primary">Gastos hormiga</h2>
+              <div className="text-xs text-text-tertiary mt-0.5">
                 {antExpenses.count} compras pequeñas sumaron {formatGs(antExpenses.total)} (
                 {antExpenses.percentageOfExpenses.toFixed(1)}% del total gastado).
               </div>
@@ -648,12 +755,12 @@ export function ReportesRoute() {
           </div>
 
           {antExpenses.topMerchants.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/5 text-xs">
-              <span className="text-white/40">Frecuentes:</span>
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-glass-border text-xs">
+              <span className="text-text-tertiary">Frecuentes:</span>
               {antExpenses.topMerchants.map((tm) => (
                 <span
                   key={tm.name}
-                  className="bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-full text-white/80 font-mono text-[11.5px]"
+                  className="bg-white/5 border border-glass-border px-2.5 py-0.5 rounded-full text-text-secondary tabular-nums text-[11.5px]"
                 >
                   {tm.name} ({formatGs(tm.amount)})
                 </span>
@@ -666,28 +773,28 @@ export function ReportesRoute() {
       {/* Row 4: Tus días (Heat Map 2D / 3D) */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">Tus días</h2>
-          <span className="text-xs text-white/40">actividad diaria</span>
+          <h2 className="text-lg font-bold text-text-primary">Tus días</h2>
+          <span className="text-xs text-text-tertiary">actividad diaria</span>
         </div>
         <TusDias
           days={tusDiasData}
           periodLabel={`Gastado en últimos 6 meses`}
-          totalAmount={totalExpenses}
+          totalAmount={tusDiasTotal}
           onSelectDay={handleSelectDay}
         />
       </div>
 
       {/* Row 5: Descargas (CSV, Excel, PDF) */}
-      <div className="card p-5 bg-black border border-white/10 rounded-2xl">
+      <div className="card p-5 bg-glass-fill border border-glass-border rounded-2xl shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div>
-            <h2 className="text-base font-bold text-white">Descargas</h2>
-            <div className="text-xs text-white/40">del período elegido ({periodLabel})</div>
+            <h2 className="text-base font-bold text-text-primary">Descargas</h2>
+            <div className="text-xs text-text-tertiary">del período elegido ({periodLabel})</div>
           </div>
 
           {isGeneratingPdf && (
-            <div className="flex items-center gap-2 text-xs text-white/70 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-              <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-[#FF8A3D] rounded-full animate-spin inline-block" />
+            <div className="flex items-center gap-2 text-xs text-text-secondary bg-white/5 px-3 py-1.5 rounded-full border border-glass-border">
+              <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-brand-start rounded-full animate-spin inline-block" />
               <span>Generando PDF</span>
             </div>
           )}
@@ -696,52 +803,31 @@ export function ReportesRoute() {
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
           <button
             type="button"
-            className="chip hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadCsv}
             disabled={periodTxs.length === 0}
           >
-            <svg className="ic w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M7 3h7l5 5v13H7z M14 3v5h5"
-              />
-            </svg>
+            <Download className="w-3.5 h-3.5" />
             <span>Movimientos · CSV</span>
           </button>
 
           <button
             type="button"
-            className="chip hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadExcel}
             disabled={periodTxs.length === 0}
           >
-            <svg className="ic w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M7 3h7l5 5v13H7z M14 3v5h5"
-              />
-            </svg>
+            <Download className="w-3.5 h-3.5" />
             <span>Movimientos · Excel</span>
           </button>
 
           <button
             type="button"
-            className="chip hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
           >
-            <svg className="ic w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M7 3h7l5 5v13H7z M14 3v5h5"
-              />
-            </svg>
+            <Download className="w-3.5 h-3.5" />
             <span>Resumen · PDF</span>
           </button>
         </div>
@@ -773,7 +859,7 @@ export function ReportesRoute() {
             name: c.name,
             kind: c.kind ?? 'expense',
             sort_order: c.sort_order ?? 0,
-            icon: c.icon,
+            icon: c.icon ?? undefined,
             color_dark: c.color_dark,
             color_light: c.color_light,
           }))}

@@ -5,6 +5,8 @@
  * and lib/features/reports/domain/weekly_summary.dart.
  */
 
+import { formatThousands } from '../format';
+
 export function normalizeKeyword(text: string): string {
   let s = text.trim().toLowerCase();
   s = s.replace(/[áàäâ]/g, 'a');
@@ -284,4 +286,250 @@ export function calculateWeeklySummary({
     topCategoryName: topCat,
     topCategoryAmount: topAmount,
   };
+}
+
+const SHORT_MONTHS_ES = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+export interface CategoryTrendTx {
+  type: string;
+  amount: number;
+  occurred_at: number;
+  category_id?: string | null;
+  category_name?: string | null;
+  color_dark?: number | string | null;
+  color_light?: number | string | null;
+}
+
+export interface CategoryTrendSeries {
+  categoryId: string;
+  categoryName: string;
+  colorDark?: number | string | null;
+  colorLight?: number | string | null;
+  points: number[];
+  total: number;
+}
+
+export interface CategoryTrendResult {
+  hasData: boolean;
+  months: Array<{ key: string; label: string; year: number; month: number }>;
+  series: CategoryTrendSeries[];
+  maxAmount: number;
+}
+
+export function calculateCategoryMonthlyTrend({
+  transactions,
+  referenceDate = new Date(),
+  monthsCount = 6,
+}: {
+  transactions: CategoryTrendTx[];
+  referenceDate?: Date;
+  monthsCount?: number;
+}): CategoryTrendResult {
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth();
+
+  const months: Array<{ key: string; label: string; year: number; month: number }> = [];
+  const monthKeyToIndex = new Map<string, number>();
+
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const totalMonthIndex = refYear * 12 + refMonth - i;
+    const y = Math.floor(totalMonthIndex / 12);
+    const m = ((totalMonthIndex % 12) + 12) % 12;
+    const padM = String(m + 1).padStart(2, '0');
+    const key = `${y}-${padM}`;
+    monthKeyToIndex.set(key, months.length);
+    months.push({
+      key,
+      label: SHORT_MONTHS_ES[m],
+      year: y,
+      month: m,
+    });
+  }
+
+  interface CatBucket {
+    id: string;
+    name: string;
+    colorDark?: number | string | null;
+    colorLight?: number | string | null;
+    points: number[];
+    total: number;
+  }
+
+  const catBuckets = new Map<string, CatBucket>();
+
+  for (const tx of transactions) {
+    if (tx.type !== 'expense') continue;
+    const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+    const d = new Date(ms);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const monthIdx = monthKeyToIndex.get(key);
+    if (monthIdx === undefined) continue;
+
+    const catId = tx.category_id || tx.category_name || 'otros';
+    const catName = tx.category_name || 'Otros';
+
+    let bucket = catBuckets.get(catId);
+    if (!bucket) {
+      bucket = {
+        id: catId,
+        name: catName,
+        colorDark: tx.color_dark,
+        colorLight: tx.color_light,
+        points: new Array(monthsCount).fill(0),
+        total: 0,
+      };
+      catBuckets.set(catId, bucket);
+    }
+
+    bucket.points[monthIdx] += tx.amount;
+    bucket.total += tx.amount;
+  }
+
+  const sorted = Array.from(catBuckets.values())
+    .filter((b) => b.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3);
+
+  if (sorted.length === 0) {
+    return {
+      hasData: false,
+      months,
+      series: [],
+      maxAmount: 0,
+    };
+  }
+
+  let maxAmount = 1;
+  const series: CategoryTrendSeries[] = sorted.map((s) => {
+    for (const p of s.points) {
+      if (p > maxAmount) maxAmount = p;
+    }
+    return {
+      categoryId: s.id,
+      categoryName: s.name,
+      colorDark: s.colorDark,
+      colorLight: s.colorLight,
+      points: s.points,
+      total: s.total,
+    };
+  });
+
+  return {
+    hasData: true,
+    months,
+    series,
+    maxAmount,
+  };
+}
+
+export function formatNetSavingsSubtitle(netSavings: number, totalIncome: number): string {
+  if (netSavings < 0) {
+    if (totalIncome > 0) {
+      return `Gastaste Gs. ${formatThousands(Math.abs(netSavings))} más de lo que entró`;
+    }
+    return `Gastaste Gs. ${formatThousands(Math.abs(netSavings))} sin ingresos`;
+  }
+  if (totalIncome > 0) {
+    const pct = Math.round((netSavings / totalIncome) * 100);
+    return `${pct} % de lo que entró`;
+  }
+  return 'Sin ingresos registrados';
+}
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface MonotoneCubicOptions {
+  baselineY?: number;
+  topY?: number;
+}
+
+export function buildMonotoneCubicPath(
+  points: Point2D[],
+  options?: MonotoneCubicOptions
+): string {
+  const n = points.length;
+  if (n === 0) return '';
+  if (n === 1) return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  if (n === 2) {
+    return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+  }
+
+  const { baselineY, topY } = options || {};
+
+  // Step 1: calculate secants (slopes) between consecutive points
+  const dx: number[] = [];
+  const dy: number[] = [];
+  const s: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dX = points[i + 1].x - points[i].x;
+    const dY = points[i + 1].y - points[i].y;
+    dx.push(dX);
+    dy.push(dY);
+    s.push(dX === 0 ? 0 : dY / dX);
+  }
+
+  // Step 2: initial tangents (slopes) at each point
+  const m: number[] = new Array(n).fill(0);
+  m[0] = s[0];
+  m[n - 1] = s[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    if (s[i - 1] * s[i] <= 0) {
+      m[i] = 0; // Local extremum: flat tangent
+    } else {
+      // Harmonic mean (Fritsch-Butland / Steffen)
+      m[i] = (2 * s[i - 1] * s[i]) / (s[i - 1] + s[i]);
+    }
+  }
+
+  // Step 3: Fritsch-Carlson constraint adjustment
+  for (let i = 0; i < n - 1; i++) {
+    if (s[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+    } else {
+      const alpha = m[i] / s[i];
+      const beta = m[i + 1] / s[i];
+      if (alpha < 0) m[i] = 0;
+      if (beta < 0) m[i + 1] = 0;
+      const hyp = alpha * alpha + beta * beta;
+      if (hyp > 9) {
+        const tau = 3 / Math.sqrt(hyp);
+        m[i] = tau * alpha * s[i];
+        m[i + 1] = tau * beta * s[i];
+      }
+    }
+  }
+
+  // Step 4: generate cubic Bezier control points and path
+  let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const segDx = dx[i];
+
+    let cp1x = p1.x + segDx / 3;
+    let cp1y = p1.y + (m[i] * segDx) / 3;
+    let cp2x = p2.x - segDx / 3;
+    let cp2y = p2.y - (m[i + 1] * segDx) / 3;
+
+    // Strict boundary clamping if provided
+    if (baselineY != null) {
+      cp1y = Math.min(cp1y, baselineY);
+      cp2y = Math.min(cp2y, baselineY);
+    }
+    if (topY != null) {
+      cp1y = Math.max(cp1y, topY);
+      cp2y = Math.max(cp2y, topY);
+    }
+
+    path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+
+  return path;
 }

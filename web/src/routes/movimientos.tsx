@@ -302,11 +302,11 @@ export function MovimientosRoute() {
             <span>{totals.count} movimientos</span>
             <span>·</span>
             <span>
-              salieron Gs. <CountUp value={totals.spent} />
+              salieron <CountUp value={totals.spent} />
             </span>
             <span>·</span>
             <span className="text-positive font-semibold">
-              entraron Gs. <CountUp value={totals.earned} />
+              entraron <CountUp value={totals.earned} />
             </span>
           </div>
         </div>

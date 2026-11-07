@@ -147,4 +147,91 @@ describe('ReportesRoute', () => {
     expect(screen.getByRole('button', { name: /Movimientos · Excel/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Resumen · PDF/i })).toBeInTheDocument();
   });
+
+  it('renders negative net savings subtitle when spending exceeds income', async () => {
+    const deficitTxs = [
+      {
+        id: 'tx-1',
+        type: 'expense',
+        amount: 5000000,
+        occurred_at: Math.floor(Date.now() / 1000) - 3600,
+        merchant: 'Alquiler',
+        category_id: 'cat-1',
+        category_name: 'Vivienda',
+      },
+      {
+        id: 'tx-2',
+        type: 'income',
+        amount: 2000000,
+        occurred_at: Math.floor(Date.now() / 1000) - 7200,
+        merchant: 'Sueldo',
+        category_id: 'cat-2',
+        category_name: 'Ingresos',
+      },
+    ];
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('transactions')) {
+        return { data: deficitTxs, isLoading: false, error: undefined } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Gastaste Gs\..*más de lo que entró/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays the total sum across all days shown in TusDias rather than just the single month', async () => {
+    // Current month expense: 1.000.000 Gs (today)
+    // Past month expense (within 60 days): 3.000.000 Gs
+    // Single month total should be 1.000.000, but TusDias 6-month total should be 4.000.000 Gs
+    const multiMonthTxs = [
+      {
+        id: 'tx-current',
+        type: 'expense',
+        amount: 1000000,
+        occurred_at: Math.floor(Date.now() / 1000) - 3600,
+        merchant: 'Supermercado',
+        category_id: 'cat-1',
+        category_name: 'Comida',
+      },
+      {
+        id: 'tx-past',
+        type: 'expense',
+        amount: 3000000,
+        occurred_at: Math.floor(Date.now() / 1000) - 45 * 86400,
+        merchant: 'Alquiler Mes Anterior',
+        category_id: 'cat-2',
+        category_name: 'Vivienda',
+      },
+    ];
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('transactions')) {
+        return { data: multiMonthTxs, isLoading: false, error: undefined } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    // TusDias header has periodLabel "Gastado en últimos 6 meses" and total 4.000.000
+    await waitFor(() => {
+      expect(screen.getByText('Gastado en últimos 6 meses')).toBeInTheDocument();
+      // Should find Gs. 4.000.000 in TusDias container
+      const container = screen.getByTestId('tus-dias-container');
+      expect(container).toHaveTextContent(/4\.000\.000/);
+    });
+  });
 });

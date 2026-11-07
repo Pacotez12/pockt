@@ -183,14 +183,14 @@ export function MovementsTable({
     <div className="space-y-4">
       <div className="rounded-3xl overflow-hidden bg-glass-fill border border-glass-border shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[13.5px] border-collapse">
+          <table className="w-full table-fixed text-left text-[13.5px] border-collapse">
             <thead>
               <tr className="border-b border-white/5 text-[12px] font-semibold text-text-tertiary">
-                <th className="py-3 px-5 sm:px-6">Descripción</th>
-                <th className="py-3 px-4 hidden sm:table-cell">Categoría</th>
-                <th className="py-3 px-4">Fecha</th>
-                <th className="py-3 px-4 hidden md:table-cell">Origen</th>
-                <th className="py-3 px-5 sm:px-6 text-right">Monto</th>
+                <th className="py-3 pl-3.5 pr-2 sm:px-6">Descripción</th>
+                <th className="py-3 px-4 hidden sm:table-cell sm:w-36">Categoría</th>
+                <th className="py-3 px-4 hidden sm:table-cell sm:w-24">Fecha</th>
+                <th className="py-3 px-4 hidden md:table-cell md:w-24">Origen</th>
+                <th className="py-3 pr-3.5 pl-2 sm:px-6 text-right w-[130px] sm:w-36 shrink-0">Monto</th>
               </tr>
             </thead>
             <tbody>
@@ -198,10 +198,10 @@ export function MovementsTable({
                 <React.Fragment key={group.dateKey}>
                   {/* Day header with day subtotal */}
                   <tr className="bg-white/[0.03] border-t border-b border-white/5 text-[12px] font-semibold text-text-tertiary">
-                    <td colSpan={5} className="py-2 px-5 sm:px-6">
-                      <div className="flex items-center justify-between">
+                    <td colSpan={5} className="py-2 px-3.5 sm:px-6">
+                      <div className="flex items-center justify-between flex-wrap gap-y-1 gap-x-3">
                         <span>{formatDayHeader(group.dateKey)}</span>
-                        <div className="flex gap-3 text-[11.5px] font-medium tabular-nums">
+                        <div className="flex gap-3 text-[11.5px] font-medium tabular-nums flex-wrap">
                           {group.daySpent > 0 && (
                             <span>Salieron: {formatGs(-group.daySpent)}</span>
                           )}
@@ -252,23 +252,26 @@ export function MovementsTable({
                         )}
                       >
                         {/* Name & detail with category dot */}
-                        <td className="py-3 px-5 sm:px-6 font-medium text-text-primary">
-                          <div className="flex items-center gap-2.5">
+                        <td className="py-3 pl-3.5 pr-2 sm:px-6 font-medium text-text-primary min-w-0">
+                          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                             <span
                               className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
                               style={{ backgroundColor: dotColor }}
                               aria-hidden="true"
                             />
-                            <div className="truncate max-w-[200px] sm:max-w-xs">
+                            <div className="min-w-0 flex-1 truncate">
                               <span className="block truncate">{detail}</span>
                               {tx.merchant && tx.note && (
                                 <span className="block text-[11.5px] text-text-tertiary truncate">
                                   {tx.note}
                                 </span>
                               )}
+                              <span className="block text-[11.5px] text-text-tertiary sm:hidden truncate">
+                                {categoryName}
+                              </span>
                             </div>
                             {tx.loan_id && (
-                              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
                                 Préstamo
                               </span>
                             )}
@@ -281,7 +284,7 @@ export function MovementsTable({
                         </td>
 
                         {/* Time */}
-                        <td className="py-3 px-4 text-text-tertiary whitespace-nowrap text-[13px] tabular-nums">
+                        <td className="py-3 px-4 text-text-tertiary whitespace-nowrap text-[13px] tabular-nums hidden sm:table-cell">
                           {formatTimeOnly(tx.occurred_at)}
                         </td>
 
@@ -295,7 +298,7 @@ export function MovementsTable({
                         {/* Amount */}
                         <td
                           className={cn(
-                            'py-3 px-5 sm:px-6 text-right font-bold tabular-nums whitespace-nowrap',
+                            'py-3 pr-3.5 pl-2 sm:px-6 text-right font-bold tabular-nums whitespace-nowrap w-[130px] sm:w-36 shrink-0',
                             isExpense ? 'text-text-primary' : 'text-positive'
                           )}
                         >

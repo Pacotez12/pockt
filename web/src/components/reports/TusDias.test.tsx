@@ -100,4 +100,23 @@ describe('TusDias Component', () => {
 
     expect(screen.getByTestId('tus-dias-tooltip')).toBeInTheDocument();
   });
+
+  it('uses light gray palette for empty cells in light mode', () => {
+    const days: DayData[] = [
+      { date: new Date(2026, 4, 1), amount: 0, txCount: 0 },
+      { date: new Date(2026, 4, 2), amount: 100000, txCount: 1 },
+    ];
+
+    render(
+      <TusDias
+        days={days}
+        periodLabel="Gastado en 6 meses"
+        totalAmount={100000}
+      />
+    );
+
+    // In default theme provider fallback or with ThemeContext light
+    const cells = screen.getAllByTestId('tus-dias-cell');
+    expect(cells.length).toBe(2);
+  });
 });

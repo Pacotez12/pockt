@@ -112,8 +112,8 @@ describe('MovimientosRoute', () => {
 
     expect(screen.getByText('Movimientos')).toBeInTheDocument();
     expect(screen.getByText(/2 movimientos/i)).toBeInTheDocument();
-    expect(screen.getByText(/salieron Gs\./i)).toBeInTheDocument();
-    expect(screen.getByText(/entraron Gs\./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/salieron/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/entraron/i).length).toBeGreaterThanOrEqual(1);
 
     expect(screen.getByText('Supermercado Los Jardines')).toBeInTheDocument();
     expect(screen.getByText('−Gs. 184.000')).toBeInTheDocument();

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { formatGs } from '@/lib/format';
 import { heatLevels } from '@/lib/calc/heat_levels';
+import { useTheme } from '@/lib/theme';
 
 export interface DayData {
   date: Date;
@@ -19,7 +20,8 @@ export interface TusDiasProps {
   className?: string;
 }
 
-const HEAT_PALETTE = ['#1a1a1d', '#55263A', '#94344D', '#DA534F', '#FF3D7F'];
+export const HEAT_PALETTE_DARK = ['#1a1a1d', '#55263A', '#94344D', '#DA534F', '#FF3D7F'];
+export const HEAT_PALETTE_LIGHT = ['#E8E8E9', '#FFE0DA', '#FFBDB7', '#F98E8F', '#FF3D7F'];
 
 function isWebGLAvailable(): boolean {
   if (typeof window === 'undefined') return false;
@@ -41,6 +43,9 @@ export function TusDias({
   onSelectDay,
   className = '',
 }: TusDiasProps) {
+  const { resolvedTheme } = useTheme();
+  const palette = resolvedTheme === 'light' ? HEAT_PALETTE_LIGHT : HEAT_PALETTE_DARK;
+
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
   const [hoveredDay, setHoveredDay] = useState<{
@@ -115,7 +120,7 @@ export function TusDias({
     const mesh = new THREE.InstancedMesh(geo, mat, totalDays);
     scene.add(mesh);
 
-    const threePalette = HEAT_PALETTE.map((c) => new THREE.Color(c));
+    const threePalette = palette.map((c) => new THREE.Color(c));
     for (let i = 0; i < totalDays; i++) {
       const lvl = enrichedDays[i]?.level ?? 0;
       mesh.setColorAt(i, threePalette[lvl]);
@@ -272,7 +277,7 @@ export function TusDias({
       geo.dispose();
       mat.dispose();
     };
-  }, [mode, webGLSupported, enrichedDays, onSelectDay]);
+  }, [mode, webGLSupported, enrichedDays, onSelectDay, palette]);
 
   // Weeks for 2D grid
   const weeks = useMemo(() => {
@@ -308,30 +313,38 @@ export function TusDias({
   return (
     <div
       ref={containerRef}
-      className={`card relative overflow-hidden bg-black border border-white/10 rounded-[22px] p-5.5 select-none ${className}`}
+      className={`relative overflow-hidden bg-glass-fill border border-glass-border rounded-2xl p-5 select-none shadow-sm ${className}`}
       data-testid="tus-dias-container"
     >
       {/* Header */}
       <div className="flex justify-between items-start relative z-10 mb-2">
         <div>
-          <div className="text-[13px] text-white/60">{periodLabel}</div>
-          <div className="text-[28px] font-extrabold text-white tracking-tight mt-0.5">
+          <div className="text-[13px] text-text-tertiary">{periodLabel}</div>
+          <div className="text-[28px] font-extrabold text-text-primary tracking-tight mt-0.5">
             {formatGs(computedTotal)}
           </div>
         </div>
 
         {/* 2D / 3D Segmented Control */}
-        <div className="seg">
+        <div className="inline-flex p-1 rounded-xl bg-white/5 border border-glass-border">
           <button
             type="button"
-            className={mode === '2d' ? 'on' : ''}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start ${
+              mode === '2d'
+                ? 'bg-white/10 text-text-primary shadow-sm on'
+                : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
+            }`}
             onClick={() => setMode('2d')}
           >
             2D
           </button>
           <button
             type="button"
-            className={mode === '3d' ? 'on' : ''}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start ${
+              mode === '3d'
+                ? 'bg-white/10 text-text-primary shadow-sm on'
+                : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
+            }`}
             onClick={() => setMode('3d')}
             title={!webGLSupported ? 'Sin aceleración WebGL en este dispositivo' : undefined}
           >
@@ -361,7 +374,7 @@ export function TusDias({
               week.map((day, dIdx) => {
                 const x = 10 + wIdx * 28;
                 const y = 10 + dIdx * 28;
-                const color = HEAT_PALETTE[day.level ?? 0];
+                const color = palette[day.level ?? 0];
                 return (
                   <rect
                     key={`${wIdx}-${dIdx}`}
@@ -385,9 +398,9 @@ export function TusDias({
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-white/40 mt-3">
+      <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-text-tertiary mt-3">
         <span>menos</span>
-        {HEAT_PALETTE.map((color, i) => (
+        {palette.map((color, i) => (
           <i
             key={i}
             className="w-2.5 h-2.5 rounded-[3px] inline-block"
@@ -401,24 +414,24 @@ export function TusDias({
       {hoveredDay && (
         <div
           data-testid="tus-dias-tooltip"
-          className="pointer-events-none absolute z-20 bg-[#17171a] border border-white/15 rounded-xl p-3 text-xs shadow-2xl transition-opacity duration-100"
+          className="pointer-events-none absolute z-20 bg-sheet-surface border border-glass-border rounded-xl p-3 text-xs shadow-2xl transition-opacity duration-100"
           style={{
             left: `${hoveredDay.x}px`,
             top: `${hoveredDay.y}px`,
           }}
         >
-          <div className="text-white/40 capitalize">
+          <div className="text-text-tertiary capitalize">
             {hoveredDay.day.date.toLocaleDateString('es-PY', {
               weekday: 'short',
               day: 'numeric',
               month: 'short',
             })}
           </div>
-          <div className="text-base font-bold text-white my-0.5">
+          <div className="text-base font-bold text-text-primary my-0.5">
             {hoveredDay.day.amount > 0 ? formatGs(hoveredDay.day.amount) : 'Sin gastos'}
           </div>
           {hoveredDay.day.amount > 0 && (
-            <div className="text-white/50 text-[11px]">
+            <div className="text-text-secondary text-[11px]">
               {hoveredDay.day.txCount} {hoveredDay.day.txCount === 1 ? 'movimiento' : 'movimientos'}
               {hoveredDay.day.topMerchant ? ` · más alto: ${hoveredDay.day.topMerchant}` : ''}
             </div>

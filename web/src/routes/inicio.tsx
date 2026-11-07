@@ -535,11 +535,11 @@ export function InicioRoute() {
               <span className="font-bold text-[14px] text-text-primary">Entradas y salidas</span>
               <div className="flex items-center gap-3.5 text-[12px] text-text-tertiary">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.3)]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-positive" />
                   Entradas
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-start" />
                   Salidas
                 </span>
               </div>
@@ -572,7 +572,8 @@ export function InicioRoute() {
                           width={28}
                           height={inH}
                           rx={7}
-                          fill="rgba(255,255,255,0.14)"
+                          fill="var(--positive)"
+                          opacity={0.85}
                         />
                         {/* Expense bar */}
                         <rect
@@ -581,14 +582,15 @@ export function InicioRoute() {
                           width={28}
                           height={exH}
                           rx={7}
-                          fill="#FF8A3D"
+                          fill="var(--brand-start)"
                         />
                         {/* Month label */}
                         <text
                           x={x + 30}
                           y={196}
                           textAnchor="middle"
-                          fill="rgba(255,255,255,0.45)"
+                          fill="currentColor"
+                          className="text-text-tertiary"
                           fontSize="11"
                           fontFamily="Inter, system-ui, sans-serif"
                         >

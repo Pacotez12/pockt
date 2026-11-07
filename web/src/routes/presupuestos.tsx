@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@powersync/react';
-import { PieChart, AlertTriangle } from 'lucide-react';
+import { PieChart, AlertTriangle, Info } from 'lucide-react';
 import { CountUp } from '@/components/CountUp';
 import { Skeleton } from '@/components/Skeleton';
 import { formatGs, formatThousands } from '@/lib/format';
@@ -181,8 +181,9 @@ export function PresupuestosRoute() {
         </div>
 
         {/* Aviso discreto */}
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-text-tertiary bg-white/5 border border-glass-border">
-          Para editar, usá la app
+        <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          <span>Para editar, usá la app</span>
         </span>
       </div>
 
