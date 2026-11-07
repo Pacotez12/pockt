@@ -26,7 +26,9 @@ export function ProtectedRoute() {
     }
   }, [user]);
 
-  if (loading) {
+  // Hasta tener la base local las pantallas no pueden consultar: sin esto useQuery
+  // lanza "PowerSync not configured" y la página queda en negro.
+  if (loading || (session && !db)) {
     return (
       <div
         data-testid="auth-loading"
@@ -41,11 +43,9 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  const content = <Outlet />;
-
-  if (db) {
-    return <PowerSyncContext.Provider value={db as any}>{content}</PowerSyncContext.Provider>;
-  }
-
-  return content;
+  return (
+    <PowerSyncContext.Provider value={db as any}>
+      <Outlet />
+    </PowerSyncContext.Provider>
+  );
 }
