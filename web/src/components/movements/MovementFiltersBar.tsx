@@ -147,7 +147,7 @@ export function MovementFiltersBar({
           </button>
 
           {periodOpen && (
-            <div className="absolute left-0 top-11 w-44 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+            <div className="absolute right-0 sm:right-auto sm:left-0 top-11 w-44 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
               {[
                 { id: 'this_month', label: 'Este mes' },
                 { id: 'last_month', label: 'Mes pasado' },

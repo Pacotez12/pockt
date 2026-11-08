@@ -51,6 +51,12 @@
     --keypad-key: #E4E4E7;
   }
 
+  /* Un popover que se pasa del borde no debe ensanchar la página en el celular
+     (ensancha el viewport y la barra fija queda cortada). */
+  html,
+  body {
+    overflow-x: clip;
+  }
   body {
     background-color: var(--background);
     color: var(--text-primary);
