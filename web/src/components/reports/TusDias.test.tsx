@@ -162,4 +162,32 @@ describe('TusDias Component', () => {
       })
     );
   });
+
+  it('scrolls 2D grid to the right on mount to display the most recent weeks', () => {
+    const days = generateMockDays(182);
+    const originalScrollWidth = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'scrollWidth'
+    );
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+      configurable: true,
+      value: 800,
+    });
+
+    render(
+      <TusDias
+        days={days}
+        periodLabel="Gastado en 6 meses"
+        totalAmount={14820500}
+      />
+    );
+
+    const container = screen.getByTestId('tus-dias-scroll-container');
+    expect(container).toBeInTheDocument();
+    expect(container.scrollLeft).toBe(800);
+
+    if (originalScrollWidth) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', originalScrollWidth);
+    }
+  });
 });

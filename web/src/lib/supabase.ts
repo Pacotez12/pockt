@@ -11,5 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    // PKCE: el callback solo se acepta en el navegador que inició el login (evita login CSRF).
+    flowType: 'pkce',
   },
 });

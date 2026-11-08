@@ -57,6 +57,7 @@ export function TusDias({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   // Compute levels using heatLevels calculation
@@ -351,6 +352,19 @@ export function TusDias({
 
   const show3D = mode === '3d' && webGLSupported;
 
+  // En celular el contenedor 2D hace scroll horizontal arrancando a la derecha
+  // para mostrar las semanas más recientes con datos inmediatamente.
+  useEffect(() => {
+    if (!show3D && scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      el.scrollLeft = el.scrollWidth;
+      const rId = requestAnimationFrame(() => {
+        if (el) el.scrollLeft = el.scrollWidth;
+      });
+      return () => cancelAnimationFrame(rId);
+    }
+  }, [show3D, weeks]);
+
   return (
     <div
       ref={containerRef}
@@ -405,7 +419,11 @@ export function TusDias({
 
       {/* 2D SVG Grid Fallback / Default */}
       {!show3D && (
-        <div className="w-full overflow-x-auto py-4">
+        <div
+          ref={scrollContainerRef}
+          data-testid="tus-dias-scroll-container"
+          className="w-full overflow-x-auto py-4"
+        >
           <svg
             data-testid="tus-dias-2d-svg"
             viewBox={`0 0 ${weeks.length * 28 + 20} 220`}
