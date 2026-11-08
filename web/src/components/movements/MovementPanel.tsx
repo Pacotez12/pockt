@@ -332,7 +332,7 @@ export function MovementPanel({
                       className={cn(
                         'flex-1 min-h-[40px] py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center cursor-pointer',
                         type === 'expense'
-                          ? 'bg-white/15 text-white shadow-sm'
+                          ? 'bg-glass-fill text-text-primary shadow-sm border border-glass-border'
                           : 'text-text-tertiary hover:text-text-secondary'
                       )}
                     >
