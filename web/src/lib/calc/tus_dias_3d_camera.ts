@@ -8,6 +8,8 @@ export interface TusDiasCameraFramingInput {
   canvasHeight: number;
   k: number; // 0 = 2D, 1 = 3D
   yaw?: number;
+  pitch?: number; // Elevation in radians (default ~35.6°: Math.PI / 2 - 0.95)
+  zoom?: number; // Zoom factor (default 1)
   cellSize?: number;
   coverage?: number; // default 0.85 (85% coverage of canvas)
 }
@@ -45,6 +47,8 @@ export function computeTusDiasCameraFraming({
   canvasHeight,
   k,
   yaw = 0,
+  pitch,
+  zoom = 1,
   cellSize = 0.85,
   coverage = 0.85,
 }: TusDiasCameraFramingInput): TusDiasCameraFramingResult {
@@ -52,7 +56,8 @@ export function computeTusDiasCameraFraming({
   const D = Math.max(1, days);
 
   // Camera orientation matching TusDias.tsx
-  const tilt = lerp(0.001, 0.95, k);
+  const targetTilt = pitch !== undefined ? Math.PI / 2 - pitch : 0.95;
+  const tilt = lerp(0.001, targetTilt, k);
   const az = lerp(0, -0.72, k) + yaw * k;
   const r = 60;
 
@@ -128,6 +133,10 @@ export function computeTusDiasCameraFraming({
     halfH = halfHNeeded;
     halfW = halfHNeeded * canvasAspect;
   }
+
+  const effectiveZoom = zoom && zoom > 0 ? zoom : 1;
+  halfW /= effectiveZoom;
+  halfH /= effectiveZoom;
 
   return {
     left: centerXCam - halfW,

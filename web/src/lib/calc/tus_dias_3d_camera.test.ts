@@ -92,4 +92,46 @@ describe('computeTusDiasCameraFraming', () => {
     expect(resMid.right - resMid.left).toBeGreaterThan(0);
     expect(resMid.top - resMid.bottom).toBeGreaterThan(0);
   });
+
+  it('adjusts framing according to pitch and zoom', () => {
+    const base = computeTusDiasCameraFraming({
+      weeks: 8,
+      days: 7,
+      maxHeight: 3.55,
+      canvasWidth: 800,
+      canvasHeight: 340,
+      k: 1,
+      yaw: 0,
+      zoom: 1,
+    });
+
+    const zoomedIn = computeTusDiasCameraFraming({
+      weeks: 8,
+      days: 7,
+      maxHeight: 3.55,
+      canvasWidth: 800,
+      canvasHeight: 340,
+      k: 1,
+      yaw: 0,
+      zoom: 2,
+    });
+
+    const baseWidth = base.right - base.left;
+    const zoomedWidth = zoomedIn.right - zoomedIn.left;
+    expect(zoomedWidth).toBeCloseTo(baseWidth / 2, 3);
+
+    const higherPitch = computeTusDiasCameraFraming({
+      weeks: 8,
+      days: 7,
+      maxHeight: 3.55,
+      canvasWidth: 800,
+      canvasHeight: 340,
+      k: 1,
+      yaw: 0,
+      pitch: Math.PI / 3, // 60 deg
+    });
+
+    // Pitch changes camPosition.y (elevation)
+    expect(higherPitch.camPosition.y).toBeGreaterThan(base.camPosition.y);
+  });
 });

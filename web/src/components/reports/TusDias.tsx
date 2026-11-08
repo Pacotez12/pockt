@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { RotateCcw } from 'lucide-react';
 import { computeTusDiasCameraFraming } from '@/lib/calc/tus_dias_3d_camera';
+import {
+  type TusDiasOrbitState,
+  createInitialOrbitState,
+  applyDragMove,
+  applyZoom,
+  stepOrbitPhysics,
+  isOrbitModified,
+} from '@/lib/calc/tus_dias_orbit';
 import { formatGs } from '@/lib/format';
 import { heatLevels } from '@/lib/calc/heat_levels';
 import {
@@ -148,6 +157,12 @@ export function TusDias({
   const animationFrameRef = useRef<number | null>(null);
   const maxBadgeRef = useRef<HTMLDivElement>(null);
   const monthRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const orbitStateRef = useRef<TusDiasOrbitState>(createInitialOrbitState());
+  const isDraggingRef = useRef<boolean>(false);
+  const lastModifiedStateRef = useRef<boolean>(false);
+  const [canRecenter, setCanRecenter] = useState(false);
+  const [showWheelHint, setShowWheelHint] = useState(false);
+  const wheelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const realToday = useMemo(() => today ?? referenceDate ?? new Date(), [today, referenceDate]);
 
@@ -347,8 +362,6 @@ export function TusDias({
     let k = mode === '3d' ? 1 : 0;
     let v = 0;
     const target = 1;
-    let yaw = 0;
-    let yawT = 0;
     let hoverIndex = -1;
 
     const reduceMotion =
@@ -403,7 +416,9 @@ export function TusDias({
         canvasWidth: canvasW,
         canvasHeight: canvasH,
         k,
-        yaw,
+        yaw: orbitStateRef.current.yaw,
+        pitch: orbitStateRef.current.pitch,
+        zoom: orbitStateRef.current.zoom,
       });
 
       cam.left = framing.left;
@@ -430,7 +445,27 @@ export function TusDias({
         k += v * dt;
       }
 
-      yaw += (yawT - yaw) * Math.min(1, dt * 8);
+      // Step orbit physics (inertial spin, bounds spring rebound, recenter spring)
+      if (!isDraggingRef.current || orbitStateRef.current.isRecentering) {
+        orbitStateRef.current = stepOrbitPhysics(orbitStateRef.current, dt, { reduceMotion });
+      }
+
+      // Detect if orbit changed to show/hide Recentrar button (0 setState per frame)
+      const modifiedNow = isOrbitModified(orbitStateRef.current);
+      if (modifiedNow !== lastModifiedStateRef.current) {
+        lastModifiedStateRef.current = modifiedNow;
+        setCanRecenter(modifiedNow);
+      }
+
+      // Update cursor directly on canvas DOM element
+      if (canvas) {
+        canvas.style.cursor = isDraggingRef.current
+          ? 'grabbing'
+          : hoverIndex >= 0
+          ? 'pointer'
+          : 'grab';
+      }
+
       updateLayout();
       updateCamera();
       renderer.render(scene, cam);
@@ -471,62 +506,196 @@ export function TusDias({
 
     animationFrameRef.current = requestAnimationFrame(tick);
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (!canvas || !renderer) return;
-      const w = canvas.clientWidth || 800;
-      const h =
-        canvas.clientHeight ||
-        (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
-      renderer.setSize(w, h, false);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      updateCamera();
-    });
-    resizeObserver.observe(canvas);
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            if (!canvas || !renderer) return;
+            const w = canvas.clientWidth || 800;
+            const h =
+              canvas.clientHeight ||
+              (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
+            renderer.setSize(w, h, false);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            updateCamera();
+          })
+        : null;
+    if (resizeObserver) resizeObserver.observe(canvas);
 
     const ray = new THREE.Raycaster();
     const mv = new THREE.Vector2();
-    let drag: { x: number; y0: number } | null = null;
+
+    const pointerMap = new Map<number, { x: number; y: number }>();
+    let dragStartPos: { x: number; y: number } | null = null;
+    let maxDragDist = 0;
+    let lastPointerTime = 0;
+    let lastPointerX = 0;
+    let currentVelocityX = 0;
+    let prevPinchDist: number | null = null;
+    let prevPinchCenterY: number | null = null;
+    let wasDrag = false;
 
     const onPointerDown = (e: PointerEvent) => {
-      drag = { x: e.clientX, y0: yawT };
-    };
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {}
+      pointerMap.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      isDraggingRef.current = true;
 
-    const onPointerUp = () => {
-      drag = null;
+      // Stop inertia immediately upon grab
+      orbitStateRef.current.yawVelocity = 0;
+      orbitStateRef.current.pitchVelocity = 0;
+      orbitStateRef.current.zoomVelocity = 0;
+      orbitStateRef.current.isRecentering = false;
+
+      if (pointerMap.size === 1) {
+        dragStartPos = { x: e.clientX, y: e.clientY };
+        maxDragDist = 0;
+        wasDrag = false;
+        lastPointerTime = performance.now();
+        lastPointerX = e.clientX;
+        currentVelocityX = 0;
+        prevPinchDist = null;
+        prevPinchCenterY = null;
+      } else if (pointerMap.size === 2) {
+        const pts = Array.from(pointerMap.values());
+        prevPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        prevPinchCenterY = (pts[0].y + pts[1].y) / 2;
+        maxDragDist = 999;
+        wasDrag = true;
+      }
     };
 
     const onPointerMove = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      if (drag && target === 1) {
-        yawT = Math.max(-0.6, Math.min(0.6, drag.y0 + (e.clientX - drag.x) / 300));
-      }
-      mv.set(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1
-      );
-      ray.setFromCamera(mv, cam);
-      const hits = ray.intersectObject(mesh);
-      const hit = hits[0];
-      hoverIndex = hit && hit.instanceId !== undefined ? hit.instanceId : -1;
 
-      if (hoverIndex >= 0 && enrichedDays[hoverIndex] && !enrichedDays[hoverIndex].isFuture) {
-        const containerRect = containerRef.current?.getBoundingClientRect();
-        setHoveredDay({
-          day: enrichedDays[hoverIndex],
-          x: e.clientX - (containerRect?.left || 0) + 14,
-          y: e.clientY - (containerRect?.top || 0) + 14,
-        });
+      if (pointerMap.has(e.pointerId)) {
+        const prev = pointerMap.get(e.pointerId)!;
+        pointerMap.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (dragStartPos) {
+          const dist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+          if (dist > maxDragDist) maxDragDist = dist;
+          if (maxDragDist > 5) wasDrag = true;
+        }
+
+        if (pointerMap.size === 1) {
+          const dx = e.clientX - prev.x;
+          const dy = e.clientY - prev.y;
+
+          const now = performance.now();
+          const dtMove = (now - lastPointerTime) / 1000;
+          if (dtMove > 0.005) {
+            const vx = (e.clientX - lastPointerX) / dtMove;
+            currentVelocityX = vx * 0.006;
+            lastPointerTime = now;
+            lastPointerX = e.clientX;
+          }
+
+          if (e.pointerType === 'touch') {
+            // Requirement 4: On mobile, 1-finger horizontal drag rotates yaw,
+            // while vertical scroll is handled natively via touch-action: pan-y.
+            orbitStateRef.current = applyDragMove(orbitStateRef.current, dx, 0);
+          } else {
+            // Desktop / pointer: horizontal rotates yaw, vertical adjusts pitch
+            orbitStateRef.current = applyDragMove(orbitStateRef.current, dx, dy);
+          }
+        } else if (pointerMap.size === 2) {
+          // Requirement 4: 2 fingers handle pinch-to-zoom and vertical pitch
+          const pts = Array.from(pointerMap.values());
+          const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          const newCenterY = (pts[0].y + pts[1].y) / 2;
+
+          if (prevPinchDist && prevPinchDist > 0) {
+            const zoomRatio = newDist / prevPinchDist;
+            orbitStateRef.current = applyZoom(orbitStateRef.current, zoomRatio);
+          }
+          if (prevPinchCenterY !== null) {
+            const dy = newCenterY - prevPinchCenterY;
+            orbitStateRef.current = applyDragMove(orbitStateRef.current, 0, dy);
+          }
+
+          prevPinchDist = newDist;
+          prevPinchCenterY = newCenterY;
+        }
+      }
+
+      // Raycasting when not dragging
+      if (!isDraggingRef.current) {
+        mv.set(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        ray.setFromCamera(mv, cam);
+        const hits = ray.intersectObject(mesh);
+        const hit = hits[0];
+        hoverIndex = hit && hit.instanceId !== undefined ? hit.instanceId : -1;
+
+        if (hoverIndex >= 0 && enrichedDays[hoverIndex] && !enrichedDays[hoverIndex].isFuture) {
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          setHoveredDay({
+            day: enrichedDays[hoverIndex],
+            x: e.clientX - (containerRect?.left || 0) + 14,
+            y: e.clientY - (containerRect?.top || 0) + 14,
+          });
+        } else {
+          setHoveredDay(null);
+        }
       } else {
+        hoverIndex = -1;
         setHoveredDay(null);
       }
     };
 
+    const onPointerUp = (e: PointerEvent) => {
+      pointerMap.delete(e.pointerId);
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {}
+
+      if (pointerMap.size === 0) {
+        isDraggingRef.current = false;
+        const elapsedSinceMove = performance.now() - lastPointerTime;
+        if (elapsedSinceMove < 80 && !reduceMotion) {
+          orbitStateRef.current.yawVelocity = currentVelocityX;
+        } else {
+          orbitStateRef.current.yawVelocity = 0;
+        }
+        dragStartPos = null;
+        prevPinchDist = null;
+        prevPinchCenterY = null;
+      } else if (pointerMap.size === 1) {
+        const remaining = Array.from(pointerMap.values())[0];
+        lastPointerTime = performance.now();
+        lastPointerX = remaining.x;
+        currentVelocityX = 0;
+        prevPinchDist = null;
+        prevPinchCenterY = null;
+      }
+    };
+
+    const onPointerCancel = (e: PointerEvent) => {
+      pointerMap.delete(e.pointerId);
+      if (pointerMap.size === 0) {
+        isDraggingRef.current = false;
+        orbitStateRef.current.yawVelocity = 0;
+        dragStartPos = null;
+        prevPinchDist = null;
+        prevPinchCenterY = null;
+      }
+    };
+
     const onPointerLeave = () => {
-      hoverIndex = -1;
-      setHoveredDay(null);
+      if (!isDraggingRef.current) {
+        hoverIndex = -1;
+        setHoveredDay(null);
+      }
     };
 
     const onClick = () => {
+      if (wasDrag) {
+        wasDrag = false;
+        return;
+      }
       if (
         hoverIndex >= 0 &&
         enrichedDays[hoverIndex] &&
@@ -537,20 +706,61 @@ export function TusDias({
       }
     };
 
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomDelta = Math.exp(-e.deltaY * 0.002);
+        orbitStateRef.current = applyZoom(orbitStateRef.current, zoomDelta);
+        orbitStateRef.current.isRecentering = false;
+      } else {
+        setShowWheelHint(true);
+        if (wheelHintTimeoutRef.current) {
+          clearTimeout(wheelHintTimeoutRef.current);
+        }
+        wheelHintTimeoutRef.current = setTimeout(() => {
+          setShowWheelHint(false);
+          wheelHintTimeoutRef.current = null;
+        }, 2000);
+      }
+    };
+
+    const onDoubleClick = (e: MouseEvent) => {
+      e.preventDefault();
+      orbitStateRef.current.isRecentering = true;
+      orbitStateRef.current.yawVelocity = 0;
+      orbitStateRef.current.pitchVelocity = 0;
+      orbitStateRef.current.zoomVelocity = 0;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
     canvas.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointercancel', onPointerCancel);
     canvas.addEventListener('pointerleave', onPointerLeave);
     canvas.addEventListener('click', onClick);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('dblclick', onDoubleClick);
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      resizeObserver.disconnect();
+      if (wheelHintTimeoutRef.current) clearTimeout(wheelHintTimeoutRef.current);
+      if (resizeObserver) resizeObserver.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('click', onClick);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('dblclick', onDoubleClick);
+      canvas.removeEventListener('touchmove', onTouchMove);
 
       geo.dispose();
       mat.dispose();
@@ -569,6 +779,41 @@ export function TusDias({
     palette,
     resolvedTheme,
   ]);
+
+  const onCanvasKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    let handled = false;
+    orbitStateRef.current.isRecentering = false;
+
+    if (e.key === 'ArrowLeft') {
+      orbitStateRef.current = applyDragMove(orbitStateRef.current, -25, 0);
+      handled = true;
+    } else if (e.key === 'ArrowRight') {
+      orbitStateRef.current = applyDragMove(orbitStateRef.current, 25, 0);
+      handled = true;
+    } else if (e.key === 'ArrowUp') {
+      orbitStateRef.current = applyDragMove(orbitStateRef.current, 0, -25);
+      handled = true;
+    } else if (e.key === 'ArrowDown') {
+      orbitStateRef.current = applyDragMove(orbitStateRef.current, 0, 25);
+      handled = true;
+    } else if (e.key === '+' || e.key === '=') {
+      orbitStateRef.current = applyZoom(orbitStateRef.current, 1.15);
+      handled = true;
+    } else if (e.key === '-' || e.key === '_') {
+      orbitStateRef.current = applyZoom(orbitStateRef.current, 1 / 1.15);
+      handled = true;
+    } else if (e.key === '0') {
+      orbitStateRef.current.isRecentering = true;
+      orbitStateRef.current.yawVelocity = 0;
+      orbitStateRef.current.pitchVelocity = 0;
+      orbitStateRef.current.zoomVelocity = 0;
+      handled = true;
+    }
+
+    if (handled) {
+      e.preventDefault();
+    }
+  };
 
   const handleCellClick = (day: DayDataWithFlags) => {
     if (day.isFuture) return;
@@ -754,7 +999,12 @@ export function TusDias({
         >
           <canvas
             ref={canvasRef}
-            className="w-full h-full cursor-crosshair block"
+            tabIndex={0}
+            role="region"
+            aria-label="Gráfico 3D interactivo de tus días. Usá flechas para rotar e inclinar, más y menos para zoom, cero para recentrar."
+            className="w-full h-full block touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-brand-start/50"
+            style={{ touchAction: 'pan-y', cursor: 'grab' }}
+            onKeyDown={onCanvasKeyDown}
             data-testid="tus-dias-3d-canvas"
           />
 
@@ -790,6 +1040,35 @@ export function TusDias({
               </div>
             )}
           </div>
+
+          {/* Wheel hint toast */}
+          {showWheelHint && (
+            <div
+              data-testid="tus-dias-wheel-hint"
+              className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-sheet-surface/90 dark:bg-zinc-900/90 backdrop-blur-md border border-glass-border shadow-md text-[12px] font-medium text-text-secondary pointer-events-none transition-opacity duration-200 z-20"
+            >
+              Usá Ctrl + rueda para acercar
+            </div>
+          )}
+
+          {/* Recentrar button */}
+          {canRecenter && (
+            <button
+              type="button"
+              data-testid="tus-dias-recenter-btn"
+              onClick={() => {
+                orbitStateRef.current.isRecentering = true;
+                orbitStateRef.current.yawVelocity = 0;
+                orbitStateRef.current.pitchVelocity = 0;
+                orbitStateRef.current.zoomVelocity = 0;
+              }}
+              className="absolute bottom-3 right-3 px-2.5 py-1.5 rounded-lg bg-sheet-surface/90 dark:bg-zinc-900/90 backdrop-blur-md border border-glass-border shadow-sm text-[12px] font-medium text-text-secondary hover:text-text-primary transition-all flex items-center gap-1.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start z-20"
+              title="Recentrar vista (o tecla 0)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Recentrar</span>
+            </button>
+          )}
         </div>
       )}
 
