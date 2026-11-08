@@ -258,6 +258,7 @@ class SyncController {
   int _lastPendingCount = 0;
   SyncState _currentState = const SyncState.off();
   int _connectionGeneration = 0;
+  Future<void> _authQueue = Future<void>.value();
 
   SyncController({
     required SyncDatabaseClient database,
@@ -278,6 +279,9 @@ class SyncController {
   /// Estado actual sincrónico.
   SyncState get currentSyncState => _currentState;
 
+  /// Sesión actual conocida por el controlador.
+  Session? get currentSession => _currentSession;
+
   /// Stream reactivo de cambios de estado.
   Stream<SyncState> get syncStateStream => _syncStateController.stream;
 
@@ -292,19 +296,23 @@ class SyncController {
       _reevaluateConnection();
     });
 
-    _authSub = authService.authStateChanges.listen((session) async {
-      final prevUserId = _currentSession?.user.id;
-      final newUserId = session?.user.id;
-      if (prevUserId != null && newUserId != null && prevUserId != newUserId) {
-        if (_isConnectingOrConnected) {
-          _isConnectingOrConnected = false;
-          try {
-            await _database.disconnect();
-          } catch (_) {}
+    _authSub = authService.authStateChanges.listen((session) {
+      _authQueue = _authQueue.then((_) async {
+        final prevUserId = _currentSession?.user.id;
+        final newUserId = session?.user.id;
+        if (prevUserId != null && newUserId != null && prevUserId != newUserId) {
+          if (_isConnectingOrConnected) {
+            _isConnectingOrConnected = false;
+            try {
+              await _database.disconnect();
+            } catch (_) {}
+          }
         }
-      }
-      _currentSession = session;
-      _reevaluateConnection();
+        _currentSession = session;
+        await _reevaluateConnection();
+      }).catchError((e) {
+        debugPrint('Error en authStateChange: $e');
+      });
     });
 
     settingsRepository.get(SettingsKeys.syncEnabled).then((val) {
@@ -381,6 +389,15 @@ class SyncController {
       } catch (e) {
         if (generation == _connectionGeneration) {
           debugPrint('Error al conectar PowerSync: $e');
+          _isConnectingOrConnected = false;
+          if (e is sync_owner.CrossAccountSyncException) {
+            _emitState(SyncState.error(
+              'Cambio de cuenta detectado. No se permite sincronizar con otra cuenta en la misma base local.',
+            ));
+          } else {
+            _emitState(SyncState.offline(_lastPendingCount));
+          }
+          return;
         }
       }
     }
@@ -414,8 +431,13 @@ class SyncController {
   }
 
   void _calculateAndEmitState() {
-    if (!_isConnectingOrConnected || !isSyncAvailable || _currentSession == null || !_syncEnabled) {
+    if (!isSyncAvailable || _currentSession == null || !_syncEnabled) {
       _emitState(const SyncState.off());
+      return;
+    }
+
+    if (!_isConnectingOrConnected) {
+      _emitState(SyncState.offline(_lastPendingCount));
       return;
     }
 

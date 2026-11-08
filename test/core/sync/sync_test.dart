@@ -96,12 +96,18 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
     pendingCountController.add(count);
   }
 
+  Object? connectError;
+  Completer<void>? disconnectCompleter;
+
   @override
   Future<void> connect({required ps.PowerSyncBackendConnector connector}) async {
     connectCallCount++;
     connectCalled = true;
     disconnectCalled = false;
     lastConnector = connector;
+    if (connectError != null) {
+      throw connectError!;
+    }
   }
 
   @override
@@ -109,6 +115,10 @@ class FakeSyncDatabaseClient implements SyncDatabaseClient {
     disconnectCallCount++;
     disconnectCalled = true;
     connectCalled = false;
+    final comp = disconnectCompleter;
+    if (comp != null) {
+      await comp.future;
+    }
   }
 
   @override
@@ -859,6 +869,98 @@ void main() {
       // Y la de user-other no se conectó porque la base es de user-123
       expect(fakeSyncDb.connectCalled, isFalse);
       expect(controller.currentSyncState, isA<SyncError>());
+    });
+
+    test('17) si connect() falla, _isConnectingOrConnected vuelve a false y la app reintenta al renovar la sesión', () async {
+      fakeSyncDb.connectError = Exception('Simulated network failure on connect');
+      when(() => mockAuth.currentSession).thenReturn(testSession);
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Intentó conectar una vez y falló
+      expect(fakeSyncDb.connectCallCount, equals(1));
+      expect(controller.currentSyncState, equals(const SyncState.offline(0)));
+
+      // Se recupera la red
+      fakeSyncDb.connectError = null;
+
+      // Se renueva la sesión (evento de tokenRefreshed o authStateChange)
+      authStateController.add(AuthState(AuthChangeEvent.tokenRefreshed, testSession));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Debe volver a intentar conectar y tener éxito
+      expect(fakeSyncDb.connectCallCount, equals(2));
+      expect(fakeSyncDb.connectCalled, isTrue);
+    });
+
+    test('18) callbacks rápidos de onAuthStateChange están serializados y un evento viejo no pisa _currentSession al reanudar', () async {
+      final userB = User(
+        id: 'user-b',
+        appMetadata: {},
+        userMetadata: {},
+        aud: 'authenticated',
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      final sessionB = Session(
+        accessToken: 'b-token',
+        tokenType: 'bearer',
+        user: userB,
+      );
+
+      // Inicia con sesión de usuario B
+      when(() => mockAuth.currentSession).thenReturn(sessionB);
+      await settingsRepo.set(SettingsKeys.syncEnabled, 'true');
+
+      final authService = AuthService(
+        client: mockSupabase,
+        googleSignIn: fakeGoogleSignIn,
+      );
+
+      final controller = SyncController(
+        database: fakeSyncDb,
+        connector: fakeConnector,
+        settingsRepository: settingsRepo,
+        authService: authService,
+        supabaseUrl: 'https://test.supabase.co',
+      );
+      addTearDown(controller.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(controller.currentSession?.user.id, equals('user-b'));
+
+      // Pausamos el disconnect que ocurrirá al cambiar a user-123
+      final disconnectComp = Completer<void>();
+      fakeSyncDb.disconnectCompleter = disconnectComp;
+
+      // Emitimos evento 1: cambio a user-123 -> desencadena await _database.disconnect()
+      authStateController.add(AuthState(AuthChangeEvent.signedIn, testSession));
+
+      // Inmediatamente emitimos evento 2: logout (session = null)
+      authStateController.add(const AuthState(AuthChangeEvent.signedOut, null));
+
+      // Dejamos que el microtask procese el evento 2 mientras evento 1 está bloqueado en disconnect
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Ahora liberamos el disconnect del evento 1
+      disconnectComp.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      // El estado final de la sesión DEBE ser null (logout), NO testSession
+      expect(controller.currentSession, isNull);
     });
   });
 }
