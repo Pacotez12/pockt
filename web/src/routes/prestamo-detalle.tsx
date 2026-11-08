@@ -122,14 +122,13 @@ export function PrestamoDetalleRoute() {
     }
   }, [loan]);
 
-  const { progress, effSchedule, nextAmount, totalInstallments, intereses } = useMemo(() => {
+  const { progress, effSchedule, nextAmount, totalInstallments } = useMemo(() => {
     if (!loan) {
       return {
         progress: null,
         effSchedule: [],
         nextAmount: null,
         totalInstallments: null,
-        intereses: 0,
       };
     }
 
@@ -182,18 +181,11 @@ export function PrestamoDetalleRoute() {
 
     const totalCount = effective.length > 0 ? effective.length : (loan.installments_total ?? null);
 
-    const totalScheduleAmount = effective.length > 0
-      ? effective.reduce((s, i) => s + i.amount, 0)
-      : (loan.installment_amount && loan.installments_total ? loan.installment_amount * loan.installments_total : 0);
-
-    const calcIntereses = Math.max(0, totalScheduleAmount - loan.total_amount);
-
     return {
       progress: calculatedProgress,
       effSchedule: effective,
       nextAmount: calculatedNextAmount,
       totalInstallments: totalCount,
-      intereses: calcIntereses,
     };
   }, [loan, installmentRows, paymentRows]);
 
@@ -202,8 +194,7 @@ export function PrestamoDetalleRoute() {
       <div className="space-y-6">
         <Skeleton className="w-48 h-6 rounded-lg" />
         <Skeleton className="w-72 h-10 rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-32 rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Skeleton className="h-32 rounded-2xl" />
           <Skeleton className="h-32 rounded-2xl" />
           <Skeleton className="h-32 rounded-2xl" />
@@ -321,8 +312,8 @@ export function PrestamoDetalleRoute() {
         </div>
       </div>
 
-      {/* 4 KPIs grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3 KPIs grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* KPI 1: Saldo pendiente */}
         <div
           className="p-5 rounded-2xl border"
@@ -332,7 +323,7 @@ export function PrestamoDetalleRoute() {
           }}
         >
           <div className="text-xs font-semibold text-text-secondary">Saldo pendiente</div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2 whitespace-nowrap">
             <CountUp value={progress.balance} formatter={formatGs} />
           </div>
           {/* Barra de progreso con resorte */}
@@ -361,7 +352,7 @@ export function PrestamoDetalleRoute() {
         {/* KPI 2: Próxima cuota */}
         <div className="p-5 rounded-2xl bg-glass-fill border border-glass-border">
           <div className="text-xs font-semibold text-text-secondary">Próxima cuota</div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2 whitespace-nowrap">
             {nextAmount != null ? <CountUp value={nextAmount} formatter={formatGs} /> : '—'}
           </div>
           <div className="text-xs text-text-tertiary mt-2">
@@ -371,19 +362,10 @@ export function PrestamoDetalleRoute() {
           </div>
         </div>
 
-        {/* KPI 3: Intereses del préstamo */}
-        <div className="p-5 rounded-2xl bg-glass-fill border border-glass-border">
-          <div className="text-xs font-semibold text-text-secondary">Intereses del préstamo</div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
-            <CountUp value={intereses} formatter={formatGs} />
-          </div>
-          <div className="text-xs text-text-tertiary mt-2">total menos capital</div>
-        </div>
-
-        {/* KPI 4: Fin */}
+        {/* KPI 3: Fin */}
         <div className="p-5 rounded-2xl bg-glass-fill border border-glass-border">
           <div className="text-xs font-semibold text-text-secondary">Fin</div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mt-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mt-2 whitespace-nowrap">
             {progress.estimatedEndDate ? formatMonthYear(progress.estimatedEndDate) : '—'}
           </div>
           <div className="text-xs text-text-tertiary mt-2">sin adelantos</div>

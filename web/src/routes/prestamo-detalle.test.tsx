@@ -78,7 +78,7 @@ describe('PrestamoDetalleRoute', () => {
     expect(screen.getAllByText('Préstamo banco').length).toBeGreaterThan(0);
   });
 
-  it('renders 4 KPIs: Saldo pendiente, Próxima cuota, Intereses del préstamo, Fin', () => {
+  it('renders 3 KPIs (Saldo pendiente, Próxima cuota, Fin) and does NOT show Intereses del préstamo', () => {
     vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
       if (sql.includes('FROM loans WHERE id =')) {
         return { data: [mockLoan], isLoading: false } as any;
@@ -102,7 +102,7 @@ describe('PrestamoDetalleRoute', () => {
 
     expect(screen.getByText('Saldo pendiente')).toBeInTheDocument();
     expect(screen.getByText('Próxima cuota')).toBeInTheDocument();
-    expect(screen.getByText('Intereses del préstamo')).toBeInTheDocument();
+    expect(screen.queryByText('Intereses del préstamo')).not.toBeInTheDocument();
     expect(screen.getByText('Fin')).toBeInTheDocument();
   });
 

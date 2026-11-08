@@ -202,9 +202,11 @@ export function PresupuestosRoute() {
             </span>
           </div>
 
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
-            <CountUp value={totalSpent} formatter={formatGs} />
-            <span className="text-sm font-semibold text-text-tertiary ml-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="whitespace-nowrap">
+              <CountUp value={totalSpent} formatter={formatGs} />
+            </span>
+            <span className="text-sm font-semibold text-text-tertiary whitespace-nowrap">
               de Gs. {formatThousands(totalLimit)}
             </span>
           </div>
@@ -276,11 +278,11 @@ export function PresupuestosRoute() {
                     </div>
 
                     {/* Montos */}
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-text-primary tabular-nums">
+                    <div className="mt-3 flex flex-wrap items-baseline gap-2">
+                      <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-text-primary tabular-nums whitespace-nowrap">
                         <CountUp value={spent} formatter={formatGs} />
                       </span>
-                      <span className="text-xs font-semibold text-text-tertiary">
+                      <span className="text-xs font-semibold text-text-tertiary whitespace-nowrap">
                         de Gs. {formatThousands(budget.monthly_limit)}
                       </span>
                     </div>

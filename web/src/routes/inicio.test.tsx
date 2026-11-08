@@ -327,4 +327,55 @@ describe('InicioRoute', () => {
     expect(screen.getByText(/200\.000/)).toBeInTheDocument();
     expect(screen.getByText(/85\.000/)).toBeInTheDocument();
   });
+
+  it('renders month indicator as a plain label without button border or background, and renders recent movements amounts with whitespace-nowrap', async () => {
+    const now = new Date();
+    const nowSec = Math.floor(now.getTime() / 1000);
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('LIMIT 5') && sql.includes('transactions')) {
+        return {
+          data: [
+            {
+              id: 'tx-1',
+              type: 'expense',
+              amount: 424597,
+              merchant: 'Superseis Los Laureles Gran Asunción',
+              category_id: 'c-comida',
+              category_name: 'Comida',
+              color_dark: 0xffe4a067,
+              occurred_at: nowSec,
+            },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      return { data: [], isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    // Month label should not have button-like classes
+    const monthSpans = screen.getAllByText(
+      new RegExp(now.toLocaleDateString('es-PY', { month: 'long' }), 'i')
+    );
+    const headerMonth = monthSpans.find((el) => el.closest('.inline-flex')?.querySelector('svg'));
+    expect(headerMonth).toBeDefined();
+    const pill = headerMonth!.closest('.inline-flex')!;
+    expect(pill.className).not.toContain('bg-glass-fill');
+    expect(pill.className).not.toContain('border-glass-border');
+
+    // Recent movements amount cell should have whitespace-nowrap and shrink-0
+    const amountCell = await screen.findByText(/424\.597/);
+    expect(amountCell.className).toContain('whitespace-nowrap');
+    expect(amountCell.className).toContain('shrink-0');
+
+    // Description text should be truncated
+    const descSpan = screen.getByText('Superseis Los Laureles Gran Asunción');
+    expect(descSpan.className).toContain('truncate');
+  });
 });

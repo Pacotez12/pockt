@@ -275,7 +275,7 @@ export function PrestamosRoute() {
           {/* Saldo pendiente */}
           <div className="mt-4">
             <div className="text-xs text-text-tertiary">Saldo pendiente</div>
-            <div className="text-2xl font-extrabold tracking-tight text-text-primary tabular-nums mt-0.5">
+            <div className="text-2xl font-extrabold tracking-tight text-text-primary tabular-nums mt-0.5 whitespace-nowrap">
               <CountUp value={progress.balance} formatter={formatGs} />
             </div>
           </div>
@@ -305,7 +305,7 @@ export function PrestamosRoute() {
                 : `${progress.installmentsPaid} pagadas · ${percentInt}%`}
             </span>
             {nextAmount != null && progress.nextDueDate && (
-              <span className="font-medium text-text-primary">
+              <span className="font-medium text-text-primary whitespace-nowrap shrink-0">
                 Próxima: Gs. {formatThousands(nextAmount)} · vence {formatDateShort(progress.nextDueDate)}
               </span>
             )}
@@ -342,7 +342,7 @@ export function PrestamosRoute() {
             <ArrowUpRight className="w-4 h-4 text-danger" />
             <span>Debés</span>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2 whitespace-nowrap">
             <CountUp value={totalOwe} formatter={formatGs} />
           </div>
           <div className="text-xs text-text-tertiary mt-1">
@@ -355,7 +355,7 @@ export function PrestamosRoute() {
             <ArrowDownLeft className="w-4 h-4 text-positive" />
             <span>Te deben</span>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2">
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary tabular-nums mt-2 whitespace-nowrap">
             <CountUp value={totalLent} formatter={formatGs} />
           </div>
           <div className="text-xs text-text-tertiary mt-1">

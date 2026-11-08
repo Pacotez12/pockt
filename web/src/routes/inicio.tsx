@@ -515,7 +515,7 @@ export function InicioRoute() {
         <h1 className="text-[26px] sm:text-[28px] font-extrabold tracking-tight text-text-primary">
           {monthLabel}
         </h1>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-glass-fill border border-glass-border text-[12.5px] font-medium text-text-secondary">
+        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
           <Calendar className="w-3.5 h-3.5 text-text-tertiary" />
           {shortMonth}
         </span>
@@ -541,7 +541,7 @@ export function InicioRoute() {
             <div className="text-[12.5px] font-medium text-text-secondary">
               Gastado en {shortMonth.toLowerCase()}
             </div>
-            <div className="text-[32px] sm:text-[34px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+            <div className="text-[32px] sm:text-[34px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums whitespace-nowrap">
               <CountUp value={totalSpent} />
             </div>
             <div className="text-[12px] font-medium text-pos mt-1">
@@ -570,7 +570,7 @@ export function InicioRoute() {
             className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
           >
             <div className="text-[12.5px] font-medium text-text-secondary">Ingresos</div>
-            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums whitespace-nowrap">
               <CountUp value={totalIncome} />
             </div>
             <div className="text-[12px] text-text-tertiary mt-1">
@@ -587,7 +587,7 @@ export function InicioRoute() {
             className="rounded-2xl p-5 border border-glass-border bg-glass-fill shadow-sm backdrop-blur-md"
           >
             <div className="text-[12.5px] font-medium text-text-secondary">Ahorrado en metas</div>
-            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums">
+            <div className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-text-primary mt-1.5 tabular-nums whitespace-nowrap">
               <CountUp value={totalSaved} />
             </div>
             <div className="text-[12px] text-text-tertiary mt-1">
@@ -812,19 +812,19 @@ export function InicioRoute() {
                         onClick={() => setSelectedTx(tx)}
                         className="hover:bg-glass-hover cursor-pointer border-b border-glass-border/40 last:border-0 transition-colors"
                       >
-                        <td className="py-2.5 pr-2">
-                          <span className="flex items-center gap-2 font-medium text-text-primary">
+                        <td className="py-2.5 pr-2 min-w-0 max-w-[130px] sm:max-w-none">
+                          <span className="flex items-center gap-2 font-medium text-text-primary min-w-0">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="truncate max-w-[180px]">{tx.merchant || tx.note || tx.category_name || 'Movimiento'}</span>
+                            <span className="truncate min-w-0 flex-1">{tx.merchant || tx.note || tx.category_name || 'Movimiento'}</span>
                           </span>
                         </td>
                         <td className="py-2.5 px-2 text-text-tertiary hidden sm:table-cell">
                           {tx.category_name ?? 'General'}
                         </td>
-                        <td className="py-2.5 px-2 text-text-tertiary">
+                        <td className="py-2.5 px-2 text-text-tertiary whitespace-nowrap shrink-0">
                           {timeStr}
                         </td>
-                        <td className="py-2.5 pl-2 text-right tabular-nums font-semibold text-text-primary">
+                        <td className="py-2.5 pl-2 text-right tabular-nums font-semibold text-text-primary whitespace-nowrap shrink-0">
                           {isExpense ? `−${formatGs(tx.amount)}` : `+${formatGs(tx.amount)}`}
                         </td>
                       </tr>
@@ -857,8 +857,8 @@ export function InicioRoute() {
                   <div key={item.id} className="flex items-center justify-between text-[13px] gap-2">
                     <span className="text-text-primary truncate min-w-0 flex-1">{item.title}</span>
                     <div className="flex items-center gap-2.5 shrink-0 tabular-nums">
-                      <span className="font-semibold text-text-primary">{formatGs(item.amount)}</span>
-                      <span className="text-text-tertiary text-[12px] font-medium">{item.dateStr}</span>
+                      <span className="font-semibold text-text-primary whitespace-nowrap shrink-0">{formatGs(item.amount)}</span>
+                      <span className="text-text-tertiary text-[12px] font-medium whitespace-nowrap shrink-0">{item.dateStr}</span>
                     </div>
                   </div>
                 ))}

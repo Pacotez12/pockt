@@ -33,11 +33,19 @@ export function MovementFiltersBar({
   onExportCsv,
   onExportXlsx,
 }: MovementFiltersBarProps) {
-  const [downloadOpen, setDownloadOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [periodOpen, setPeriodOpen] = useState(false);
-  const [originOpen, setOriginOpen] = useState(false);
+  type OpenPopover = 'download' | 'category' | 'type' | 'period' | 'origin' | null;
+  const [openPopover, setOpenPopover] = useState<OpenPopover>(null);
+
+  const downloadOpen = openPopover === 'download';
+  const categoryOpen = openPopover === 'category';
+  const typeOpen = openPopover === 'type';
+  const periodOpen = openPopover === 'period';
+  const originOpen = openPopover === 'origin';
+
+  const togglePopover = (p: OpenPopover) => {
+    setOpenPopover((curr) => (curr === p ? null : p));
+  };
+  const closePopover = () => setOpenPopover(null);
 
   const downloadRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
@@ -45,27 +53,34 @@ export function MovementFiltersBar({
   const periodRef = useRef<HTMLDivElement>(null);
   const originRef = useRef<HTMLDivElement>(null);
 
-  // Close menus when clicking outside
+  // Close menus when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (downloadRef.current && !downloadRef.current.contains(e.target as Node)) {
-        setDownloadOpen(false);
+      const target = e.target as Node;
+      if (
+        (downloadRef.current && downloadRef.current.contains(target)) ||
+        (categoryRef.current && categoryRef.current.contains(target)) ||
+        (typeRef.current && typeRef.current.contains(target)) ||
+        (periodRef.current && periodRef.current.contains(target)) ||
+        (originRef.current && originRef.current.contains(target))
+      ) {
+        return;
       }
-      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
-        setCategoryOpen(false);
-      }
-      if (typeRef.current && !typeRef.current.contains(e.target as Node)) {
-        setTypeOpen(false);
-      }
-      if (periodRef.current && !periodRef.current.contains(e.target as Node)) {
-        setPeriodOpen(false);
-      }
-      if (originRef.current && !originRef.current.contains(e.target as Node)) {
-        setOriginOpen(false);
+      setOpenPopover(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpenPopover(null);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const hasActiveFilters =
@@ -104,7 +119,7 @@ export function MovementFiltersBar({
         <div className="relative" ref={periodRef}>
           <button
             type="button"
-            onClick={() => setPeriodOpen(!periodOpen)}
+            onClick={() => togglePopover('period')}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.period && filters.period !== 'this_month'
@@ -144,7 +159,7 @@ export function MovementFiltersBar({
                   type="button"
                   onClick={() => {
                     onFiltersChange({ ...filters, period: p.id as any });
-                    setPeriodOpen(false);
+                    closePopover();
                   }}
                   className={cn(
                     'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
@@ -164,7 +179,7 @@ export function MovementFiltersBar({
         <div className="relative" ref={categoryRef}>
           <button
             type="button"
-            onClick={() => setCategoryOpen(!categoryOpen)}
+            onClick={() => togglePopover('category')}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.categoryId
@@ -184,7 +199,7 @@ export function MovementFiltersBar({
                 type="button"
                 onClick={() => {
                   onFiltersChange({ ...filters, categoryId: undefined });
-                  setCategoryOpen(false);
+                  closePopover();
                 }}
                 className={cn(
                   'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
@@ -201,7 +216,7 @@ export function MovementFiltersBar({
                   type="button"
                   onClick={() => {
                     onFiltersChange({ ...filters, categoryId: cat.id });
-                    setCategoryOpen(false);
+                    closePopover();
                   }}
                   className={cn(
                     'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors truncate',
@@ -221,7 +236,7 @@ export function MovementFiltersBar({
         <div className="relative" ref={typeRef}>
           <button
             type="button"
-            onClick={() => setTypeOpen(!typeOpen)}
+            onClick={() => togglePopover('type')}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.type
@@ -256,7 +271,7 @@ export function MovementFiltersBar({
                   type="button"
                   onClick={() => {
                     onFiltersChange({ ...filters, type: t.id as any });
-                    setTypeOpen(false);
+                    closePopover();
                   }}
                   className={cn(
                     'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
@@ -276,7 +291,7 @@ export function MovementFiltersBar({
         <div className="relative" ref={originRef}>
           <button
             type="button"
-            onClick={() => setOriginOpen(!originOpen)}
+            onClick={() => togglePopover('origin')}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.source
@@ -314,7 +329,7 @@ export function MovementFiltersBar({
                   type="button"
                   onClick={() => {
                     onFiltersChange({ ...filters, source: o.id as any });
-                    setOriginOpen(false);
+                    closePopover();
                   }}
                   className={cn(
                     'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
@@ -346,7 +361,7 @@ export function MovementFiltersBar({
       <div className="relative" ref={downloadRef}>
         <button
           type="button"
-          onClick={() => setDownloadOpen(!downloadOpen)}
+          onClick={() => togglePopover('download')}
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-white/5 border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -361,7 +376,7 @@ export function MovementFiltersBar({
               type="button"
               onClick={() => {
                 onExportCsv();
-                setDownloadOpen(false);
+                closePopover();
               }}
               className="w-full text-left px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
             >
@@ -375,7 +390,7 @@ export function MovementFiltersBar({
               type="button"
               onClick={() => {
                 onExportXlsx();
-                setDownloadOpen(false);
+                closePopover();
               }}
               className="w-full text-left px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
             >

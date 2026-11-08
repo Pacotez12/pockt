@@ -155,17 +155,17 @@ export function DayDetailPanel({
                 </h2>
                 <div className="flex items-center gap-3 text-[12.5px] font-medium tabular-nums mt-1 flex-wrap">
                   {totalSpent > 0 && (
-                    <span className="text-text-secondary">
+                    <span className="text-text-secondary whitespace-nowrap">
                       Salieron:{' '}
-                      <span className="font-semibold text-text-primary">
+                      <span className="font-semibold text-text-primary whitespace-nowrap">
                         {formatGs(-totalSpent)}
                       </span>
                     </span>
                   )}
                   {totalEarned > 0 && (
-                    <span className="text-text-secondary">
+                    <span className="text-text-secondary whitespace-nowrap">
                       Entraron:{' '}
-                      <span className="font-semibold text-positive">
+                      <span className="font-semibold text-positive whitespace-nowrap">
                         {formatGs(totalEarned, { explicitSign: true })}
                       </span>
                     </span>

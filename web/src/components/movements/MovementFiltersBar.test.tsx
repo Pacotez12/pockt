@@ -67,4 +67,61 @@ describe('MovementFiltersBar', () => {
     fireEvent.click(clearBtn);
     expect(onClear).toHaveBeenCalled();
   });
+
+  it('keeps only one popover open at a time, closing previous popovers', () => {
+    render(
+      <MovementFiltersBar
+        search=""
+        onSearchChange={vi.fn()}
+        filters={{}}
+        onFiltersChange={vi.fn()}
+        categories={mockCategories as any}
+        onExportCsv={vi.fn()}
+        onExportXlsx={vi.fn()}
+      />
+    );
+
+    const catBtn = screen.getByRole('button', { name: /Categoría/i });
+    const typeBtn = screen.getByRole('button', { name: /Tipo/i });
+
+    // Open category popover
+    fireEvent.click(catBtn);
+    expect(screen.getByText('Comida')).toBeInTheDocument();
+
+    // Now open type popover - category should close
+    fireEvent.click(typeBtn);
+    expect(screen.queryByText('Comida')).not.toBeInTheDocument();
+    expect(screen.getByText('Gastos')).toBeInTheDocument();
+  });
+
+  it('closes open popover on Escape key and on clicking outside', () => {
+    render(
+      <MovementFiltersBar
+        search=""
+        onSearchChange={vi.fn()}
+        filters={{}}
+        onFiltersChange={vi.fn()}
+        categories={mockCategories as any}
+        onExportCsv={vi.fn()}
+        onExportXlsx={vi.fn()}
+      />
+    );
+
+    const catBtn = screen.getByRole('button', { name: /Categoría/i });
+
+    // Open popover
+    fireEvent.click(catBtn);
+    expect(screen.getByText('Comida')).toBeInTheDocument();
+
+    // Press Escape
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByText('Comida')).not.toBeInTheDocument();
+
+    // Open again and click outside
+    fireEvent.click(catBtn);
+    expect(screen.getByText('Comida')).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('Comida')).not.toBeInTheDocument();
+  });
 });

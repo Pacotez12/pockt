@@ -319,4 +319,39 @@ describe('ReportesRoute', () => {
       expect(screen.getByText('Editar movimiento')).toBeInTheDocument();
     });
   });
+
+  it('triggers PDF download with name pockt-resumen-<periodo>.pdf when clicking Resumen · PDF', async () => {
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('transactions')) {
+        return { data: sampleTxs, isLoading: false, error: undefined } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    const createObjectURLMock = vi.fn().mockReturnValue('blob:test-pdf');
+    const revokeObjectURLMock = vi.fn();
+    window.URL.createObjectURL = createObjectURLMock;
+    window.URL.revokeObjectURL = revokeObjectURLMock;
+
+    let clickedFilename = '';
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clickedFilename = this.download;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    const pdfBtn = screen.getByRole('button', { name: /Resumen · PDF/i });
+    fireEvent.click(pdfBtn);
+
+    await waitFor(() => {
+      expect(clickSpy).toHaveBeenCalled();
+    });
+
+    expect(clickedFilename).toMatch(/^pockt-resumen-.*\.pdf$/);
+    clickSpy.mockRestore();
+  });
 });

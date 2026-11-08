@@ -458,7 +458,8 @@ export function ReportesRoute() {
           topMerchants: antExpenses.topMerchants,
         },
       };
-      await generateReportPdf(pdfData);
+      const blob = await generateReportPdf(pdfData);
+      downloadBlob(blob, `pockt-resumen-${periodLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`);
     } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
