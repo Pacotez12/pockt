@@ -226,9 +226,9 @@ describe('ReportesRoute', () => {
       </MemoryRouter>
     );
 
-    // TusDias header has periodLabel "Gastado en últimos 6 meses" and total 4.000.000
+    // TusDias header has dynamic title "Gastado desde el ..." and total 4.000.000
     await waitFor(() => {
-      expect(screen.getByText('Gastado en últimos 6 meses')).toBeInTheDocument();
+      expect(screen.getByText(/Gastado desde el/i)).toBeInTheDocument();
       // Should find Gs. 4.000.000 in TusDias container
       const container = screen.getByTestId('tus-dias-container');
       expect(container).toHaveTextContent(/4\.000\.000/);
@@ -294,7 +294,7 @@ describe('ReportesRoute', () => {
     const dateKey = `${y}-${m}-${d}`;
 
     // Get the day cell in TusDias matching today's date
-    const todayCell = document.querySelector(`rect[data-date="${dateKey}"]`);
+    const todayCell = document.querySelector(`[data-date="${dateKey}"]`);
     expect(todayCell).toBeInTheDocument();
 
     fireEvent.click(todayCell!);

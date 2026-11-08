@@ -2,26 +2,58 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { formatGs } from '@/lib/format';
 import { heatLevels } from '@/lib/calc/heat_levels';
+import {
+  computeTusDiasWindow,
+  computeTusDiasStats,
+  type DailyDataPoint,
+  type DayDataWithFlags,
+} from '@/lib/calc/tus_dias_stats';
 import { useTheme } from '@/lib/theme';
+import { CountUp } from '@/components/CountUp';
 
-export interface DayData {
-  date: Date;
-  amount: number;
-  txCount: number;
-  topMerchant?: string;
-  level?: number;
-}
+export type DayData = DailyDataPoint;
 
 export interface TusDiasProps {
   days: DayData[];
   periodLabel?: string;
   totalAmount?: number;
+  referenceDate?: Date;
   onSelectDay?: (day: DayData) => void;
   className?: string;
 }
 
 export const HEAT_PALETTE_DARK = ['#1a1a1d', '#55263A', '#94344D', '#DA534F', '#FF3D7F'];
 export const HEAT_PALETTE_LIGHT = ['#E8E8E9', '#FFE0DA', '#FFBDB7', '#F98E8F', '#FF3D7F'];
+
+const MONTH_NAMES = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'setiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+const MONTH_SHORT = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'oct',
+  'nov',
+  'dic',
+];
 
 function isWebGLAvailable(): boolean {
   if (typeof window === 'undefined') return false;
@@ -36,20 +68,79 @@ function isWebGLAvailable(): boolean {
   }
 }
 
+function createTextSprite(text: string, color: string): THREE.Sprite {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.font = 'bold 26px Inter, sans-serif';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 64, 32);
+  }
+  const texture = new THREE.CanvasTexture(c);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(1.6, 0.8, 1);
+  return sprite;
+}
+
+function createAmountBadgeSprite(text: string, bgColor: string, textColor: string): THREE.Sprite {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.arc(24, 32, 20, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(232, 32, 20, Math.PI * 1.5, Math.PI * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = 'bold 22px Inter, sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 33);
+  }
+  const texture = new THREE.CanvasTexture(c);
+  const spriteMat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(2.4, 0.6, 1);
+  return sprite;
+}
+
 export function TusDias({
   days,
-  periodLabel = 'Gastado en 6 meses',
+  periodLabel,
   totalAmount,
+  referenceDate,
   onSelectDay,
   className = '',
 }: TusDiasProps) {
-  const { resolvedTheme } = useTheme();
+  const themeContext = useTheme();
+  const isLight =
+    themeContext?.resolvedTheme === 'light' ||
+    (typeof document !== 'undefined' &&
+      document.documentElement.classList.contains('light'));
+  const resolvedTheme: 'light' | 'dark' = isLight ? 'light' : 'dark';
   const palette = resolvedTheme === 'light' ? HEAT_PALETTE_LIGHT : HEAT_PALETTE_DARK;
 
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
   const [hoveredDay, setHoveredDay] = useState<{
-    day: DayData;
+    day: DayDataWithFlags;
     x: number;
     y: number;
   } | null>(null);
@@ -60,20 +151,86 @@ export function TusDias({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Compute levels using heatLevels calculation
-  const enrichedDays = useMemo(() => {
-    const amounts = days.map((d) => d.amount);
+  // Compute adaptive window
+  const windowData = useMemo(() => {
+    return computeTusDiasWindow({
+      dataPoints: days,
+      referenceDate,
+    });
+  }, [days, referenceDate]);
+
+  // Compute stats on the window
+  const stats = useMemo(() => {
+    return computeTusDiasStats({
+      days: windowData.days,
+      today: referenceDate,
+    });
+  }, [windowData.days, referenceDate]);
+
+  // Compute levels using heatLevels calculation on window days
+  const enrichedDays = useMemo<DayDataWithFlags[]>(() => {
+    const amounts = windowData.days.map((d) => d.amount);
     const levels = heatLevels(amounts);
-    return days.map((d, i) => ({
+    return windowData.days.map((d, i) => ({
       ...d,
       level: levels.get(i) ?? 0,
     }));
-  }, [days]);
+  }, [windowData.days]);
 
   const computedTotal = useMemo(() => {
     if (typeof totalAmount === 'number') return totalAmount;
-    return days.reduce((sum, d) => sum + d.amount, 0);
-  }, [days, totalAmount]);
+    return stats.totalSpent;
+  }, [stats.totalSpent, totalAmount]);
+
+  // Title: "Gastado desde el <fecha>"
+  const dynamicTitle = useMemo(() => {
+    if (periodLabel && !periodLabel.includes('últimos 6 meses') && !periodLabel.includes('en 6 meses')) {
+      return periodLabel;
+    }
+    const d = stats.startDate;
+    const monthStr = MONTH_NAMES[d.getMonth()] || '';
+    return `Gastado desde el ${d.getDate()} de ${monthStr}`;
+  }, [periodLabel, stats.startDate]);
+
+  // Weeks breakdown (7 days each)
+  const weeks = useMemo<DayDataWithFlags[][]>(() => {
+    const result: DayDataWithFlags[][] = [];
+    for (let i = 0; i < enrichedDays.length; i += 7) {
+      result.push(enrichedDays.slice(i, i + 7));
+    }
+    return result;
+  }, [enrichedDays]);
+
+  // First week of each month to display month labels
+  const monthLabelsByWeek = useMemo(() => {
+    const labels: (string | null)[] = [];
+    let lastMonth = -1;
+
+    for (let w = 0; w < weeks.length; w++) {
+      const week = weeks[w];
+      if (!week || week.length === 0) {
+        labels.push(null);
+        continue;
+      }
+      // Check the month of the first day or middle day of the week
+      const currentMonth = week[0].date.getMonth();
+      if (w === 0) {
+        labels.push(MONTH_SHORT[currentMonth]);
+        lastMonth = currentMonth;
+      } else {
+        // Did a month transition happen in this week?
+        const transitionDay = week.find((d) => d.date.getMonth() !== lastMonth);
+        if (transitionDay) {
+          const newMonth = transitionDay.date.getMonth();
+          labels.push(MONTH_SHORT[newMonth]);
+          lastMonth = newMonth;
+        } else {
+          labels.push(null);
+        }
+      }
+    }
+    return labels;
+  }, [weeks]);
 
   useEffect(() => {
     setWebGLSupported(isWebGLAvailable());
@@ -107,16 +264,16 @@ export function TusDias({
 
     const scene = new THREE.Scene();
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
     const dl = new THREE.DirectionalLight(0xffffff, 1.6);
     dl.position.set(-12, 30, 18);
     scene.add(dl);
 
     const totalDays = enrichedDays.length;
-    const W = Math.ceil(totalDays / 7);
+    const W = weeks.length;
     const D = 7;
 
-    const geo = new THREE.CylinderGeometry(0.4, 0.4, 1, 24);
+    const geo = new THREE.CylinderGeometry(0.38, 0.38, 1, 24);
     geo.translate(0, 0.5, 0);
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.05 });
     const mesh = new THREE.InstancedMesh(geo, mat, totalDays);
@@ -124,10 +281,50 @@ export function TusDias({
 
     const threePalette = palette.map((c) => new THREE.Color(c));
     for (let i = 0; i < totalDays; i++) {
-      const lvl = enrichedDays[i]?.level ?? 0;
-      mesh.setColorAt(i, threePalette[lvl]);
+      const d = enrichedDays[i];
+      if (d?.isFuture) {
+        mesh.setColorAt(i, new THREE.Color(resolvedTheme === 'light' ? 0xe0e0e0 : 0x222226));
+      } else {
+        const lvl = d?.level ?? 0;
+        mesh.setColorAt(i, threePalette[lvl]);
+      }
     }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+    // Floor Month Sprites
+    const spritesToDispose: THREE.Sprite[] = [];
+    monthLabelsByWeek.forEach((lbl, w) => {
+      if (lbl) {
+        const sprite = createTextSprite(
+          lbl,
+          resolvedTheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.5)'
+        );
+        sprite.position.set(w - (W - 1) / 2, 0.02, -(D - 1) / 2 - 0.9);
+        scene.add(sprite);
+        spritesToDispose.push(sprite);
+      }
+    });
+
+    // Tallest building badge
+    let maxIdx = -1;
+    let maxAmt = 0;
+    for (let i = 0; i < totalDays; i++) {
+      if (!enrichedDays[i].isFuture && enrichedDays[i].amount > maxAmt) {
+        maxAmt = enrichedDays[i].amount;
+        maxIdx = i;
+      }
+    }
+
+    let badgeSprite: THREE.Sprite | null = null;
+    if (maxIdx >= 0 && maxAmt > 0) {
+      badgeSprite = createAmountBadgeSprite(
+        formatGs(maxAmt),
+        '#18181b',
+        '#FF8A3D'
+      );
+      scene.add(badgeSprite);
+      spritesToDispose.push(badgeSprite);
+    }
 
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
@@ -145,7 +342,7 @@ export function TusDias({
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const maxAmt = Math.max(...enrichedDays.map((d) => d.amount), 1);
+    const maxAmtRef = Math.max(...enrichedDays.map((d) => d.amount), 1);
 
     function updateLayout() {
       const h = k;
@@ -153,11 +350,23 @@ export function TusDias({
         const e = enrichedDays[i];
         const w = Math.floor(i / 7);
         const d = i % 7;
-        const ht = 0.06 + h * ((e.amount / maxAmt) * 7 + 0.05) + (i === hoverIndex ? 0.25 * h : 0);
+        const isHovered = i === hoverIndex;
+
+        let ht: number;
+        if (e.isFuture) {
+          ht = 0.04;
+        } else {
+          ht = 0.06 + h * ((e.amount / maxAmtRef) * 6.5 + 0.05) + (isHovered ? 0.25 * h : 0);
+        }
+
         p.set(w - (W - 1) / 2, 0, d - (D - 1) / 2);
-        s.set(i === hoverIndex ? 1.12 : 1, ht, i === hoverIndex ? 1.12 : 1);
+        s.set(isHovered ? 1.15 : 1, ht, isHovered ? 1.15 : 1);
         m.compose(p, q, s);
         mesh.setMatrixAt(i, m);
+
+        if (i === maxIdx && badgeSprite) {
+          badgeSprite.position.set(p.x, ht + 0.55, p.z);
+        }
       }
       mesh.instanceMatrix.needsUpdate = true;
     }
@@ -168,7 +377,8 @@ export function TusDias({
 
     function updateCamera() {
       const asp = (canvas.clientWidth || 856) / (canvas.clientHeight || 360);
-      const z = lerp(6.6, 10.5, k);
+      const baseSpan = Math.max(5.5, W * 0.32);
+      const z = lerp(baseSpan * 0.9, baseSpan * 1.35, k);
       cam.left = -z * asp;
       cam.right = z * asp;
       cam.top = z;
@@ -212,7 +422,6 @@ export function TusDias({
 
     animationFrameRef.current = requestAnimationFrame(tick);
 
-    // Pointer events on canvas
     const ray = new THREE.Raycaster();
     const mv = new THREE.Vector2();
     let drag: { x: number; y0: number } | null = null;
@@ -239,7 +448,7 @@ export function TusDias({
       const hit = hits[0];
       hoverIndex = hit && hit.instanceId !== undefined ? hit.instanceId : -1;
 
-      if (hoverIndex >= 0 && enrichedDays[hoverIndex]) {
+      if (hoverIndex >= 0 && enrichedDays[hoverIndex] && !enrichedDays[hoverIndex].isFuture) {
         const containerRect = containerRef.current?.getBoundingClientRect();
         setHoveredDay({
           day: enrichedDays[hoverIndex],
@@ -257,7 +466,12 @@ export function TusDias({
     };
 
     const onClick = () => {
-      if (hoverIndex >= 0 && enrichedDays[hoverIndex] && onSelectDay) {
+      if (
+        hoverIndex >= 0 &&
+        enrichedDays[hoverIndex] &&
+        !enrichedDays[hoverIndex].isFuture &&
+        onSelectDay
+      ) {
         onSelectDay(enrichedDays[hoverIndex]);
       }
     };
@@ -275,30 +489,38 @@ export function TusDias({
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('click', onClick);
+
+      spritesToDispose.forEach((s) => {
+        scene.remove(s);
+        s.material.map?.dispose();
+        s.material.dispose();
+      });
+
       renderer.dispose();
       geo.dispose();
       mat.dispose();
     };
-  }, [mode, webGLSupported, enrichedDays, onSelectDay, palette]);
+  }, [
+    mode,
+    webGLSupported,
+    enrichedDays,
+    weeks.length,
+    monthLabelsByWeek,
+    onSelectDay,
+    palette,
+    resolvedTheme,
+  ]);
 
-  // Weeks for 2D grid
-  const weeks = useMemo(() => {
-    const result: DayData[][] = [];
-    for (let i = 0; i < enrichedDays.length; i += 7) {
-      result.push(enrichedDays.slice(i, i + 7));
-    }
-    return result;
-  }, [enrichedDays]);
-
-  const handleCellClick = (day: DayData) => {
+  const handleCellClick = (day: DayDataWithFlags) => {
+    if (day.isFuture) return;
     if (onSelectDay) onSelectDay(day);
   };
 
   const handleKeyDown = (
-    e: React.KeyboardEvent<SVGRectElement>,
+    e: React.KeyboardEvent<HTMLElement>,
     w: number,
     d: number,
-    day: DayData
+    day: DayDataWithFlags
   ) => {
     let nextW = w;
     let nextD = d;
@@ -335,9 +557,13 @@ export function TusDias({
   };
 
   const handleCellMouseEnter = (
-    day: DayData,
-    e: React.MouseEvent<SVGRectElement | HTMLElement>
+    day: DayDataWithFlags,
+    e: React.MouseEvent<HTMLElement>
   ) => {
+    if (day.isFuture) {
+      setHoveredDay(null);
+      return;
+    }
     const containerRect = containerRef.current?.getBoundingClientRect();
     setHoveredDay({
       day,
@@ -352,8 +578,7 @@ export function TusDias({
 
   const show3D = mode === '3d' && webGLSupported;
 
-  // En celular el contenedor 2D hace scroll horizontal arrancando a la derecha
-  // para mostrar las semanas más recientes con datos inmediatamente.
+  // Auto-scroll 2D grid to the right on mount so recent days are immediately visible
   useEffect(() => {
     if (!show3D && scrollContainerRef.current) {
       const el = scrollContainerRef.current;
@@ -372,11 +597,11 @@ export function TusDias({
       data-testid="tus-dias-container"
     >
       {/* Header */}
-      <div className="flex justify-between items-start relative z-10 mb-2">
+      <div className="flex justify-between items-start relative z-10 mb-1">
         <div>
-          <div className="text-[13px] text-text-tertiary">{periodLabel}</div>
-          <div className="text-[28px] font-extrabold text-text-primary tracking-tight mt-0.5">
-            {formatGs(computedTotal)}
+          <div className="text-[13px] text-text-tertiary">{dynamicTitle}</div>
+          <div className="text-[28px] font-extrabold text-text-primary tracking-tight mt-0.5 tabular-nums">
+            <CountUp value={computedTotal} />
           </div>
         </div>
 
@@ -408,6 +633,60 @@ export function TusDias({
         </div>
       </div>
 
+      {/* 4 Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-4">
+        <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.04] border border-glass-border">
+          <small className="text-[11px] text-text-tertiary block">Día más caro</small>
+          <b
+            data-testid="stat-dia-mas-caro"
+            className="block text-[15px] font-bold text-text-primary mt-0.5 tabular-nums"
+          >
+            {stats.maxExpenseDay.amount > 0 ? (
+              <CountUp value={stats.maxExpenseDay.amount} />
+            ) : (
+              '-'
+            )}
+          </b>
+          <small className="text-[11px] text-text-tertiary capitalize block truncate">
+            {stats.maxExpenseDay.shortDate}
+          </small>
+        </div>
+
+        <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.04] border border-glass-border">
+          <small className="text-[11px] text-text-tertiary block">Promedio por día</small>
+          <b
+            data-testid="stat-promedio"
+            className="block text-[15px] font-bold text-text-primary mt-0.5 tabular-nums"
+          >
+            <CountUp value={stats.dailyAverage.amount} />
+          </b>
+          <small className="text-[11px] text-text-tertiary block">
+            en {stats.dailyAverage.daysCount} {stats.dailyAverage.daysCount === 1 ? 'día' : 'días'}
+          </small>
+        </div>
+
+        <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.04] border border-glass-border">
+          <small className="text-[11px] text-text-tertiary block">Días sin gastos</small>
+          <b className="block text-[15px] font-bold text-text-primary mt-0.5 tabular-nums">
+            {stats.noExpenseDays.count} de {stats.noExpenseDays.totalDays}
+          </b>
+          <small data-testid="stat-dias-sin-gastos" className="text-[11px] text-text-tertiary block">
+            {stats.noExpenseDays.percentage} %
+          </small>
+        </div>
+
+        <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.04] border border-glass-border">
+          <small className="text-[11px] text-text-tertiary block">Racha actual</small>
+          <b
+            data-testid="stat-racha-actual"
+            className="block text-[15px] font-bold text-text-primary mt-0.5 tabular-nums"
+          >
+            {stats.currentStreak.days} {stats.currentStreak.days === 1 ? 'día' : 'días'}
+          </b>
+          <small className="text-[11px] text-text-tertiary block">sin gastos</small>
+        </div>
+      </div>
+
       {/* 3D WebGL Canvas */}
       {show3D && (
         <canvas
@@ -417,78 +696,148 @@ export function TusDias({
         />
       )}
 
-      {/* 2D SVG Grid Fallback / Default */}
+      {/* 2D Heatmap Grid */}
       {!show3D && (
-        <div
-          ref={scrollContainerRef}
-          data-testid="tus-dias-scroll-container"
-          className="w-full overflow-x-auto py-4"
-        >
-          <svg
-            data-testid="tus-dias-2d-svg"
-            viewBox={`0 0 ${weeks.length * 28 + 20} 220`}
-            className="w-full min-w-[700px] h-[220px]"
-          >
-            {weeks.map((week, wIdx) =>
-              week.map((day, dIdx) => {
-                const x = 10 + wIdx * 28;
-                const y = 10 + dIdx * 28;
-                const color = palette[day.level ?? 0];
-                const isFocused = focusedCoord?.w === wIdx && focusedCoord?.d === dIdx;
-                const tabIndex =
-                  isFocused || (!focusedCoord && wIdx === 0 && dIdx === 0) ? 0 : -1;
-                const dateLabel = day.date.toLocaleDateString('es-PY', {
-                  day: 'numeric',
-                  month: 'long',
-                });
-                const amountLabel = day.amount > 0 ? formatGs(day.amount) : 'Sin gastos';
+        <div className="w-full overflow-hidden">
+          <div className="flex gap-2">
+            {/* Weekday labels: L, M, V, D in alternating rows */}
+            <div
+              className="grid grid-rows-7 text-[10px] text-text-tertiary font-semibold select-none shrink-0 pt-6"
+              style={{
+                rowGap: '5px',
+                gridTemplateRows: 'repeat(7, clamp(20px, 3.2vw, 30px))',
+              }}
+            >
+              <span className="flex items-center justify-center">L</span>
+              <span />
+              <span className="flex items-center justify-center">M</span>
+              <span />
+              <span className="flex items-center justify-center">V</span>
+              <span />
+              <span className="flex items-center justify-center">D</span>
+            </div>
 
-                return (
-                  <rect
-                    id={`tus-dias-cell-${wIdx}-${dIdx}`}
-                    key={`${wIdx}-${dIdx}`}
-                    x={x}
-                    y={y}
-                    width={22}
-                    height={22}
-                    rx={6}
-                    fill={color}
-                    stroke={isFocused ? 'var(--brand-start)' : 'none'}
-                    strokeWidth={isFocused ? 2 : 0}
-                    role="button"
-                    tabIndex={tabIndex}
-                    aria-label={`${dateLabel}: ${amountLabel}`}
-                    data-testid="tus-dias-cell"
-                    data-date={day.date.toISOString().split('T')[0]}
-                    className="cursor-pointer transition-transform hover:scale-110 origin-center outline-none focus:stroke-brand-start focus:stroke-2"
-                    onClick={() => handleCellClick(day)}
-                    onKeyDown={(e) => handleKeyDown(e, wIdx, dIdx, day)}
-                    onFocus={() => setFocusedCoord({ w: wIdx, d: dIdx })}
-                    onMouseEnter={(e) => handleCellMouseEnter(day, e)}
-                    onMouseLeave={handleCellMouseLeave}
-                  />
-                );
-              })
-            )}
-          </svg>
+            {/* Scrollable Columns Container */}
+            <div
+              ref={scrollContainerRef}
+              data-testid="tus-dias-scroll-container"
+              className="flex-1 overflow-x-auto pb-1"
+            >
+              <div className="flex gap-[5px] min-w-max">
+                {weeks.map((week, wIdx) => {
+                  const monthLabel = monthLabelsByWeek[wIdx];
+                  return (
+                    <div
+                      key={wIdx}
+                      className="flex flex-col gap-[5px] items-center"
+                      style={{ width: 'clamp(20px, 3.2vw, 30px)' }}
+                    >
+                      {/* Month label header */}
+                      <div className="h-5 text-[11px] text-text-tertiary font-semibold w-full text-left pl-0.5 select-none truncate">
+                        {monthLabel || ''}
+                      </div>
+
+                      {/* 7 Days of the week */}
+                      {week.map((day, dIdx) => {
+                        const isFocused =
+                          focusedCoord?.w === wIdx && focusedCoord?.d === dIdx;
+                        const tabIndex =
+                          day.isFuture
+                            ? -1
+                            : isFocused || (!focusedCoord && wIdx === 0 && dIdx === 0)
+                            ? 0
+                            : -1;
+
+                        const dateKey = `${day.date.getFullYear()}-${String(
+                          day.date.getMonth() + 1
+                        ).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
+
+                        const dateLabel = day.date.toLocaleDateString('es-PY', {
+                          day: 'numeric',
+                          month: 'long',
+                        });
+                        const amountLabel =
+                          day.amount > 0 ? formatGs(day.amount) : 'Sin gastos';
+
+                        let cellClass =
+                          'rounded-[7px] transition-all relative outline-none select-none ';
+
+                        if (day.isFuture) {
+                          cellClass +=
+                            'bg-transparent border border-dashed border-white/15 dark:border-white/15 border-black/15 cursor-default';
+                        } else {
+                          cellClass += 'cursor-pointer hover:scale-110 active:scale-95';
+                        }
+
+                        if (day.isToday) {
+                          cellClass += ' ring-2 ring-[#FF8A3D] ring-offset-1 ring-offset-transparent z-10';
+                        }
+
+                        const cellColor = day.isFuture
+                          ? 'transparent'
+                          : palette[day.level ?? 0];
+
+                        return (
+                          <div
+                            id={`tus-dias-cell-${wIdx}-${dIdx}`}
+                            key={`${wIdx}-${dIdx}`}
+                            role={day.isFuture ? 'presentation' : 'button'}
+                            tabIndex={tabIndex}
+                            aria-label={
+                              day.isFuture
+                                ? `${dateLabel}: futuro`
+                                : `${dateLabel}: ${amountLabel}`
+                            }
+                            aria-disabled={day.isFuture ? true : undefined}
+                            data-testid="tus-dias-cell"
+                            data-date={dateKey}
+                            data-today={day.isToday ? 'true' : 'false'}
+                            data-future={day.isFuture ? 'true' : 'false'}
+                            className={cellClass}
+                            style={{
+                              width: 'clamp(20px, 3.2vw, 30px)',
+                              height: 'clamp(20px, 3.2vw, 30px)',
+                              backgroundColor: cellColor,
+                            }}
+                            onClick={() => handleCellClick(day)}
+                            onKeyDown={(e) => handleKeyDown(e, wIdx, dIdx, day)}
+                            onFocus={() => {
+                              if (!day.isFuture) setFocusedCoord({ w: wIdx, d: dIdx });
+                            }}
+                            onMouseEnter={(e) => handleCellMouseEnter(day, e)}
+                            onMouseLeave={handleCellMouseLeave}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-text-tertiary mt-3">
-        <span>menos</span>
-        {palette.map((color, i) => (
-          <i
-            key={i}
-            className="w-2.5 h-2.5 rounded-[3px] inline-block"
-            style={{ backgroundColor: color }}
-          />
-        ))}
-        <span>más</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-tertiary mt-3 pt-2 border-t border-glass-border/40">
+        <span className="text-[11px] text-text-tertiary">
+          Hoy tiene borde naranja. Los días futuros sin pintar.
+        </span>
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span>menos</span>
+          {palette.map((color, i) => (
+            <i
+              key={i}
+              className="w-2.5 h-2.5 rounded-[3px] inline-block"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <span>más</span>
+        </div>
       </div>
 
       {/* Tooltip */}
-      {hoveredDay && (
+      {hoveredDay && !hoveredDay.day.isFuture && (
         <div
           data-testid="tus-dias-tooltip"
           className="pointer-events-none absolute z-20 bg-sheet-surface border border-glass-border rounded-xl p-3 text-xs shadow-2xl transition-opacity duration-100"
@@ -509,7 +858,8 @@ export function TusDias({
           </div>
           {hoveredDay.day.amount > 0 && (
             <div className="text-text-secondary text-[11px]">
-              {hoveredDay.day.txCount} {hoveredDay.day.txCount === 1 ? 'movimiento' : 'movimientos'}
+              {hoveredDay.day.txCount}{' '}
+              {hoveredDay.day.txCount === 1 ? 'movimiento' : 'movimientos'}
               {hoveredDay.day.topMerchant ? ` · más alto: ${hoveredDay.day.topMerchant}` : ''}
             </div>
           )}

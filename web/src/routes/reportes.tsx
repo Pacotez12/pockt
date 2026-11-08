@@ -346,20 +346,15 @@ export function ReportesRoute() {
     };
   }, [periodTxs, totalExpenses]);
 
-  // Tus días dataset: 182 days (26 weeks x 7 days)
+  // Tus días dataset: aggregated expenses by day
   const tusDiasData = useMemo<DayData[]>(() => {
-    const days: DayData[] = [];
-    const endDate = new Date(endSec * 1000);
-    const baseDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-    const startDate = new Date(baseDate);
-    startDate.setDate(baseDate.getDate() - 181);
-
-    const txByDay = new Map<string, { total: number; count: number; merchants: Map<string, number> }>();
+    const txByDay = new Map<string, { total: number; count: number; merchants: Map<string, number>; date: Date }>();
     for (const t of txs) {
       if (t.type === 'expense') {
         const d = new Date(t.occurred_at * 1000);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const cur = txByDay.get(key) || { total: 0, count: 0, merchants: new Map() };
+        const dayDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const key = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+        const cur = txByDay.get(key) || { total: 0, count: 0, merchants: new Map(), date: dayDate };
         cur.total += t.amount;
         cur.count += 1;
         if (t.merchant) {
@@ -369,14 +364,10 @@ export function ReportesRoute() {
       }
     }
 
-    for (let i = 0; i < 182; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const entry = txByDay.get(key);
-
+    const days: DayData[] = [];
+    for (const entry of txByDay.values()) {
       let topMerchant: string | undefined;
-      if (entry && entry.merchants.size > 0) {
+      if (entry.merchants.size > 0) {
         let maxM = '';
         let maxVal = 0;
         for (const [mName, mVal] of entry.merchants.entries()) {
@@ -389,20 +380,15 @@ export function ReportesRoute() {
       }
 
       days.push({
-        date: d,
-        amount: entry ? entry.total : 0,
-        txCount: entry ? entry.count : 0,
+        date: entry.date,
+        amount: entry.total,
+        txCount: entry.count,
         topMerchant,
       });
     }
 
     return days;
-  }, [txs, endSec]);
-
-  // Total spent across the 182 days displayed in Tus días
-  const tusDiasTotal = useMemo(() => {
-    return tusDiasData.reduce((acc, d) => acc + (d.amount || 0), 0);
-  }, [tusDiasData]);
+  }, [txs]);
 
   // Handlers for switching period
   const handlePeriodChange = (newPeriod: 'mes' | 'ano' | 'custom') => {
@@ -815,8 +801,7 @@ export function ReportesRoute() {
         </div>
         <TusDias
           days={tusDiasData}
-          periodLabel={`Gastado en últimos 6 meses`}
-          totalAmount={tusDiasTotal}
+          referenceDate={new Date(endSec * 1000)}
           onSelectDay={handleSelectDay}
         />
       </div>

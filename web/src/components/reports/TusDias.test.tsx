@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TusDias, type DayData } from './TusDias';
 
@@ -21,59 +21,130 @@ describe('TusDias Component', () => {
     return days;
   };
 
-  it('renders in 2D mode by default with total amount and legend', () => {
+  it('renders in 2D mode by default with 4 stats cards and title', () => {
     const days = generateMockDays(182);
     render(
       <TusDias
         days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={14820500}
+        referenceDate={new Date(2026, 9, 29)}
       />
     );
 
-    expect(screen.getByText('Gastado en 6 meses')).toBeInTheDocument();
-    expect(screen.getByText(/14\.820\.500/)).toBeInTheDocument();
+    expect(screen.getByText(/Gastado desde el/i)).toBeInTheDocument();
+    expect(screen.getByText('Día más caro')).toBeInTheDocument();
+    expect(screen.getByText('Promedio por día')).toBeInTheDocument();
+    expect(screen.getByText('Días sin gastos')).toBeInTheDocument();
+    expect(screen.getByText('Racha actual')).toBeInTheDocument();
+
     expect(screen.getByRole('button', { name: '2D' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3D' })).toBeInTheDocument();
     expect(screen.getByText(/menos/i)).toBeInTheDocument();
-    expect(screen.getByText(/más/i)).toBeInTheDocument();
-
-    // In jsdom without WebGL, it falls back cleanly to 2D SVG grid
-    const svgGrid = screen.getByTestId('tus-dias-2d-svg');
-    expect(svgGrid).toBeInTheDocument();
+    expect(screen.getByText(/^más$/i)).toBeInTheDocument();
   });
 
-  it('triggers onSelectDay callback when clicking a day cell in 2D mode', () => {
-    const days = generateMockDays(182);
+  it('ventana con datos desde octubre arranca en esa semana', () => {
+    const refDate = new Date(2026, 11, 16); // 16 Dec 2026
+    const octExpenseDate = new Date(2026, 9, 12); // Monday 12 Oct 2026
+    const days: DayData[] = [
+      { date: octExpenseDate, amount: 150000, txCount: 2, topMerchant: 'Superseis' },
+      { date: new Date(2026, 10, 5), amount: 80000, txCount: 1 },
+      { date: refDate, amount: 0, txCount: 0 },
+    ];
+
+    render(<TusDias days={days} referenceDate={refDate} />);
+
+    const cells = screen.getAllByTestId('tus-dias-cell');
+    // 10 weeks * 7 = 70 cells
+    expect(cells.length).toBe(70);
+    expect(cells[0]).toHaveAttribute('data-date', '2026-10-12');
+  });
+
+  it('con datos de más de 6 meses, la ventana es de 6 meses (26 semanas)', () => {
+    const refDate = new Date(2026, 11, 15);
+    const days: DayData[] = [
+      { date: new Date(2026, 0, 10), amount: 200000, txCount: 1 },
+      { date: new Date(2026, 11, 1), amount: 50000, txCount: 1 },
+    ];
+
+    render(<TusDias days={days} referenceDate={refDate} />);
+
+    const cells = screen.getAllByTestId('tus-dias-cell');
+    expect(cells.length).toBe(26 * 7);
+  });
+
+  it('días futuros no clicables', () => {
+    const refDate = new Date(2026, 10, 11); // Wednesday 11 Nov 2026
     const onSelectDay = vi.fn();
+    const days: DayData[] = [
+      { date: new Date(2026, 9, 1), amount: 50000, txCount: 1 },
+    ];
+
     render(
       <TusDias
         days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={14820500}
+        referenceDate={refDate}
         onSelectDay={onSelectDay}
       />
     );
 
-    const cells = screen.getAllByTestId('tus-dias-cell');
-    expect(cells.length).toBe(182);
+    const futureCells = screen.getAllByTestId('tus-dias-cell').filter(
+      (c) => c.getAttribute('data-future') === 'true'
+    );
+    expect(futureCells.length).toBeGreaterThan(0);
 
-    fireEvent.click(cells[1]);
-    expect(onSelectDay).toHaveBeenCalledWith(expect.objectContaining({
-      amount: days[1].amount,
-      txCount: days[1].txCount,
-    }));
+    // Clicking future cell does not call onSelectDay
+    fireEvent.click(futureCells[0]);
+    expect(onSelectDay).not.toHaveBeenCalled();
+
+    // Clicking past/today cell does call onSelectDay
+    const pastCells = screen.getAllByTestId('tus-dias-cell').filter(
+      (c) => c.getAttribute('data-future') !== 'true'
+    );
+    fireEvent.click(pastCells[0]);
+    expect(onSelectDay).toHaveBeenCalledTimes(1);
+  });
+
+  it('cálculos de stats con casos inventados (incluido sin gastos y racha 0)', () => {
+    const refDate = new Date(2026, 10, 10);
+    // Caso 1: sin gastos
+    const zeroDays: DayData[] = [
+      { date: new Date(2026, 9, 1), amount: 0, txCount: 0 },
+    ];
+
+    const { rerender } = render(
+      <TusDias days={zeroDays} referenceDate={refDate} />
+    );
+
+    expect(screen.getByTestId('stat-dia-mas-caro')).toHaveTextContent('-');
+    expect(screen.getByTestId('stat-dias-sin-gastos')).toHaveTextContent('100 %');
+
+    // Caso 2: hoy con gastos -> racha 0
+    const todayExpenseDays: DayData[] = [
+      { date: new Date(2026, 10, 10), amount: 200000, txCount: 2, topMerchant: 'Biggie' },
+    ];
+
+    rerender(<TusDias days={todayExpenseDays} referenceDate={refDate} />);
+    expect(screen.getByTestId('stat-racha-actual')).toHaveTextContent('0 días');
+  });
+
+  it('muestra hoy con marca distintiva y días de la semana L, M, V, D', () => {
+    const refDate = new Date(2026, 10, 11);
+    render(<TusDias days={[]} referenceDate={refDate} />);
+
+    const todayCell = screen.getAllByTestId('tus-dias-cell').find(
+      (c) => c.getAttribute('data-today') === 'true'
+    );
+    expect(todayCell).toBeDefined();
+
+    expect(screen.getByText('L')).toBeInTheDocument();
+    expect(screen.getByText('M')).toBeInTheDocument();
+    expect(screen.getByText('V')).toBeInTheDocument();
+    expect(screen.getByText('D')).toBeInTheDocument();
   });
 
   it('switches mode when clicking 3D and 2D buttons', () => {
-    const days = generateMockDays(182);
-    render(
-      <TusDias
-        days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={14820500}
-      />
-    );
+    const days = generateMockDays(60);
+    render(<TusDias days={days} />);
 
     const btn3D = screen.getByRole('button', { name: '3D' });
     const btn2D = screen.getByRole('button', { name: '2D' });
@@ -86,108 +157,20 @@ describe('TusDias Component', () => {
   });
 
   it('renders tooltip on day hover in 2D mode', () => {
-    const days = generateMockDays(182);
-    render(
-      <TusDias
-        days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={14820500}
-      />
-    );
-
-    const cells = screen.getAllByTestId('tus-dias-cell');
-    fireEvent.mouseEnter(cells[2]);
-
-    expect(screen.getByTestId('tus-dias-tooltip')).toBeInTheDocument();
-  });
-
-  it('uses light gray palette for empty cells in light mode', () => {
+    const refDate = new Date(2026, 10, 11);
     const days: DayData[] = [
-      { date: new Date(2026, 4, 1), amount: 0, txCount: 0 },
-      { date: new Date(2026, 4, 2), amount: 100000, txCount: 1 },
+      { date: new Date(2026, 10, 10), amount: 124500, txCount: 3, topMerchant: 'Farmacenter' },
     ];
 
-    render(
-      <TusDias
-        days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={100000}
-      />
+    render(<TusDias days={days} referenceDate={refDate} />);
+
+    const cell = screen.getAllByTestId('tus-dias-cell').find(
+      (c) => c.getAttribute('data-date') === '2026-11-10'
     );
+    expect(cell).toBeDefined();
 
-    // In default theme provider fallback or with ThemeContext light
-    const cells = screen.getAllByTestId('tus-dias-cell');
-    expect(cells.length).toBe(2);
-  });
-
-  it('supports keyboard navigation via arrow keys and selection with Enter', () => {
-    const days = generateMockDays(21); // 3 weeks of 7 days
-    const onSelectDay = vi.fn();
-
-    render(
-      <TusDias
-        days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={100000}
-        onSelectDay={onSelectDay}
-      />
-    );
-
-    const cells = screen.getAllByTestId('tus-dias-cell');
-    expect(cells[0]).toHaveAttribute('role', 'button');
-    expect(cells[0]).toHaveAttribute('tabindex', '0');
-    expect(cells[1]).toHaveAttribute('tabindex', '-1');
-    expect(cells[0]).toHaveAttribute('aria-label');
-
-    // Focus first cell
-    cells[0].focus();
-    expect(document.activeElement).toBe(cells[0]);
-
-    // Press ArrowDown to move to cell (0, 1) -> index 1
-    fireEvent.keyDown(cells[0], { key: 'ArrowDown' });
-    const cell01 = document.getElementById('tus-dias-cell-0-1');
-    expect(document.activeElement).toBe(cell01);
-
-    // Press ArrowRight to move to cell (1, 1) -> index 8
-    fireEvent.keyDown(cell01!, { key: 'ArrowRight' });
-    const cell11 = document.getElementById('tus-dias-cell-1-1');
-    expect(document.activeElement).toBe(cell11);
-
-    // Press Enter to select the day
-    fireEvent.keyDown(cell11!, { key: 'Enter' });
-    expect(onSelectDay).toHaveBeenCalledTimes(1);
-    expect(onSelectDay).toHaveBeenCalledWith(
-      expect.objectContaining({
-        date: days[8].date,
-      })
-    );
-  });
-
-  it('scrolls 2D grid to the right on mount to display the most recent weeks', () => {
-    const days = generateMockDays(182);
-    const originalScrollWidth = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      'scrollWidth'
-    );
-    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
-      configurable: true,
-      value: 800,
-    });
-
-    render(
-      <TusDias
-        days={days}
-        periodLabel="Gastado en 6 meses"
-        totalAmount={14820500}
-      />
-    );
-
-    const container = screen.getByTestId('tus-dias-scroll-container');
-    expect(container).toBeInTheDocument();
-    expect(container.scrollLeft).toBe(800);
-
-    if (originalScrollWidth) {
-      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', originalScrollWidth);
-    }
+    fireEvent.mouseEnter(cell!);
+    expect(screen.getByTestId('tus-dias-tooltip')).toBeInTheDocument();
+    expect(screen.getByText(/124\.500/)).toBeInTheDocument();
   });
 });
