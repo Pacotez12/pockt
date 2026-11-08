@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery, usePowerSync } from '@powersync/react';
-import { Link } from 'react-router-dom';
-import { Calendar } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/Skeleton';
 import { CountUp } from '@/components/CountUp';
 import { AuroraShader } from '@/components/AuroraShader';
@@ -18,6 +18,9 @@ import {
   LoanPaymentInput,
 } from '@/lib/calc/loan_progress';
 import { formatGs } from '@/lib/format';
+import { cn } from '@/lib/utils';
+
+const MONTH_ABBRS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 interface TxRow {
   id: string;
@@ -70,7 +73,138 @@ export function InicioRoute() {
     document.title = 'Inicio · Pockt';
   }, []);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mesParam = searchParams.get('mes');
+
   const now = useMemo(() => new Date(), []);
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+  const { selectedYear, selectedMonth, selectedMonthKey, isPastMonth, isCurrentMonth } = useMemo(() => {
+    if (mesParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(mesParam)) {
+      const [y, m] = mesParam.split('-').map(Number);
+      if (y > currentYear || (y === currentYear && m > currentMonth)) {
+        return {
+          selectedYear: currentYear,
+          selectedMonth: currentMonth,
+          selectedMonthKey: currentMonthKey,
+          isPastMonth: false,
+          isCurrentMonth: true,
+        };
+      }
+      const isPast = y < currentYear || (y === currentYear && m < currentMonth);
+      return {
+        selectedYear: y,
+        selectedMonth: m,
+        selectedMonthKey: `${y}-${String(m).padStart(2, '0')}`,
+        isPastMonth: isPast,
+        isCurrentMonth: !isPast,
+      };
+    }
+    return {
+      selectedYear: currentYear,
+      selectedMonth: currentMonth,
+      selectedMonthKey: currentMonthKey,
+      isPastMonth: false,
+      isCurrentMonth: true,
+    };
+  }, [mesParam, currentYear, currentMonth, currentMonthKey]);
+
+  const [slideDirection, setSlideDirection] = useState<-1 | 1 | 0>(0);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [popoverYear, setPopoverYear] = useState(selectedYear);
+  const selectorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPopoverYear(selectedYear);
+  }, [selectedYear, popoverOpen]);
+
+  const navigateToMonth = (targetYear: number, targetMonth: number) => {
+    if (targetYear > currentYear || (targetYear === currentYear && targetMonth > currentMonth)) {
+      return;
+    }
+    const targetKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+    const diff = targetYear * 12 + targetMonth - (selectedYear * 12 + selectedMonth);
+    setSlideDirection(diff < 0 ? -1 : 1);
+
+    const newParams = new URLSearchParams(searchParams);
+    if (targetKey === currentMonthKey) {
+      newParams.delete('mes');
+    } else {
+      newParams.set('mes', targetKey);
+    }
+    setSearchParams(newParams);
+    setPopoverOpen(false);
+  };
+
+  const handlePrevMonth = () => {
+    let prevY = selectedYear;
+    let prevM = selectedMonth - 1;
+    if (prevM < 1) {
+      prevM = 12;
+      prevY -= 1;
+    }
+    navigateToMonth(prevY, prevM);
+  };
+
+  const handleNextMonth = () => {
+    if (isCurrentMonth) return;
+    let nextY = selectedYear;
+    let nextM = selectedMonth + 1;
+    if (nextM > 12) {
+      nextM = 1;
+      nextY += 1;
+    }
+    navigateToMonth(nextY, nextM);
+  };
+
+  const handleResetToCurrentMonth = () => {
+    navigateToMonth(currentYear, currentMonth);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      const isInput =
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active && (active as HTMLElement).isContentEditable);
+
+      if (e.key === 'Escape') {
+        setPopoverOpen(false);
+        return;
+      }
+
+      if (isInput) return;
+
+      if (e.key === 'ArrowLeft') {
+        handlePrevMonth();
+      } else if (e.key === 'ArrowRight') {
+        if (!isCurrentMonth) {
+          handleNextMonth();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedYear, selectedMonth, isCurrentMonth]);
+
+  // Click outside listener for popover
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (selectorRef.current && !selectorRef.current.contains(e.target as Node)) {
+        setPopoverOpen(false);
+      }
+    };
+    if (popoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [popoverOpen]);
+
   const todayStr = useMemo(() => {
     const y = now.getFullYear().toString().padStart(4, '0');
     const m = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -106,12 +240,16 @@ export function InicioRoute() {
       } catch (_) {}
     }
 
-    return periodFor(todayStr, {
+    const targetDayStr = isCurrentMonth
+      ? todayStr
+      : `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-15`;
+
+    return periodFor(targetDayStr, {
       mode: modeSetting,
       payDays,
       payDayRules,
     });
-  }, [settingsData, scheduleData, todayStr]);
+  }, [settingsData, scheduleData, todayStr, isCurrentMonth, selectedYear, selectedMonth]);
 
   const startSec = useMemo(() => Math.floor(new Date(period.start + 'T00:00:00').getTime() / 1000), [period.start]);
   const endSec = useMemo(() => Math.floor(new Date(period.end + 'T23:59:59').getTime() / 1000) + 1, [period.end]);
@@ -126,20 +264,47 @@ export function InicioRoute() {
     [startSec, endSec]
   );
 
-  // Six-month transactions for evolution & comparison
+  // Six-month transactions for evolution & comparison (ending in selected month)
   const sixMonthsAgoSec = useMemo(() => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0);
+    const d = new Date(selectedYear, selectedMonth - 1 - 5, 1, 0, 0, 0);
     return Math.floor(d.getTime() / 1000);
-  }, [now]);
+  }, [selectedYear, selectedMonth]);
+
+  const sixMonthsEndSec = useMemo(() => {
+    const d = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
+    return Math.floor(d.getTime() / 1000);
+  }, [selectedYear, selectedMonth]);
 
   const { data: sixMonthsTxs, isLoading: loadingSixMonths } = useQuery<TxRow>(
     `SELECT t.*, c.name as category_name, c.color_dark, c.color_light
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
-     WHERE t.deleted_at IS NULL AND t.occurred_at >= ?
+     WHERE t.deleted_at IS NULL AND t.occurred_at >= ? AND t.occurred_at < ?
      ORDER BY t.occurred_at ASC`,
-    [sixMonthsAgoSec]
+    [sixMonthsAgoSec, sixMonthsEndSec]
   );
+
+  // All transaction dates for popover activity
+  const { data: allTxDates } = useQuery<{ occurred_at: number }>(
+    'SELECT occurred_at FROM transactions WHERE deleted_at IS NULL'
+  );
+
+  const activeMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const tx of allTxDates ?? []) {
+      const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+      const d = new Date(ms);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      set.add(key);
+    }
+    for (const tx of sixMonthsTxs ?? []) {
+      const ms = tx.occurred_at > 1e11 ? tx.occurred_at : tx.occurred_at * 1000;
+      const d = new Date(ms);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      set.add(key);
+    }
+    return set;
+  }, [allTxDates, sixMonthsTxs]);
 
   // Goals
   const { data: goals, isLoading: loadingGoals } = useQuery<GoalRow>(
@@ -183,7 +348,7 @@ export function InicioRoute() {
     deleted_at?: number | null;
   }>('SELECT id, loan_id, type, amount, occurred_at, is_extra, deleted_at FROM transactions WHERE loan_id IS NOT NULL AND deleted_at IS NULL');
 
-  // Upcoming recurring rules
+  // Upcoming recurring rules (always from today onwards)
   const { data: recurringDues, isLoading: loadingRecurring } = useQuery<{
     id: string;
     name: string;
@@ -198,13 +363,19 @@ export function InicioRoute() {
   );
 
   // Latest 5 transactions
-  const { data: recentTxs, isLoading: loadingRecent } = useQuery<TxRow>(
+  const { data: recentTxsQuery, isLoading: loadingRecent } = useQuery<TxRow>(
     `SELECT t.*, c.name as category_name, c.color_dark, c.color_light
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
-     WHERE t.deleted_at IS NULL
-     ORDER BY t.occurred_at DESC LIMIT 5`
+     WHERE t.deleted_at IS NULL AND t.occurred_at >= ? AND t.occurred_at < ?
+     ORDER BY t.occurred_at DESC LIMIT 5`,
+    [startSec, endSec]
   );
+
+  const recentTxs = useMemo(() => {
+    if (recentTxsQuery && recentTxsQuery.length > 0) return recentTxsQuery;
+    return (periodTxs ?? []).slice(0, 5);
+  }, [recentTxsQuery, periodTxs]);
 
   // Categories for MovementPanel
   const { data: allCategories } = useQuery<{
@@ -268,13 +439,21 @@ export function InicioRoute() {
     const activeGoals = goals ?? [];
     const activeIds = new Set(activeGoals.map((g) => g.id));
     const saved = (goalContribs ?? [])
-      .filter((c) => activeIds.has(c.goal_id))
+      .filter((c) => {
+        if (!activeIds.has(c.goal_id)) return false;
+        if (c.date != null) {
+          const ms = typeof c.date === 'number' ? (c.date > 1e11 ? c.date : c.date * 1000) : new Date(c.date).getTime();
+          const sec = Math.floor(ms / 1000);
+          return sec <= endSec;
+        }
+        return true;
+      })
       .reduce((sum, c) => sum + c.amount, 0);
     return {
       totalSaved: saved,
       activeGoalsCount: activeGoals.length,
     };
-  }, [goals, goalContribs]);
+  }, [goals, goalContribs, endSec]);
 
   // Comparison
   const comparison = useMemo(() => {
@@ -289,20 +468,22 @@ export function InicioRoute() {
       const key = `${y}-${m}-${day}`;
       dailyMap[key] = (dailyMap[key] ?? 0) + tx.amount;
     }
+    const compareDay = isCurrentMonth ? todayStr : period.end;
     return compareToPreviousMonth({
-      today: todayStr,
+      today: compareDay,
       dailyExpenseByLocalDay: dailyMap,
     });
-  }, [sixMonthsTxs, todayStr]);
+  }, [sixMonthsTxs, todayStr, isCurrentMonth, period.end]);
 
   const prevMonthName = useMemo(() => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return d.toLocaleDateString('es-PY', { month: 'long' }).toLowerCase();
-  }, [now]);
+    const prevDate = new Date(selectedYear, selectedMonth - 2, 1);
+    return prevDate.toLocaleDateString('es-PY', { month: 'long' }).toLowerCase();
+  }, [selectedYear, selectedMonth]);
 
   const prevMonthTotal = useMemo(() => {
-    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+    const prevDate = new Date(selectedYear, selectedMonth - 2, 1);
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = prevDate.getMonth() + 1;
     let total = 0;
     for (const tx of sixMonthsTxs ?? []) {
       if (tx.type !== 'expense') continue;
@@ -313,7 +494,7 @@ export function InicioRoute() {
       }
     }
     return total;
-  }, [sixMonthsTxs, now]);
+  }, [sixMonthsTxs, selectedYear, selectedMonth]);
 
   // Categories arc data
   const arcSegments = useMemo(() => {
@@ -343,7 +524,7 @@ export function InicioRoute() {
     const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(selectedYear, selectedMonth - 1 - i, 1);
       months.push({
         label: monthNames[d.getMonth()],
         year: d.getFullYear(),
@@ -482,19 +663,17 @@ export function InicioRoute() {
 
   // Month header name in Spanish
   const monthLabel = useMemo(() => {
-    const parts = period.start.split('-').map(Number);
-    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const d = new Date(selectedYear, selectedMonth - 1, 1);
     const name = d.toLocaleDateString('es-PY', { month: 'long' });
     const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
-    return `${capitalized} ${parts[0]}`;
-  }, [period.start]);
+    return `${capitalized} ${selectedYear}`;
+  }, [selectedYear, selectedMonth]);
 
   const shortMonth = useMemo(() => {
-    const parts = period.start.split('-').map(Number);
-    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const d = new Date(selectedYear, selectedMonth - 1, 1);
     const name = d.toLocaleDateString('es-PY', { month: 'long' });
     return name.charAt(0).toUpperCase() + name.slice(1);
-  }, [period.start]);
+  }, [selectedYear, selectedMonth]);
 
   const isLoadingKPIs = loadingSettings || loadingSchedule || loadingTxs || loadingGoals || loadingContribs || loadingSixMonths;
   const isLoadingCharts = loadingSixMonths || loadingTxs;
@@ -511,17 +690,141 @@ export function InicioRoute() {
       <AuroraShader opacity={0.22} interactive={false} />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-[26px] sm:text-[28px] font-extrabold tracking-tight text-text-primary">
           {monthLabel}
         </h1>
-        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-text-secondary">
-          <Calendar className="w-3.5 h-3.5 text-text-tertiary" />
-          {shortMonth}
-        </span>
+
+        <div className="flex items-center gap-3 relative" ref={selectorRef}>
+          {isPastMonth && (
+            <button
+              type="button"
+              onClick={handleResetToCurrentMonth}
+              className="text-[12.5px] font-semibold text-brand-start hover:underline cursor-pointer transition-colors"
+            >
+              Volver a este mes
+            </button>
+          )}
+
+          <div className="flex items-center gap-0.5 bg-glass-fill border border-glass-border rounded-full p-[3px] backdrop-blur-md shadow-sm">
+            <button
+              type="button"
+              aria-label="Mes anterior"
+              onClick={handlePrevMonth}
+              className="h-7 w-7 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPopoverOpen((v) => !v)}
+              className="h-7 px-3 rounded-full flex items-center justify-center text-[13px] font-semibold text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              {shortMonth}
+            </button>
+
+            <button
+              type="button"
+              aria-label="Mes siguiente"
+              onClick={handleNextMonth}
+              disabled={isCurrentMonth}
+              className={cn(
+                'h-7 w-7 rounded-full flex items-center justify-center transition-colors',
+                isCurrentMonth
+                  ? 'opacity-30 cursor-not-allowed pointer-events-none'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/10 cursor-pointer'
+              )}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Month Popover */}
+          {popoverOpen && (
+            <motion.div
+              initial={prefersReduced ? false : { opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
+              className="absolute right-0 top-full mt-2 z-50 w-[260px] bg-sheet-surface border border-glass-border rounded-2xl p-3 shadow-2xl backdrop-blur-xl"
+            >
+              <div className="flex items-center justify-between text-[13px] font-bold text-text-primary mb-2.5 px-1">
+                <button
+                  type="button"
+                  aria-label="Año anterior"
+                  onClick={() => setPopoverYear((y) => y - 1)}
+                  className="p-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span>{popoverYear}</span>
+                <button
+                  type="button"
+                  aria-label="Año siguiente"
+                  onClick={() => setPopoverYear((y) => Math.min(currentYear, y + 1))}
+                  disabled={popoverYear >= currentYear}
+                  className={cn(
+                    'p-1 rounded-md transition-colors',
+                    popoverYear >= currentYear
+                      ? 'opacity-30 cursor-not-allowed pointer-events-none'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-white/10 cursor-pointer'
+                  )}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {MONTH_ABBRS.map((abbr, idx) => {
+                  const mNum = idx + 1;
+                  const isFuture =
+                    popoverYear > currentYear ||
+                    (popoverYear === currentYear && mNum > currentMonth);
+                  const isSelected =
+                    popoverYear === selectedYear && mNum === selectedMonth;
+                  const mKey = `${popoverYear}-${String(mNum).padStart(2, '0')}`;
+                  const hasMovements = activeMonths.has(mKey);
+
+                  return (
+                    <button
+                      key={abbr}
+                      type="button"
+                      disabled={isFuture}
+                      onClick={() => navigateToMonth(popoverYear, mNum)}
+                      className={cn(
+                        'text-[12.5px] py-2 rounded-xl transition-all font-medium text-center',
+                        isSelected
+                          ? 'bg-gradient-to-br from-[#FF8A3D] to-[#FF3D7F] text-white font-bold shadow-sm'
+                          : isFuture
+                          ? 'opacity-25 cursor-not-allowed text-text-tertiary'
+                          : hasMovements
+                          ? 'text-text-primary hover:bg-white/10 font-semibold cursor-pointer'
+                          : 'text-text-secondary/60 hover:text-text-primary hover:bg-white/5 cursor-pointer'
+                      )}
+                    >
+                      {abbr}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </div>
       </div>
 
-      {/* Main KPI Grid */}
+      <motion.div
+        key={selectedMonthKey}
+        initial={prefersReduced ? false : { x: slideDirection * 10, opacity: 0.85 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={
+          prefersReduced
+            ? { duration: 0 }
+            : { type: 'spring', stiffness: 350, damping: 28 }
+        }
+        className="space-y-6"
+      >
+        {/* Main KPI Grid */}
       {isLoadingKPIs ? (
         <div data-testid="inicio-kpi-skeleton" className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           <Skeleton className="h-[120px] rounded-2xl" />
@@ -529,7 +832,7 @@ export function InicioRoute() {
           <Skeleton className="h-[120px] rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3.5">
           {/* Main card: Gastado en <mes> */}
           <motion.div
             variants={cardVariants}
@@ -599,12 +902,12 @@ export function InicioRoute() {
 
       {/* Middle Row: Por categoría & Entradas y salidas */}
       {isLoadingCharts ? (
-        <div data-testid="inicio-charts-skeleton" className="grid grid-cols-1 md:grid-cols-[1fr_1.7fr] gap-3.5">
+        <div data-testid="inicio-charts-skeleton" className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] gap-3.5">
           <Skeleton className="h-[286px] rounded-2xl" />
           <Skeleton className="h-[286px] rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.7fr] gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] gap-3.5">
           {/* Card: Por categoría */}
           <motion.div
             variants={cardVariants}
@@ -769,12 +1072,12 @@ export function InicioRoute() {
 
       {/* Bottom Row: Últimos movimientos & Próximos vencimientos */}
       {isLoadingLists ? (
-        <div data-testid="inicio-lists-skeleton" className="grid grid-cols-1 md:grid-cols-[1.7fr_1fr] gap-3.5">
+        <div data-testid="inicio-lists-skeleton" className="grid grid-cols-1 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-3.5">
           <Skeleton className="h-[220px] rounded-2xl" />
           <Skeleton className="h-[220px] rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[1.7fr_1fr] gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-3.5">
           {/* Últimos movimientos */}
           <motion.div
             variants={cardVariants}
@@ -812,7 +1115,7 @@ export function InicioRoute() {
                         onClick={() => setSelectedTx(tx)}
                         className="hover:bg-glass-hover cursor-pointer border-b border-glass-border/40 last:border-0 transition-colors"
                       >
-                        <td className="py-2.5 pr-2 min-w-0 max-w-[130px] sm:max-w-none">
+                        <td className="py-2.5 pr-2 w-full max-w-0">
                           <span className="flex items-center gap-2 font-medium text-text-primary min-w-0">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
                             <span className="truncate min-w-0 flex-1">{tx.merchant || tx.note || tx.category_name || 'Movimiento'}</span>
@@ -867,6 +1170,7 @@ export function InicioRoute() {
           </motion.div>
         </div>
       )}
+      </motion.div>
 
       {/* MovementPanel for editing selected transaction */}
       <MovementPanel

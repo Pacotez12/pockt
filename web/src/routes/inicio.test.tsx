@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { InicioRoute } from './inicio';
@@ -328,12 +328,12 @@ describe('InicioRoute', () => {
     expect(screen.getByText(/85\.000/)).toBeInTheDocument();
   });
 
-  it('renders month indicator as a plain label without button border or background, and renders recent movements amounts with whitespace-nowrap', async () => {
+  it('renders recent movements amounts with whitespace-nowrap and truncates description', async () => {
     const now = new Date();
     const nowSec = Math.floor(now.getTime() / 1000);
 
     vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
-      if (sql.includes('LIMIT 5') && sql.includes('transactions')) {
+      if (sql.includes('transactions') && (sql.includes('LIMIT 5') || sql.includes('occurred_at >='))) {
         return {
           data: [
             {
@@ -359,23 +359,186 @@ describe('InicioRoute', () => {
       </MemoryRouter>
     );
 
-    // Month label should not have button-like classes
-    const monthSpans = screen.getAllByText(
-      new RegExp(now.toLocaleDateString('es-PY', { month: 'long' }), 'i')
-    );
-    const headerMonth = monthSpans.find((el) => el.closest('.inline-flex')?.querySelector('svg'));
-    expect(headerMonth).toBeDefined();
-    const pill = headerMonth!.closest('.inline-flex')!;
-    expect(pill.className).not.toContain('bg-glass-fill');
-    expect(pill.className).not.toContain('border-glass-border');
-
     // Recent movements amount cell should have whitespace-nowrap and shrink-0
-    const amountCell = await screen.findByText(/424\.597/);
+    const table = screen.getByRole('table');
+    const amountCell = within(table).getByText(/424\.597/);
     expect(amountCell.className).toContain('whitespace-nowrap');
     expect(amountCell.className).toContain('shrink-0');
 
     // Description text should be truncated
     const descSpan = screen.getByText('Superseis Los Laureles Gran Asunción');
     expect(descSpan.className).toContain('truncate');
+  });
+
+  it('?mes=2026-10 muestra octubre y sus totales', async () => {
+    const octStartSec = Math.floor(new Date('2026-10-01T00:00:00').getTime() / 1000);
+    const octEndSec = Math.floor(new Date('2026-10-31T23:59:59').getTime() / 1000) + 1;
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any, params: any) => {
+      if (sql.includes('transactions') && params && params[0] === octStartSec && params[1] === octEndSec) {
+        return {
+          data: [
+            { id: 'oct-1', type: 'expense', amount: 3355000, category_id: 'c-1', category_name: 'Comida', color_dark: 0xffe4a067, occurred_at: octStartSec + 3600 },
+            { id: 'oct-2', type: 'income', amount: 5000000, category_id: 'c-2', category_name: 'Sueldo', color_dark: 0xff30d158, occurred_at: octStartSec + 7200 },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      return { data: [], isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/?mes=2026-10']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Octubre 2026');
+    expect(screen.getByRole('button', { name: 'Octubre' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Volver a este mes/i })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('Gs. 3.355.000')).toBeInTheDocument();
+      expect(screen.getByText('Gs. 5.000.000')).toBeInTheDocument();
+    });
+  });
+
+  it('› deshabilitado en el mes actual', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    const nextBtn = screen.getByRole('button', { name: 'Mes siguiente' });
+    expect(nextBtn).toBeDisabled();
+  });
+
+  it('la grilla deshabilita los meses futuros', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    const now = new Date();
+    const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const currentMonthIdx = now.getMonth();
+
+    const monthBtn = screen.getByRole('button', {
+      name: new RegExp(now.toLocaleDateString('es-PY', { month: 'long' }), 'i'),
+    });
+    fireEvent.click(monthBtn);
+
+    for (let m = currentMonthIdx + 1; m < 12; m++) {
+      const futureMonthBtn = screen.getByRole('button', { name: monthNames[m] });
+      expect(futureMonthBtn).toBeDisabled();
+    }
+  });
+
+  it('"Volver a este mes" solo aparece en meses pasados', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole('button', { name: /Volver a este mes/i })).not.toBeInTheDocument();
+
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/?mes=2026-10']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: /Volver a este mes/i })).toBeInTheDocument();
+  });
+
+  it('clicking "Volver a este mes" resets to current month', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/?mes=2026-10']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    const backBtn = screen.getByRole('button', { name: /Volver a este mes/i });
+    fireEvent.click(backBtn);
+
+    const now = new Date();
+    const curMonthLong = now.toLocaleDateString('es-PY', { month: 'long' });
+    const expectedHeading = `${curMonthLong.charAt(0).toUpperCase() + curMonthLong.slice(1)} ${now.getFullYear()}`;
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(expectedHeading);
+    expect(screen.queryByRole('button', { name: /Volver a este mes/i })).not.toBeInTheDocument();
+  });
+
+  it('navigates with Mes anterior and keyboard arrows', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/?mes=2026-10']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    // Prev month via button
+    const prevBtn = screen.getByRole('button', { name: 'Mes anterior' });
+    fireEvent.click(prevBtn);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Septiembre 2026');
+
+    // Next month via keyboard
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Octubre 2026');
+
+    // Prev month via keyboard
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Septiembre 2026');
+  });
+
+  it('popover closes on Escape', () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    const now = new Date();
+    const curMonthLong = now.toLocaleDateString('es-PY', { month: 'long' });
+    const monthBtn = screen.getByRole('button', { name: new RegExp(curMonthLong, 'i') });
+
+    fireEvent.click(monthBtn);
+    expect(screen.getByRole('button', { name: 'ene' })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('button', { name: 'ene' })).not.toBeInTheDocument();
   });
 });
