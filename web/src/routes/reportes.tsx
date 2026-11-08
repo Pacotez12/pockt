@@ -684,7 +684,7 @@ export function ReportesRoute() {
                             cy={p.y}
                             r={3.5}
                             fill={color}
-                            className="transition-transform hover:scale-125"
+                            className="transition-transform hover:scale-125 origin-center [transform-box:fill-box]"
                           />
                         ))}
                       </g>
