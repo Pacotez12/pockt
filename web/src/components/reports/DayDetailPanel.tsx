@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatGs } from '@/lib/format';
 import { useTheme } from '@/lib/theme';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 
 export interface DayDetailTransaction {
   id: string;
@@ -67,18 +68,7 @@ export function DayDetailPanel({
   const prefersReducedMotion = useReducedMotion();
   const { resolvedTheme } = useTheme();
 
-  // Esc key listener
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const panelRef = useFocusTrap<HTMLElement>(isOpen, onClose);
 
   const { totalSpent, totalEarned } = useMemo(() => {
     let spent = 0;
@@ -112,6 +102,7 @@ export function DayDetailPanel({
 
           {/* Sliding Panel */}
           <motion.aside
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="day-panel-title"

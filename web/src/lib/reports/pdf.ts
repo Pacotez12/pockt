@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import { formatGs } from '../format';
 
 export interface ReportCategoryItem {
@@ -39,6 +38,7 @@ export interface ReportPdfData {
 }
 
 export async function generateReportPdf(data: ReportPdfData): Promise<Blob> {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

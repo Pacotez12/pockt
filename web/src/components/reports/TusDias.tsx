@@ -53,6 +53,7 @@ export function TusDias({
     x: number;
     y: number;
   } | null>(null);
+  const [focusedCoord, setFocusedCoord] = useState<{ w: number; d: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -292,6 +293,46 @@ export function TusDias({
     if (onSelectDay) onSelectDay(day);
   };
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent<SVGRectElement>,
+    w: number,
+    d: number,
+    day: DayData
+  ) => {
+    let nextW = w;
+    let nextD = d;
+
+    if (e.key === 'ArrowLeft') {
+      nextW = Math.max(0, w - 1);
+    } else if (e.key === 'ArrowRight') {
+      nextW = Math.min(weeks.length - 1, w + 1);
+    } else if (e.key === 'ArrowUp') {
+      nextD = Math.max(0, d - 1);
+    } else if (e.key === 'ArrowDown') {
+      nextD = Math.min((weeks[w]?.length || 7) - 1, d + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCellClick(day);
+      return;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    const colLength = weeks[nextW]?.length || 0;
+    if (nextD >= colLength) {
+      nextD = colLength - 1;
+    }
+
+    setFocusedCoord({ w: nextW, d: nextD });
+
+    const targetId = `tus-dias-cell-${nextW}-${nextD}`;
+    const el = document.getElementById(targetId);
+    if (el) {
+      el.focus();
+    }
+  };
+
   const handleCellMouseEnter = (
     day: DayData,
     e: React.MouseEvent<SVGRectElement | HTMLElement>
@@ -375,8 +416,18 @@ export function TusDias({
                 const x = 10 + wIdx * 28;
                 const y = 10 + dIdx * 28;
                 const color = palette[day.level ?? 0];
+                const isFocused = focusedCoord?.w === wIdx && focusedCoord?.d === dIdx;
+                const tabIndex =
+                  isFocused || (!focusedCoord && wIdx === 0 && dIdx === 0) ? 0 : -1;
+                const dateLabel = day.date.toLocaleDateString('es-PY', {
+                  day: 'numeric',
+                  month: 'long',
+                });
+                const amountLabel = day.amount > 0 ? formatGs(day.amount) : 'Sin gastos';
+
                 return (
                   <rect
+                    id={`tus-dias-cell-${wIdx}-${dIdx}`}
                     key={`${wIdx}-${dIdx}`}
                     x={x}
                     y={y}
@@ -384,10 +435,17 @@ export function TusDias({
                     height={22}
                     rx={6}
                     fill={color}
+                    stroke={isFocused ? 'var(--brand-start)' : 'none'}
+                    strokeWidth={isFocused ? 2 : 0}
+                    role="button"
+                    tabIndex={tabIndex}
+                    aria-label={`${dateLabel}: ${amountLabel}`}
                     data-testid="tus-dias-cell"
                     data-date={day.date.toISOString().split('T')[0]}
-                    className="cursor-pointer transition-transform hover:scale-110 origin-center"
+                    className="cursor-pointer transition-transform hover:scale-110 origin-center outline-none focus:stroke-brand-start focus:stroke-2"
                     onClick={() => handleCellClick(day)}
+                    onKeyDown={(e) => handleKeyDown(e, wIdx, dIdx, day)}
+                    onFocus={() => setFocusedCoord({ w: wIdx, d: dIdx })}
                     onMouseEnter={(e) => handleCellMouseEnter(day, e)}
                     onMouseLeave={handleCellMouseLeave}
                   />

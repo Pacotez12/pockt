@@ -1,5 +1,3 @@
-import ExcelJS from 'exceljs';
-
 export interface MovementExportRow {
   type: string;
   amount: number;
@@ -75,6 +73,7 @@ export function toCsv(rows: MovementExportRow[]): string {
 }
 
 export async function toXlsx(rows: MovementExportRow[]): Promise<Uint8Array> {
+  const ExcelJS = await import('exceljs').then((m) => (m.default ? m.default : m));
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Movimientos');
 

@@ -119,4 +119,47 @@ describe('TusDias Component', () => {
     const cells = screen.getAllByTestId('tus-dias-cell');
     expect(cells.length).toBe(2);
   });
+
+  it('supports keyboard navigation via arrow keys and selection with Enter', () => {
+    const days = generateMockDays(21); // 3 weeks of 7 days
+    const onSelectDay = vi.fn();
+
+    render(
+      <TusDias
+        days={days}
+        periodLabel="Gastado en 6 meses"
+        totalAmount={100000}
+        onSelectDay={onSelectDay}
+      />
+    );
+
+    const cells = screen.getAllByTestId('tus-dias-cell');
+    expect(cells[0]).toHaveAttribute('role', 'button');
+    expect(cells[0]).toHaveAttribute('tabindex', '0');
+    expect(cells[1]).toHaveAttribute('tabindex', '-1');
+    expect(cells[0]).toHaveAttribute('aria-label');
+
+    // Focus first cell
+    cells[0].focus();
+    expect(document.activeElement).toBe(cells[0]);
+
+    // Press ArrowDown to move to cell (0, 1) -> index 1
+    fireEvent.keyDown(cells[0], { key: 'ArrowDown' });
+    const cell01 = document.getElementById('tus-dias-cell-0-1');
+    expect(document.activeElement).toBe(cell01);
+
+    // Press ArrowRight to move to cell (1, 1) -> index 8
+    fireEvent.keyDown(cell01!, { key: 'ArrowRight' });
+    const cell11 = document.getElementById('tus-dias-cell-1-1');
+    expect(document.activeElement).toBe(cell11);
+
+    // Press Enter to select the day
+    fireEvent.keyDown(cell11!, { key: 'Enter' });
+    expect(onSelectDay).toHaveBeenCalledTimes(1);
+    expect(onSelectDay).toHaveBeenCalledWith(
+      expect.objectContaining({
+        date: days[8].date,
+      })
+    );
+  });
 });

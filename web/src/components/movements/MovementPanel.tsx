@@ -4,6 +4,7 @@ import { DBExecutable, createMovement, updateMovement, softDeleteMovement } from
 import { useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 
 export interface CategoryOption {
   id: string;
@@ -150,18 +151,7 @@ export function MovementPanel({
     onClose();
   };
 
-  // Keyboard Escape listener
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isDirty]);
+  const panelRef = useFocusTrap<HTMLDivElement>(isOpen, handleClose);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +232,7 @@ export function MovementPanel({
           />
 
           <motion.aside
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="panel-title"

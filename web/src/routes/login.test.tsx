@@ -51,4 +51,19 @@ describe('LoginRoute', () => {
       },
     });
   });
+
+  it('shows configuration error message when Supabase environment variables are missing', async () => {
+    const supabaseModule = await import('@/lib/supabase');
+    const origConfigured = supabaseModule.isSupabaseConfigured;
+    (supabaseModule as any).isSupabaseConfigured = false;
+
+    render(<LoginRoute />);
+
+    expect(
+      screen.getByText(/Falta configurar las variables de entorno de Supabase/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Continuar con Google/i })).not.toBeInTheDocument();
+
+    (supabaseModule as any).isSupabaseConfigured = origConfigured;
+  });
 });

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { disconnectAndClearPowerSync } from './powersync/db';
 
 export interface AuthContextValue {
   session: Session | null;
@@ -43,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      const { disconnectAndClearPowerSync } = await import('./powersync/db');
       await disconnectAndClearPowerSync();
     } catch (e) {
       console.warn('Error clearing PowerSync db on logout:', e);

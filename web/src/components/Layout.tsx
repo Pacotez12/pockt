@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { TopNav } from './TopNav';
 import { AuroraShader } from './AuroraShader';
 import { ErrorBoundary } from './ErrorBoundary';
+import { RouteSpinner } from './RouteSpinner';
 
 export function Layout() {
   const location = useLocation();
@@ -14,7 +15,9 @@ export function Layout() {
       <main className="flex-1 w-full max-w-[1180px] mx-auto px-4 sm:px-8 pt-24 pb-16">
         {/* key: al cambiar de pantalla el error se limpia solo */}
         <ErrorBoundary key={location.pathname}>
-          <Outlet />
+          <Suspense fallback={<RouteSpinner />}>
+            <Outlet />
+          </Suspense>
         </ErrorBoundary>
       </main>
     </div>

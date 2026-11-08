@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { AuroraShader } from '@/components/AuroraShader';
 import { CountUp } from '@/components/CountUp';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export function LoginRoute() {
   const [loading, setLoading] = useState(false);
@@ -199,32 +199,41 @@ export function LoginRoute() {
             </div>
           )}
 
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleGoogleLogin}
-            className="w-full mt-6 flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-[15px] bg-white text-[#111] font-bold text-[15px] transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-white/15 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#4285F4"
-                d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2.1 3.1v2.6h3.4c2-1.8 3.1-4.5 3.1-7.5z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M6.2 13.6a6 6 0 0 1 0-3.8V7.1H2.7a10 10 0 0 0 0 9.2z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.9c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7.1l3.5 2.7C7 7.7 9.3 5.9 12 5.9z"
-              />
-            </svg>
-            {loading ? 'Conectando…' : 'Continuar con Google'}
-          </button>
+          {!isSupabaseConfigured ? (
+            <div
+              role="alert"
+              className="w-full mt-6 p-4 rounded-[15px] border border-warning/40 bg-warning/10 text-warning text-[13px] leading-relaxed text-center"
+            >
+              Falta configurar las variables de entorno de Supabase (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY).
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleGoogleLogin}
+              className="w-full mt-6 flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-[15px] bg-white text-[#111] font-bold text-[15px] transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-white/15 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2.1 3.1v2.6h3.4c2-1.8 3.1-4.5 3.1-7.5z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M6.2 13.6a6 6 0 0 1 0-3.8V7.1H2.7a10 10 0 0 0 0 9.2z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.9c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7.1l3.5 2.7C7 7.7 9.3 5.9 12 5.9z"
+                />
+              </svg>
+              {loading ? 'Conectando…' : 'Continuar con Google'}
+            </button>
+          )}
 
           <div className="text-[12.5px] text-white/45 mt-2.5 text-center">
             Si todavía no activaste "Sincronizar con la web" en la app, hacelo primero.
