@@ -168,7 +168,7 @@ export function DayDetailPanel({
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar panel"
-                className="w-8 h-8 rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-tertiary hover:text-text-primary active:scale-95 transition-all cursor-pointer shrink-0"
+                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-tertiary hover:text-text-primary active:scale-95 transition-all cursor-pointer shrink-0"
               >
                 <svg
                   className="w-4 h-4"
@@ -184,7 +184,7 @@ export function DayDetailPanel({
             </div>
 
             {/* Link to Movimientos filtered by this day */}
-            <div className="py-3 flex items-center justify-between border-b border-white/5 text-[12.5px]">
+            <div className="py-2.5 flex items-center justify-between border-b border-white/5 text-[12.5px]">
               <span className="text-text-tertiary">
                 {transactions.length === 1
                   ? '1 movimiento'
@@ -192,7 +192,7 @@ export function DayDetailPanel({
               </span>
               <Link
                 to={`/movimientos?desde=${dateKey}&hasta=${dateKey}`}
-                className="inline-flex items-center gap-1 font-semibold text-brand-primary hover:underline group"
+                className="min-h-[40px] inline-flex items-center gap-1 font-semibold text-brand-primary hover:underline group"
               >
                 Ver en Movimientos
                 <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

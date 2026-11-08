@@ -700,18 +700,18 @@ export function InicioRoute() {
             <button
               type="button"
               onClick={handleResetToCurrentMonth}
-              className="text-[12.5px] font-semibold text-brand-start hover:underline cursor-pointer transition-colors"
+              className="min-h-[40px] inline-flex items-center text-[12.5px] font-semibold text-brand-start hover:underline cursor-pointer transition-colors"
             >
               Volver a este mes
             </button>
           )}
 
-          <div className="flex items-center gap-0.5 bg-glass-fill border border-glass-border rounded-full p-[3px] backdrop-blur-md shadow-sm">
+          <div className="flex items-center gap-1 bg-glass-fill border border-glass-border rounded-full p-1 backdrop-blur-md shadow-sm min-h-[40px]">
             <button
               type="button"
               aria-label="Mes anterior"
               onClick={handlePrevMonth}
-              className="h-7 w-7 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+              className="h-8 w-8 min-w-[32px] min-h-[32px] rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -719,7 +719,7 @@ export function InicioRoute() {
             <button
               type="button"
               onClick={() => setPopoverOpen((v) => !v)}
-              className="h-7 px-3 rounded-full flex items-center justify-center text-[13px] font-semibold text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+              className="min-h-[32px] px-3 rounded-full flex items-center justify-center text-[13px] font-semibold text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
             >
               {shortMonth}
             </button>
@@ -730,7 +730,7 @@ export function InicioRoute() {
               onClick={handleNextMonth}
               disabled={isCurrentMonth}
               className={cn(
-                'h-7 w-7 rounded-full flex items-center justify-center transition-colors',
+                'h-8 w-8 min-w-[32px] min-h-[32px] rounded-full flex items-center justify-center transition-colors',
                 isCurrentMonth
                   ? 'opacity-30 cursor-not-allowed pointer-events-none'
                   : 'text-text-secondary hover:text-text-primary hover:bg-white/10 cursor-pointer'
@@ -747,14 +747,14 @@ export function InicioRoute() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={prefersReduced ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
-              className="absolute right-0 top-full mt-2 z-50 w-[260px] bg-sheet-surface border border-glass-border rounded-2xl p-3 shadow-2xl backdrop-blur-xl"
+              className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-50 w-[260px] max-w-[calc(100vw-32px)] bg-sheet-surface border border-glass-border rounded-2xl p-3 shadow-2xl backdrop-blur-xl"
             >
               <div className="flex items-center justify-between text-[13px] font-bold text-text-primary mb-2.5 px-1">
                 <button
                   type="button"
                   aria-label="Año anterior"
                   onClick={() => setPopoverYear((y) => y - 1)}
-                  className="p-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
+                  className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-text-secondary hover:text-text-primary hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -765,7 +765,7 @@ export function InicioRoute() {
                   onClick={() => setPopoverYear((y) => Math.min(currentYear, y + 1))}
                   disabled={popoverYear >= currentYear}
                   className={cn(
-                    'p-1 rounded-md transition-colors',
+                    'w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition-colors',
                     popoverYear >= currentYear
                       ? 'opacity-30 cursor-not-allowed pointer-events-none'
                       : 'text-text-secondary hover:text-text-primary hover:bg-white/10 cursor-pointer'
@@ -793,7 +793,7 @@ export function InicioRoute() {
                       disabled={isFuture}
                       onClick={() => navigateToMonth(popoverYear, mNum)}
                       className={cn(
-                        'text-[12.5px] py-2 rounded-xl transition-all font-medium text-center',
+                        'text-[12.5px] min-h-[40px] py-2 rounded-xl transition-all font-medium text-center flex items-center justify-center',
                         isSelected
                           ? 'bg-gradient-to-br from-[#FF8A3D] to-[#FF3D7F] text-white font-bold shadow-sm'
                           : isFuture

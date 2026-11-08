@@ -69,7 +69,7 @@ export function LoginRoute() {
       <AuroraShader opacity={1} interactive forceDark />
 
       {/* Top brand */}
-      <header className="pt-8 px-8 sm:px-14 flex items-center gap-3 relative z-10">
+      <header className="pt-6 sm:pt-8 px-6 sm:px-14 flex items-center gap-3 relative z-10">
         <img
           src="/pockt-icon.svg"
           alt=""
@@ -81,22 +81,25 @@ export function LoginRoute() {
       </header>
 
       {/* Main split grid */}
-      <main className="flex-1 max-w-[1240px] w-full mx-auto px-6 sm:px-14 py-8 sm:py-12 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] items-center gap-10 lg:gap-14 relative z-10">
+      <main className="flex-1 max-w-[1240px] w-full mx-auto px-5 sm:px-14 py-6 sm:py-12 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] items-center gap-6 lg:gap-14 relative z-10">
         {/* Left column: hero + floating cards */}
         <div>
-          <h1 className="text-[42px] sm:text-[56px] lg:text-[58px] font-black leading-[1.03] tracking-[-0.035em] text-white">
+          <h1 className="text-[34px] sm:text-[56px] lg:text-[58px] font-black leading-[1.08] sm:leading-[1.03] tracking-[-0.035em] text-white">
             Tu plata,<br />
             ahora también<br />
             en <span className="text-[#FF8A3D]">pantalla grande.</span>
           </h1>
 
-          <p className="mt-4 sm:mt-5 text-[16px] sm:text-[17px] leading-relaxed text-white/70 max-w-[480px]">
+          <p className="mt-3 sm:mt-5 text-[15px] sm:text-[17px] leading-snug sm:leading-relaxed text-white/70 max-w-[480px]">
             Lo mismo que cargás en el teléfono, en la compu y al instante. Más reportes, más
             detalle, descargas en Excel y PDF.
           </p>
 
-          {/* Floating cards stack */}
-          <div className="relative h-[250px] mt-8 max-w-[520px]">
+          {/* Floating cards stack - hidden on mobile (< 768px) to prevent overflow and keep login above the fold */}
+          <div
+            data-testid="login-floating-cards"
+            className="hidden md:block relative h-[250px] mt-8 max-w-[520px]"
+          >
             {/* Card 1: Gastado en noviembre */}
             <motion.div
               initial={prefersReduced ? false : { opacity: 0, y: 16 }}
@@ -183,7 +186,7 @@ export function LoginRoute() {
           initial={prefersReduced ? false : { opacity: 0, y: 18, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ ...springTransition, delay: 0.15 }}
-          className="lg:justify-self-end w-full max-w-[380px] p-7 sm:p-8 rounded-[26px] bg-[#101012]/60 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/60"
+          className="lg:justify-self-end w-full max-w-[380px] p-6 sm:p-8 rounded-[22px] sm:rounded-[26px] bg-[#101012]/60 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/60"
         >
           <h2 className="text-[24px] font-bold tracking-tight text-white">Entrá a Pockt</h2>
           <p className="text-[14px] leading-relaxed text-white/65 mt-2">

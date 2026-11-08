@@ -126,7 +126,7 @@ export function TopNav() {
               type="button"
               onClick={() => setSettingsOpen(!settingsOpen)}
               aria-label="Opciones de tema y cuenta"
-              className="w-[34px] h-[34px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
             >
               <svg
                 className="w-4 h-4"
@@ -143,7 +143,7 @@ export function TopNav() {
 
             {settingsOpen && (
               <div
-                className="absolute right-0 top-11 w-48 rounded-2xl bg-sheet-surface border border-glass-border p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
+                className="absolute right-0 top-12 w-48 rounded-2xl bg-sheet-surface border border-glass-border p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
                 onClick={() => setSettingsOpen(false)}
               >
                 <div className="px-2 py-1 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">
@@ -157,7 +157,7 @@ export function TopNav() {
                       setTheme('system');
                     }}
                     className={cn(
-                      'flex-1 py-1 rounded-lg text-[12px] font-medium transition-colors',
+                      'flex-1 min-h-[36px] py-1 rounded-lg text-[12px] font-medium transition-colors flex items-center justify-center',
                       theme === 'system' ? 'bg-white/15 text-text-primary font-bold' : 'text-text-tertiary hover:text-text-primary'
                     )}
                   >
@@ -170,7 +170,7 @@ export function TopNav() {
                       setTheme('light');
                     }}
                     className={cn(
-                      'flex-1 py-1 rounded-lg text-[12px] font-medium transition-colors',
+                      'flex-1 min-h-[36px] py-1 rounded-lg text-[12px] font-medium transition-colors flex items-center justify-center',
                       theme === 'light' ? 'bg-white/15 text-text-primary font-bold' : 'text-text-tertiary hover:text-text-primary'
                     )}
                   >
@@ -183,7 +183,7 @@ export function TopNav() {
                       setTheme('dark');
                     }}
                     className={cn(
-                      'flex-1 py-1 rounded-lg text-[12px] font-medium transition-colors',
+                      'flex-1 min-h-[36px] py-1 rounded-lg text-[12px] font-medium transition-colors flex items-center justify-center',
                       theme === 'dark' ? 'bg-white/15 text-text-primary font-bold' : 'text-text-tertiary hover:text-text-primary'
                     )}
                   >
@@ -196,7 +196,7 @@ export function TopNav() {
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium text-danger hover:bg-danger/10 transition-colors"
+                  className="w-full text-left min-h-[40px] flex items-center px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                 >
                   Cerrar sesión
                 </button>
@@ -208,7 +208,7 @@ export function TopNav() {
           <Link
             to="/movimientos?crear=1"
             onClick={handleCreateMovement}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-[13px] text-white select-none shadow-sm active:scale-95 transition-transform cursor-pointer"
+            className="min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-[13px] text-white select-none shadow-sm active:scale-95 transition-transform cursor-pointer"
             style={{
               background: 'linear-gradient(90deg, var(--brand-start), var(--brand-end))',
             }}
@@ -231,7 +231,7 @@ export function TopNav() {
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Abrir menú de navegación"
-            className="md:hidden w-[34px] h-[34px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            className="md:hidden w-10 h-10 min-w-[40px] min-h-[40px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             <svg
               className="w-4 h-4"

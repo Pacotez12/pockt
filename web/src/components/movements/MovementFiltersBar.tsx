@@ -111,7 +111,7 @@ export function MovementFiltersBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar comercio o nota"
-            className="w-full pl-10 pr-3.5 py-1.5 rounded-full text-[13px] bg-white/5 border border-glass-border focus:border-brand-start focus:ring-2 focus:ring-brand-start/20 outline-none text-text-primary placeholder:text-text-tertiary transition-all"
+            className="w-full pl-10 pr-3.5 min-h-[40px] py-2 rounded-full text-[13px] bg-white/5 border border-glass-border focus:border-brand-start focus:ring-2 focus:ring-brand-start/20 outline-none text-text-primary placeholder:text-text-tertiary transition-all"
           />
         </div>
 
@@ -121,7 +121,7 @@ export function MovementFiltersBar({
             type="button"
             onClick={() => togglePopover('period')}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
+              'inline-flex items-center gap-1.5 px-3.5 min-h-[40px] py-2 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.period && filters.period !== 'this_month'
                 ? 'bg-brand-start/15 border-brand-start/40 text-brand-start'
                 : 'bg-white/5 border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10'
@@ -147,7 +147,7 @@ export function MovementFiltersBar({
           </button>
 
           {periodOpen && (
-            <div className="absolute left-0 top-10 w-44 rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+            <div className="absolute left-0 top-11 w-44 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
               {[
                 { id: 'this_month', label: 'Este mes' },
                 { id: 'last_month', label: 'Mes pasado' },
@@ -162,7 +162,7 @@ export function MovementFiltersBar({
                     closePopover();
                   }}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
+                    'w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors flex items-center',
                     (filters.period || 'this_month') === p.id
                       ? 'bg-brand-start/15 text-brand-start font-semibold'
                       : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -181,7 +181,7 @@ export function MovementFiltersBar({
             type="button"
             onClick={() => togglePopover('category')}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
+              'inline-flex items-center gap-1.5 px-3.5 min-h-[40px] py-2 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.categoryId
                 ? 'bg-brand-start/15 border-brand-start/40 text-brand-start'
                 : 'bg-white/5 border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10'
@@ -194,7 +194,7 @@ export function MovementFiltersBar({
           </button>
 
           {categoryOpen && (
-            <div className="absolute left-0 top-10 w-48 max-h-60 overflow-y-auto rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+            <div className="absolute left-0 top-11 w-48 max-w-[calc(100vw-32px)] max-h-60 overflow-y-auto rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
               <button
                 type="button"
                 onClick={() => {
@@ -202,7 +202,7 @@ export function MovementFiltersBar({
                   closePopover();
                 }}
                 className={cn(
-                  'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
+                  'w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors flex items-center',
                   !filters.categoryId
                     ? 'bg-brand-start/15 text-brand-start font-semibold'
                     : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -219,7 +219,7 @@ export function MovementFiltersBar({
                     closePopover();
                   }}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors truncate',
+                    'w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors truncate flex items-center',
                     filters.categoryId === cat.id
                       ? 'bg-brand-start/15 text-brand-start font-semibold'
                       : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -238,7 +238,7 @@ export function MovementFiltersBar({
             type="button"
             onClick={() => togglePopover('type')}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
+              'inline-flex items-center gap-1.5 px-3.5 min-h-[40px] py-2 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.type
                 ? 'bg-brand-start/15 border-brand-start/40 text-brand-start'
                 : 'bg-white/5 border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10'
@@ -259,7 +259,7 @@ export function MovementFiltersBar({
           </button>
 
           {typeOpen && (
-            <div className="absolute left-0 top-10 w-36 rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+            <div className="absolute left-0 sm:left-0 right-0 sm:right-auto top-11 w-36 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
               {[
                 { id: undefined, label: 'Todos' },
                 { id: 'expense', label: 'Gastos' },
@@ -274,7 +274,7 @@ export function MovementFiltersBar({
                     closePopover();
                   }}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
+                    'w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors flex items-center',
                     filters.type === t.id
                       ? 'bg-brand-start/15 text-brand-start font-semibold'
                       : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -293,7 +293,7 @@ export function MovementFiltersBar({
             type="button"
             onClick={() => togglePopover('origin')}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
+              'inline-flex items-center gap-1.5 px-3.5 min-h-[40px] py-2 rounded-full text-[12.5px] font-semibold border transition-all cursor-pointer',
               filters.source
                 ? 'bg-brand-start/15 border-brand-start/40 text-brand-start'
                 : 'bg-white/5 border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10'
@@ -316,7 +316,7 @@ export function MovementFiltersBar({
           </button>
 
           {originOpen && (
-            <div className="absolute left-0 top-10 w-36 rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+            <div className="absolute left-0 sm:left-0 right-0 sm:right-auto top-11 w-36 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
               {[
                 { id: undefined, label: 'Todos' },
                 { id: 'manual', label: 'Manual' },
@@ -332,7 +332,7 @@ export function MovementFiltersBar({
                     closePopover();
                   }}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 rounded-xl text-[12.5px] font-medium transition-colors',
+                    'w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors flex items-center',
                     filters.source === o.id
                       ? 'bg-brand-start/15 text-brand-start font-semibold'
                       : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -350,7 +350,7 @@ export function MovementFiltersBar({
           <button
             type="button"
             onClick={onClearFilters}
-            className="px-2.5 py-1 rounded-full text-[12px] font-semibold text-danger hover:bg-danger/10 active:scale-95 transition-all cursor-pointer"
+            className="min-h-[40px] inline-flex items-center px-3 py-1.5 rounded-full text-[12px] font-semibold text-danger hover:bg-danger/10 active:scale-95 transition-all cursor-pointer"
           >
             Limpiar
           </button>
@@ -362,7 +362,7 @@ export function MovementFiltersBar({
         <button
           type="button"
           onClick={() => togglePopover('download')}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-white/5 border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 min-h-[40px] py-2 rounded-full text-[12.5px] font-semibold bg-white/5 border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 4v12M7 11l5 5 5-5M5 20h14" />
@@ -371,14 +371,14 @@ export function MovementFiltersBar({
         </button>
 
         {downloadOpen && (
-          <div className="absolute right-0 top-10 w-48 rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
+          <div className="absolute right-0 top-11 w-48 max-w-[calc(100vw-32px)] rounded-2xl bg-sheet-surface border border-glass-border p-1.5 shadow-xl z-30 space-y-0.5">
             <button
               type="button"
               onClick={() => {
                 onExportCsv();
                 closePopover();
               }}
-              className="w-full text-left px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
+              className="w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
             >
               <svg className="w-4 h-4 text-brand-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -392,7 +392,7 @@ export function MovementFiltersBar({
                 onExportXlsx();
                 closePopover();
               }}
-              className="w-full text-left px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
+              className="w-full text-left min-h-[40px] px-3 py-2 rounded-xl text-[13px] font-medium text-text-primary hover:bg-white/5 flex items-center gap-2 cursor-pointer transition-colors"
             >
               <svg className="w-4 h-4 text-positive" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" />

@@ -274,7 +274,7 @@ export function MovementPanel({
                 type="button"
                 onClick={handleClose}
                 aria-label="Cerrar panel"
-                className="w-8 h-8 rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-tertiary hover:text-text-primary active:scale-95 transition-all cursor-pointer"
+                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full grid place-items-center bg-glass-fill border border-glass-border text-text-tertiary hover:text-text-primary active:scale-95 transition-all cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -313,7 +313,7 @@ export function MovementPanel({
                       disabled={isLoan}
                       onClick={() => handleTypeChange('expense')}
                       className={cn(
-                        'flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-all',
+                        'flex-1 min-h-[40px] py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center cursor-pointer',
                         type === 'expense'
                           ? 'bg-white/15 text-white shadow-sm'
                           : 'text-text-tertiary hover:text-text-secondary'
@@ -326,7 +326,7 @@ export function MovementPanel({
                       disabled={isLoan}
                       onClick={() => handleTypeChange('income')}
                       className={cn(
-                        'flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-all',
+                        'flex-1 min-h-[40px] py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center cursor-pointer',
                         type === 'income'
                           ? 'bg-positive/20 text-positive shadow-sm'
                           : 'text-text-tertiary hover:text-text-secondary'
@@ -339,7 +339,7 @@ export function MovementPanel({
                       disabled={isLoan}
                       onClick={() => handleTypeChange('transfer')}
                       className={cn(
-                        'flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-all',
+                        'flex-1 min-h-[40px] py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center cursor-pointer',
                         type === 'transfer'
                           ? 'bg-brand-start/20 text-brand-start shadow-sm'
                           : 'text-text-tertiary hover:text-text-secondary'
@@ -510,14 +510,14 @@ export function MovementPanel({
                           type="button"
                           onClick={handleDelete}
                           disabled={isSubmitting}
-                          className="flex-1 py-1.5 rounded-xl bg-danger text-white text-[12.5px] font-bold hover:bg-danger/90 active:scale-95 transition-all cursor-pointer"
+                          className="flex-1 min-h-[40px] py-2 rounded-xl bg-danger text-white text-[12.5px] font-bold hover:bg-danger/90 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
                         >
                           Confirmar borrar
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDelete(false)}
-                          className="px-3 py-1.5 rounded-xl bg-white/10 text-text-secondary text-[12.5px] font-semibold hover:bg-white/15 transition-all cursor-pointer"
+                          className="px-3 min-h-[40px] py-2 rounded-xl bg-white/10 text-text-secondary text-[12.5px] font-semibold hover:bg-white/15 transition-all cursor-pointer flex items-center justify-center"
                         >
                           No, cancelar
                         </button>
@@ -529,7 +529,7 @@ export function MovementPanel({
                         <button
                           type="button"
                           onClick={() => setConfirmDelete(true)}
-                          className="px-3.5 py-2.5 rounded-xl border border-danger/30 text-danger text-[13px] font-semibold hover:bg-danger/10 active:scale-95 transition-all cursor-pointer"
+                          className="px-3.5 min-h-[40px] py-2 rounded-xl border border-danger/30 text-danger text-[13px] font-semibold hover:bg-danger/10 active:scale-95 transition-all cursor-pointer inline-flex items-center"
                         >
                           Borrar
                         </button>
@@ -538,7 +538,7 @@ export function MovementPanel({
                       <button
                         type="button"
                         onClick={handleClose}
-                        className="px-4 py-2.5 rounded-xl border border-glass-border text-text-secondary text-[13px] font-semibold hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+                        className="px-4 min-h-[40px] py-2 rounded-xl border border-glass-border text-text-secondary text-[13px] font-semibold hover:bg-white/5 active:scale-95 transition-all cursor-pointer inline-flex items-center"
                       >
                         Cancelar
                       </button>
@@ -546,7 +546,7 @@ export function MovementPanel({
                         type="submit"
                         disabled={isSubmitting}
                         className={cn(
-                          'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-[13px] text-white shadow-sm active:scale-95 transition-transform cursor-pointer',
+                          'flex items-center justify-center gap-2 px-5 min-h-[40px] py-2 rounded-xl font-bold text-[13px] text-white shadow-sm active:scale-95 transition-transform cursor-pointer',
                           isSubmitting && 'opacity-70 cursor-wait'
                         )}
                         style={{

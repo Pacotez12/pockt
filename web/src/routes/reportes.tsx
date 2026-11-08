@@ -531,7 +531,7 @@ export function ReportesRoute() {
                   key={mode}
                   type="button"
                   className={cn(
-                    'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start',
+                    'px-3.5 min-h-[40px] py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start flex items-center justify-center',
                     isActive
                       ? 'on bg-white/10 text-text-primary shadow-sm'
                       : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
@@ -840,7 +840,7 @@ export function ReportesRoute() {
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-3.5 min-h-[40px] py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadCsv}
             disabled={periodTxs.length === 0}
           >
@@ -850,7 +850,7 @@ export function ReportesRoute() {
 
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-3.5 min-h-[40px] py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadExcel}
             disabled={periodTxs.length === 0}
           >
@@ -860,7 +860,7 @@ export function ReportesRoute() {
 
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-3.5 min-h-[40px] py-2 rounded-full text-xs font-semibold bg-glass-fill border border-glass-border text-text-secondary hover:text-text-primary hover:bg-white/10 active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-start focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
           >

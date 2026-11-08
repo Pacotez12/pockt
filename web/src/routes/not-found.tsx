@@ -23,7 +23,7 @@ export function NotFoundRoute() {
         <div className="flex items-center justify-center gap-3 mt-6">
           <Link
             to="/"
-            className="px-5 py-2.5 rounded-full font-bold text-[13.5px] text-white shadow-lg shadow-brand-end/20 transition-transform active:scale-95"
+            className="min-h-[40px] inline-flex items-center justify-center px-5 py-2.5 rounded-full font-bold text-[13.5px] text-white shadow-lg shadow-brand-end/20 transition-transform active:scale-95"
             style={{
               background: 'linear-gradient(90deg, var(--brand-start), var(--brand-end))',
             }}
@@ -32,7 +32,7 @@ export function NotFoundRoute() {
           </Link>
           <Link
             to="/movimientos"
-            className="px-4 py-2.5 rounded-full font-semibold text-[13px] border border-glass-border bg-glass-fill text-text-secondary hover:text-text-primary transition-colors active:scale-95"
+            className="min-h-[40px] inline-flex items-center justify-center px-4 py-2.5 rounded-full font-semibold text-[13px] border border-glass-border bg-glass-fill text-text-secondary hover:text-text-primary transition-colors active:scale-95"
           >
             Ver movimientos
           </Link>

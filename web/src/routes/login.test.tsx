@@ -66,4 +66,11 @@ describe('LoginRoute', () => {
 
     (supabaseModule as any).isSupabaseConfigured = origConfigured;
   });
+
+  it('hides decorative floating cards on mobile viewports (< 768px)', () => {
+    render(<LoginRoute />);
+    const floatingContainer = screen.getByTestId('login-floating-cards');
+    expect(floatingContainer).toHaveClass('hidden');
+    expect(floatingContainer).toHaveClass('md:block');
+  });
 });

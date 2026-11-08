@@ -303,7 +303,7 @@ export function PrestamoDetalleRoute() {
             <button
               type="button"
               onClick={handleDownloadSchedule}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-text-primary bg-glass-fill border border-glass-border hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 min-h-[40px] py-2 rounded-full text-xs font-bold text-text-primary bg-glass-fill border border-glass-border hover:bg-white/10 transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Descargar cronograma</span>

@@ -370,7 +370,7 @@ export function TusDias({
         <div className="inline-flex p-1 rounded-xl bg-white/5 border border-glass-border">
           <button
             type="button"
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start ${
+            className={`px-3.5 min-h-[40px] py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start flex items-center justify-center ${
               mode === '2d'
                 ? 'bg-white/10 text-text-primary shadow-sm on'
                 : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
@@ -381,7 +381,7 @@ export function TusDias({
           </button>
           <button
             type="button"
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start ${
+            className={`px-3.5 min-h-[40px] py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-start flex items-center justify-center ${
               mode === '3d'
                 ? 'bg-white/10 text-text-primary shadow-sm on'
                 : 'text-text-tertiary hover:text-text-primary hover:bg-white/5'
