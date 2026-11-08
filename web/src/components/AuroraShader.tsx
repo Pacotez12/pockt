@@ -24,8 +24,12 @@ uniform float t;
 uniform vec2 mo;
 uniform float u_light;
 
+// Hash sin sin(): en GPUs de celular sin() con argumentos grandes pierde
+// precisión y el ruido se rompe en bloques.
 float h(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
 }
 
 float n(vec2 p) {
