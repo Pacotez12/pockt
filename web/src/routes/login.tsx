@@ -66,7 +66,7 @@ export function LoginRoute() {
   return (
     <div className="min-h-screen relative isolate overflow-hidden bg-black text-white flex flex-col justify-between selection:bg-brand-start/20">
       {/* Background WebGL Shader & Vignette */}
-      <AuroraShader opacity={1} interactive />
+      <AuroraShader opacity={1} interactive forceDark />
 
       {/* Top brand */}
       <header className="pt-8 px-8 sm:px-14 flex items-center gap-3 relative z-10">

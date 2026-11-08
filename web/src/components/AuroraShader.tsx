@@ -6,6 +6,8 @@ export interface AuroraShaderProps {
   opacity?: number;
   interactive?: boolean;
   className?: string;
+  /** El login es siempre oscuro (boceto aprobado), sin importar el tema. */
+  forceDark?: boolean;
 }
 
 const VERTEX_SHADER_SRC = `
@@ -85,9 +87,10 @@ export function AuroraShader({
   opacity = 1,
   interactive = true,
   className,
+  forceDark = false,
 }: AuroraShaderProps) {
   const { resolvedTheme } = useTheme();
-  const isLight = resolvedTheme === 'light';
+  const isLight = !forceDark && resolvedTheme === 'light';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
