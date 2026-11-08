@@ -6,6 +6,10 @@ import { supabase } from '../supabase';
 let activeDatabase: PowerSyncDatabase | null = null;
 let currentUserId: string | null = null;
 
+export function getActivePowerSyncDatabase(): PowerSyncDatabase | null {
+  return activeDatabase;
+}
+
 export function getPowerSyncDatabase(userId: string): PowerSyncDatabase {
   if (activeDatabase && currentUserId === userId) {
     return activeDatabase;
