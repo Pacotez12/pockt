@@ -818,7 +818,7 @@ export function TusDias({
             <div
               ref={scrollContainerRef}
               data-testid="tus-dias-scroll-container"
-              className="min-w-0 overflow-x-auto pb-1"
+              className="min-w-0 overflow-x-auto p-1.5"
             >
               <div
                 className="flex min-w-max mx-auto justify-center"
