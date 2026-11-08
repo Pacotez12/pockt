@@ -82,7 +82,51 @@ Future<String> resolveOrMigrateSyncOwner(
     return localOwner;
   }
 
-  // Flujo normal de primera cuenta local
+  // 1. Si existe el ajuste legado sync.userId distinto del usuario actual, no vincular
+  try {
+    final settingsRows = await database.getAll(
+      "SELECT value FROM settings WHERE key = 'sync.userId'",
+    );
+    if (settingsRows.isNotEmpty) {
+      final legacyUserId = settingsRows.first['value'] as String?;
+      if (legacyUserId != null &&
+          legacyUserId.isNotEmpty &&
+          legacyUserId != currentUserId) {
+        throw CrossAccountSyncException(
+          message:
+              'La base de datos contiene datos de la cuenta anterior ($legacyUserId)',
+          expectedUserId: legacyUserId,
+          actualUserId: currentUserId,
+        );
+      }
+    }
+  } catch (e) {
+    if (e is CrossAccountSyncException) rethrow;
+    // Si la tabla settings aún no existe, continuar
+  }
+
+  // 2. Si hay cambios pendientes en la cola de subida (ps_crud no vacía), no vincular
+  try {
+    final crudRows = await database.getAll(
+      'SELECT count(*) as count FROM ps_crud',
+    );
+    if (crudRows.isNotEmpty) {
+      final count = crudRows.first['count'] as int? ?? 0;
+      if (count > 0) {
+        throw CrossAccountSyncException(
+          message:
+              'La base de datos contiene cambios pendientes sin sincronizar de otra sesión',
+          expectedUserId: 'unknown_prior_user',
+          actualUserId: currentUserId,
+        );
+      }
+    }
+  } catch (e) {
+    if (e is CrossAccountSyncException) rethrow;
+    // Si la tabla ps_crud aún no existe, no hay cola pendiente
+  }
+
+  // Flujo normal de primer uso real (sin legado en conflicto y sin cola pendiente)
   final winningOwner = await setSyncOwnerIfAbsent(database, currentUserId);
   if (winningOwner != currentUserId) {
     throw CrossAccountSyncException(

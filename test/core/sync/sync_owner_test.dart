@@ -55,17 +55,44 @@ void main() {
       );
     });
 
-    test('el dueño se resuelve solo con _pockt_sync_owner y no lee settings sync.userId', () async {
-      // Si settings tuviera un sync.userId legacy pero _pockt_sync_owner está vacío,
-      // se vincula la primera cuenta directamente (sin bloquear ni migrar desde settings).
+    test('si _pockt_sync_owner está vacío pero settings tiene sync.userId de otra cuenta, lanza CrossAccountSyncException', () async {
       await db.execute(
         "INSERT INTO settings (id, key, value) VALUES ('1', 'sync.userId', 'user-legacy')",
       );
       expect(await getSyncOwner(db), isNull);
 
-      final owner = await resolveOrMigrateSyncOwner(db, 'user-new');
-      expect(owner, equals('user-new'));
-      expect(await getSyncOwner(db), equals('user-new'));
+      await expectLater(
+        resolveOrMigrateSyncOwner(db, 'user-new'),
+        throwsA(isA<CrossAccountSyncException>()),
+      );
+      expect(await getSyncOwner(db), isNull);
+    });
+
+    test('si _pockt_sync_owner está vacío y settings tiene sync.userId de la misma cuenta y cola vacía, vincula exitosamente', () async {
+      await db.execute(
+        "INSERT INTO settings (id, key, value) VALUES ('1', 'sync.userId', 'user-same')",
+      );
+      await db.execute('DELETE FROM ps_crud;');
+      expect(await getSyncOwner(db), isNull);
+
+      final owner = await resolveOrMigrateSyncOwner(db, 'user-same');
+      expect(owner, equals('user-same'));
+      expect(await getSyncOwner(db), equals('user-same'));
+    });
+
+    test('si _pockt_sync_owner está vacío pero ps_crud tiene cambios pendientes, lanza CrossAccountSyncException', () async {
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS ps_crud (id INTEGER PRIMARY KEY, data TEXT);',
+      );
+      await db.execute(
+        "INSERT INTO ps_crud (id, data) VALUES (1, 'pending-change');",
+      );
+
+      await expectLater(
+        resolveOrMigrateSyncOwner(db, 'user-new'),
+        throwsA(isA<CrossAccountSyncException>()),
+      );
+      expect(await getSyncOwner(db), isNull);
     });
   });
 }

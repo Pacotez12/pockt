@@ -4,7 +4,7 @@ import {
   type PowerSyncBackendConnector,
   type PowerSyncCredentials,
 } from '@powersync/web';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 export interface BackendResult {
   error?: { code?: string; message?: string } | null;
@@ -24,9 +24,17 @@ export interface SupabaseSyncBackend {
     data: Record<string, unknown>
   ): Promise<BackendResult>;
   delete(table: string, id: string): Promise<BackendResult>;
+  createBatchBackend?(token: string): SupabaseSyncBackend;
 }
 
-export function createSupabaseBackend(client: SupabaseClient): SupabaseSyncBackend {
+export type ClientFactory = (url: string, key: string, options: any) => SupabaseClient;
+
+export function createSupabaseBackend(
+  client: SupabaseClient,
+  url: string = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321',
+  anonKey: string = import.meta.env.VITE_SUPABASE_ANON_KEY || 'missing-anon-key',
+  clientFactory?: ClientFactory
+): SupabaseSyncBackend {
   return {
     async getAccessToken() {
       const { data } = await client.auth.getSession();
@@ -35,6 +43,18 @@ export function createSupabaseBackend(client: SupabaseClient): SupabaseSyncBacke
     async getCurrentUserId() {
       const { data } = await client.auth.getSession();
       return data.session?.user?.id ?? null;
+    },
+    createBatchBackend(token: string) {
+      const clientOptions = {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUri: false,
+        },
+      };
+      const batchClient = (clientFactory || createClient)(url, anonKey, clientOptions);
+      return createSupabaseBackend(batchClient, url, anonKey, clientFactory);
     },
     async upsert(table, data, onConflict) {
       const res = await client.from(table).upsert(data, { onConflict });
@@ -55,7 +75,10 @@ export class PocktSupabaseConnector implements PowerSyncBackendConnector {
   constructor(
     private backend: SupabaseSyncBackend,
     private endpoint: string = import.meta.env.VITE_POWERSYNC_URL || '',
-    private dbOwnerUserId: string | null = null
+    private dbOwnerUserId: string | null = null,
+    private supabaseUrl: string = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321',
+    private supabaseAnonKey: string = import.meta.env.VITE_SUPABASE_ANON_KEY || 'missing-anon-key',
+    private clientFactory?: ClientFactory
   ) {}
 
   async fetchCredentials(): Promise<PowerSyncCredentials | null> {
@@ -77,6 +100,11 @@ export class PocktSupabaseConnector implements PowerSyncBackendConnector {
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
+    const token = await this.backend.getAccessToken();
+    if (!token) {
+      throw new Error('No hay sesión activa para sincronizar datos. Cola intacta.');
+    }
+
     if (this.dbOwnerUserId && this.backend.getCurrentUserId) {
       const currentUserId = await this.backend.getCurrentUserId();
       if (!currentUserId || currentUserId !== this.dbOwnerUserId) {
@@ -89,10 +117,21 @@ export class PocktSupabaseConnector implements PowerSyncBackendConnector {
     const transaction = await database.getNextCrudTransaction();
     if (!transaction) return;
 
-    const token = await this.backend.getAccessToken();
-    if (!token) {
-      throw new Error('No hay sesión activa para sincronizar datos.');
-    }
+    const batchBackend = this.backend.createBatchBackend
+      ? this.backend.createBatchBackend(token)
+      : createSupabaseBackend(
+          (this.clientFactory || createClient)(this.supabaseUrl, this.supabaseAnonKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUri: false,
+            },
+          }),
+          this.supabaseUrl,
+          this.supabaseAnonKey,
+          this.clientFactory
+        );
 
     for (const op of transaction.crud) {
       const data = { ...((op.opData as Record<string, unknown>) || {}) };
@@ -102,15 +141,15 @@ export class PocktSupabaseConnector implements PowerSyncBackendConnector {
         let result: BackendResult | undefined;
 
         if (op.op === UpdateType.PUT) {
-          result = await this.backend.upsert(
+          result = await batchBackend.upsert(
             op.table,
             { ...data, id: op.id },
             'user_id,id'
           );
         } else if (op.op === UpdateType.PATCH) {
-          result = await this.backend.update(op.table, op.id, data);
+          result = await batchBackend.update(op.table, op.id, data);
         } else if (op.op === UpdateType.DELETE) {
-          result = await this.backend.delete(op.table, op.id);
+          result = await batchBackend.delete(op.table, op.id);
         }
 
         if (result?.error) {

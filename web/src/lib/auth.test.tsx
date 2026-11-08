@@ -49,8 +49,23 @@ function LogoutTester() {
 }
 
 describe('AuthContext logout', () => {
+  let currentSession: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    currentSession = {
+      access_token: 'fake-token',
+      user: { id: 'usr-123', email: 'test@example.com' },
+    };
+    vi.mocked(supabase.auth.getSession).mockImplementation(async () => ({
+      data: { session: currentSession },
+      error: null,
+    }));
+    vi.mocked(supabase.auth.signOut).mockImplementation(async () => {
+      currentSession = null;
+      return { error: null };
+    });
   });
 
   it('con count 0, cierra directo sin mostrar confirmación', async () => {
@@ -158,8 +173,9 @@ describe('AuthContext logout', () => {
     vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({
       getUploadQueueStats: vi.fn().mockResolvedValue({ count: 0 }),
     } as any);
-    vi.mocked(supabase.auth.signOut).mockResolvedValueOnce({
-      error: new Error('Server 500 error') as any,
+    vi.mocked(supabase.auth.signOut).mockImplementationOnce(async () => {
+      currentSession = null;
+      return { error: new Error('Server 500 error') as any };
     });
 
     render(
@@ -179,6 +195,144 @@ describe('AuthContext logout', () => {
 
     expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(screen.getByTestId('session-status')).toHaveTextContent('logged-out');
+  });
+
+  it('si getUploadQueueStats falla, falla en cerrado y muestra confirmación con mensaje de advertencia', async () => {
+    vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({
+      getUploadQueueStats: vi.fn().mockRejectedValue(new Error('Queue stats error')),
+    } as any);
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const btn = screen.getByRole('button', { name: 'Logout Button' });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(screen.getByTestId('logout-confirmation-modal')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No pudimos comprobar si hay cambios sin subir. Si cerrás sesión ahora podrían perderse.'
+      )
+    ).toBeInTheDocument();
+    expect(powersyncDb.disconnectAndClearPowerSync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('session-status')).toHaveTextContent('logged-in');
+  });
+
+  it('si getUploadQueueStats no existe en la base, falla en cerrado y muestra confirmación con mensaje de advertencia', async () => {
+    vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({} as any);
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const btn = screen.getByRole('button', { name: 'Logout Button' });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(screen.getByTestId('logout-confirmation-modal')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No pudimos comprobar si hay cambios sin subir. Si cerrás sesión ahora podrían perderse.'
+      )
+    ).toBeInTheDocument();
+    expect(powersyncDb.disconnectAndClearPowerSync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('session-status')).toHaveTextContent('logged-in');
+  });
+
+  it('si signOut local deja la sesión pero se limpia al borrar sb-*-auth-token de storage, completa logout', async () => {
+    vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({
+      getUploadQueueStats: vi.fn().mockResolvedValue({ count: 0 }),
+    } as any);
+
+    localStorage.setItem('sb-testref-auth-token', 'stale-token');
+
+    // signOut does not clear session itself
+    vi.mocked(supabase.auth.signOut).mockImplementation(async () => {
+      return { error: null };
+    });
+
+    // getSession checks whether localStorage still has the token
+    vi.mocked(supabase.auth.getSession).mockImplementation(async () => {
+      const hasToken = localStorage.getItem('sb-testref-auth-token') !== null;
+      return {
+        data: {
+          session: hasToken
+            ? ({ access_token: 'stale-token', user: { id: 'usr-123' } } as any)
+            : null,
+        },
+        error: null,
+      };
+    });
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const btn = screen.getByRole('button', { name: 'Logout Button' });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(localStorage.getItem('sb-testref-auth-token')).toBeNull();
+    expect(screen.getByTestId('session-status')).toHaveTextContent('logged-out');
+  });
+
+  it('si signOut local falla y getSession persiste tras borrar storage, muestra error y no aparenta haber cerrado', async () => {
+    vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({
+      getUploadQueueStats: vi.fn().mockResolvedValue({ count: 0 }),
+    } as any);
+
+    // Session stubbornly remains in getSession
+    vi.mocked(supabase.auth.signOut).mockImplementation(async () => {
+      return { error: null };
+    });
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fake-token', user: { id: 'usr-123' } } as any },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const btn = screen.getByRole('button', { name: 'Logout Button' });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    // Session is NOT cleared
+    expect(screen.getByTestId('session-status')).toHaveTextContent('logged-in');
+    // Error banner is displayed
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/no se pudo cerrar la sesión completamente/i)).toBeInTheDocument();
   });
 
   it('si onAuthStateChange cambia de usuario sin logout, desconecta sin borrar y recarga', async () => {

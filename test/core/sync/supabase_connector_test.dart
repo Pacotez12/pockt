@@ -100,6 +100,7 @@ void main() {
       path: '${directory.path}/test.sqlite',
     );
     await database.initialize();
+    await setSyncOwner(database, 'user-1');
     addTearDown(() async {
       await database.close();
       await directory.delete(recursive: true);
@@ -310,18 +311,21 @@ void main() {
 
   group('Protección contra subida a otra cuenta (cross-account leak)', () {
     test(
-      'uploadData vincula la base al primer usuario si no tiene dueño (flujo normal)',
+      'uploadData bloquea la vinculación si la base no tiene dueño pero tiene cola pendiente',
       () async {
+        await database.execute('DELETE FROM _pockt_sync_owner;');
         backend.currentUserId = 'user-first';
         backend.accessToken = 'token-first';
         await enqueue(database, [
           entry(UpdateType.put, {'amount': 100}),
         ]);
-        await connector.uploadData(database);
+        await expectLater(
+          connector.uploadData(database),
+          throwsA(isA<CrossAccountSyncException>()),
+        );
 
-        expect(backend.calls, isNotEmpty);
-        expect(backend.tokens, equals(['token-first']));
-        expect(await getSyncOwner(database), equals('user-first'));
+        expect(backend.calls, isEmpty);
+        expect(await getSyncOwner(database), isNull);
       },
     );
 

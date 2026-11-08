@@ -1,12 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { UpdateType } from '@powersync/web';
-import { PocktSupabaseConnector, type SupabaseSyncBackend } from './connector';
+import {
+  PocktSupabaseConnector,
+  createSupabaseBackend,
+  type SupabaseSyncBackend,
+} from './connector';
 
 describe('PocktSupabaseConnector', () => {
   const fakeUrl = 'https://powersync.example.com';
 
   function createMockBackend(overrides: Partial<SupabaseSyncBackend> = {}): SupabaseSyncBackend {
-    return {
+    const backend: SupabaseSyncBackend = {
       getAccessToken: vi.fn().mockResolvedValue('test-access-token'),
       getCurrentUserId: vi.fn().mockResolvedValue('user-a'),
       upsert: vi.fn().mockResolvedValue({ error: null }),
@@ -14,6 +18,10 @@ describe('PocktSupabaseConnector', () => {
       delete: vi.fn().mockResolvedValue({ error: null }),
       ...overrides,
     };
+    if (!backend.createBatchBackend) {
+      backend.createBatchBackend = vi.fn().mockImplementation((_token: string) => backend);
+    }
+    return backend;
   }
 
   function createMockDb(crudOps: any[]) {
@@ -85,6 +93,115 @@ describe('PocktSupabaseConnector', () => {
       expect(backend.update).not.toHaveBeenCalled();
       expect(backend.delete).not.toHaveBeenCalled();
       expect(db.complete).not.toHaveBeenCalled();
+    });
+
+    it('un cambio de sesión a mitad del lote no hace que ninguna escritura salga con el token nuevo', async () => {
+      let currentToken = 'token-user-a';
+      let currentUserId = 'user-a';
+
+      const createdClients: Array<{ token: string; ops: string[] }> = [];
+
+      const clientFactory = vi.fn((_url: string, _key: string, options: any) => {
+        const authHeader = options?.global?.headers?.Authorization || '';
+        const tokenUsed = authHeader.replace('Bearer ', '');
+        const clientOps: string[] = [];
+        const clientRecord = { token: tokenUsed, ops: clientOps };
+        createdClients.push(clientRecord);
+
+        return {
+          from: vi.fn((table: string) => ({
+            upsert: vi.fn(async (data: any) => {
+              clientOps.push(`upsert:${table}:${data.id}`);
+              // Mid-batch session switch simulation!
+              currentToken = 'token-user-b';
+              currentUserId = 'user-b';
+              return { error: null };
+            }),
+            update: vi.fn((_data: any) => ({
+              eq: vi.fn(async (_col: string, id: string) => {
+                clientOps.push(`update:${table}:${id}`);
+                return { error: null };
+              }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn(async (_col: string, id: string) => {
+                clientOps.push(`delete:${table}:${id}`);
+                return { error: null };
+              }),
+            })),
+          })),
+        } as any;
+      });
+
+      const sharedBackend: SupabaseSyncBackend = {
+        getAccessToken: vi.fn(async () => currentToken),
+        getCurrentUserId: vi.fn(async () => currentUserId),
+        upsert: vi.fn().mockRejectedValue(new Error('Shared client must NOT be used for writes')),
+        update: vi.fn().mockRejectedValue(new Error('Shared client must NOT be used for writes')),
+        delete: vi.fn().mockRejectedValue(new Error('Shared client must NOT be used for writes')),
+      };
+
+      const connector = new PocktSupabaseConnector(
+        sharedBackend,
+        fakeUrl,
+        'user-a',
+        'http://localhost:54321',
+        'test-key',
+        clientFactory
+      );
+
+      const db = createMockDb([
+        { id: 'tx-1', table: 'transactions', op: UpdateType.PUT, opData: { amount: 100 } },
+        { id: 'tx-2', table: 'transactions', op: UpdateType.PATCH, opData: { amount: 200 } },
+      ]);
+
+      await connector.uploadData(db as any);
+
+      // Exactly 1 batch client created with user-a's token
+      expect(clientFactory).toHaveBeenCalledTimes(1);
+      expect(createdClients.length).toBe(1);
+      expect(createdClients[0].token).toBe('token-user-a');
+      expect(createdClients[0].ops).toEqual(['upsert:transactions:tx-1', 'update:transactions:tx-2']);
+      // None of the writes went to shared client or with token-b
+      expect(sharedBackend.upsert).not.toHaveBeenCalled();
+      expect(sharedBackend.update).not.toHaveBeenCalled();
+      expect(db.complete).toHaveBeenCalled();
+    });
+
+    it('createBatchBackend genera un cliente con Authorization Bearer y sin sesión persistente', async () => {
+      const clientFactory = vi.fn((url: string, key: string, options: any) => {
+        return {
+          url,
+          key,
+          options,
+          from: vi.fn(),
+          auth: { getSession: vi.fn() },
+        } as any;
+      });
+
+      const sharedClient = { auth: { getSession: vi.fn() } } as any;
+      const backend = createSupabaseBackend(
+        sharedClient,
+        'https://test.supabase.co',
+        'anon-key-123',
+        clientFactory
+      );
+
+      expect(backend.createBatchBackend).toBeDefined();
+      backend.createBatchBackend!('fixed-batch-token');
+
+      expect(clientFactory).toHaveBeenCalledWith(
+        'https://test.supabase.co',
+        'anon-key-123',
+        {
+          global: { headers: { Authorization: 'Bearer fixed-batch-token' } },
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUri: false,
+          },
+        }
+      );
     });
 
     it('does nothing when there is no crud transaction', async () => {

@@ -7,15 +7,22 @@ export interface LogoutOptions {
   maxWaitMs?: number;
 }
 
+export interface PendingLogoutInfo {
+  count?: number;
+  message?: string;
+}
+
 export interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
   logout: (options?: LogoutOptions) => Promise<void>;
-  pendingLogout?: { count: number } | null;
+  pendingLogout?: PendingLogoutInfo | null;
   cancelLogout?: () => void;
   confirmLogout?: () => Promise<void>;
   isSyncingLogout?: boolean;
+  logoutError?: string | null;
+  clearLogoutError?: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -23,8 +30,9 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingLogout, setPendingLogout] = useState<{ count: number } | null>(null);
+  const [pendingLogout, setPendingLogout] = useState<PendingLogoutInfo | null>(null);
   const [isSyncingLogout, setIsSyncingLogout] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const executeLogout = async () => {
+    setLogoutError(null);
     try {
       const { disconnectAndClearPowerSync } = await import('./powersync/db');
       await disconnectAndClearPowerSync();
@@ -87,6 +96,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn('Exception during supabase.auth.signOut:', e);
     }
+
+    // Step 3: Verify that session was actually cleared with getSession()
+    try {
+      const { data: postSignOut } = await supabase.auth.getSession();
+      if (postSignOut?.session) {
+        // Session remained! Clean up storage keys sb-*-auth-token
+        if (typeof localStorage !== 'undefined') {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+        }
+
+        const storageKey = (supabase.auth as any)?.storageKey;
+        if (storageKey && typeof localStorage !== 'undefined') {
+          localStorage.removeItem(storageKey);
+        }
+
+        const { data: finalCheck } = await supabase.auth.getSession();
+        if (finalCheck?.session) {
+          setLogoutError(
+            'No se pudo cerrar la sesión completamente. Por favor intentá de nuevo.'
+          );
+          setIsSyncingLogout(false);
+          setPendingLogout(null);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Exception during session clearance verification:', e);
+    }
+
     previousUserIdRef.current = null;
     setSession(null);
     setPendingLogout(null);
@@ -103,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async (options?: LogoutOptions) => {
+    setLogoutError(null);
     const force = options?.force ?? false;
     if (force) {
       await executeLogout();
@@ -115,8 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dbInstance = getActivePowerSyncDatabase();
     } catch (_) {}
 
+    // FAIL CLOSED: si getUploadQueueStats no existe o no es función
     if (!dbInstance || typeof dbInstance.getUploadQueueStats !== 'function') {
-      await executeLogout();
+      setPendingLogout({
+        message:
+          'No pudimos comprobar si hay cambios sin subir. Si cerrás sesión ahora podrían perderse.',
+      });
       return;
     }
 
@@ -159,7 +209,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.warn('Error checking upload queue stats before logout:', err);
       setIsSyncingLogout(false);
-      await executeLogout();
+      // FAIL CLOSED: si getUploadQueueStats falla, mostrar advertencia en vez de borrar
+      setPendingLogout({
+        message:
+          'No pudimos comprobar si hay cambios sin subir. Si cerrás sesión ahora podrían perderse.',
+      });
     }
   };
 
@@ -176,6 +230,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         cancelLogout,
         confirmLogout,
         isSyncingLogout,
+        logoutError,
+        clearLogoutError: () => setLogoutError(null),
       }}
     >
       {children}
@@ -195,7 +251,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               Cambios sin guardar
             </h2>
             <p id="logout-confirm-desc" className="text-[14px] text-text-secondary leading-relaxed">
-              Tenés {pendingLogout.count} {pendingLogout.count === 1 ? 'cambio' : 'cambios'} sin subir. Si cerrás sesión ahora se pierden.
+              {pendingLogout.message ||
+                `Tenés ${pendingLogout.count} ${pendingLogout.count === 1 ? 'cambio' : 'cambios'} sin subir. Si cerrás sesión ahora se pierden.`}
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
@@ -217,6 +274,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Logout error banner when incomplete */}
+      {logoutError && (
+        <div
+          role="alert"
+          data-testid="logout-error-banner"
+          className="fixed bottom-4 right-4 z-50 p-4 rounded-2xl bg-danger/10 border border-danger/30 text-danger text-sm font-semibold shadow-lg flex items-center gap-3 animate-in fade-in"
+        >
+          <span>{logoutError}</span>
+          <button
+            type="button"
+            onClick={() => setLogoutError(null)}
+            className="text-xs underline cursor-pointer ml-2"
+          >
+            Cerrar
+          </button>
         </div>
       )}
     </AuthContext.Provider>
