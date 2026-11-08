@@ -53,6 +53,16 @@ function parseYMD(s: string): { year: number; month: number; day: number } {
   return { year: parts[0], month: parts[1], day: parts[2] };
 }
 
+export function parseLocalDate(s: string): Date {
+  if (!s.includes('T')) {
+    const parts = s.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+  }
+  return new Date(s);
+}
+
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
@@ -217,7 +227,7 @@ export function calculateLoanProgress({
 
       const paidThisMonth = relevantPayments.some((p) => {
         if (p.isExtra) return false;
-        const pDate = new Date(p.occurredAt);
+        const pDate = parseLocalDate(p.occurredAt);
         return pDate.getFullYear() === today.getFullYear() && pDate.getMonth() === today.getMonth();
       });
 

@@ -9,6 +9,8 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
 ) {
   const containerRef = useRef<T | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) {
@@ -38,9 +40,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
     const timer = setTimeout(focusFirst, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onClose) {
+      if (e.key === 'Escape' && onCloseRef.current) {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -81,7 +83,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
       clearTimeout(timer);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return containerRef;
 }

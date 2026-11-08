@@ -354,4 +354,68 @@ describe('ReportesRoute', () => {
     expect(clickedFilename).toMatch(/^pockt-resumen-.*\.pdf$/);
     clickSpy.mockRestore();
   });
+
+  it('consulta recurring_rules sin deleted_at y muestra error si falla', async () => {
+    let capturedSql = '';
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('recurring_rules')) {
+        capturedSql = sql;
+        return { data: [], isLoading: false, error: new Error('Simulated query error') } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    // The query must NOT include deleted_at
+    expect(capturedSql).not.toContain('deleted_at');
+
+    // Must display the error
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Simulated query error/);
+  });
+
+  it('parámetros URL inválidos no rompen la pantalla y caen al mes actual (5f)', async () => {
+    vi.mocked(powersyncReact.useQuery).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: undefined,
+    } as any);
+
+    expect(() => {
+      render(
+        <MemoryRouter initialEntries={['/reportes?year=abc&month=99&from=invalid&to=bad']}>
+          <ReportesRoute />
+        </MemoryRouter>
+      );
+    }).not.toThrow();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Reportes' })).toBeInTheDocument();
+  });
+
+  it('con un mes viejo elegido, la consulta empieza 6 meses antes del inicio del período (5g)', async () => {
+    let queryParams: any[] = [];
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any, params: any) => {
+      if (sql.includes('transactions')) {
+        queryParams = params || [];
+        return { data: [], isLoading: false, error: undefined } as any;
+      }
+      return { data: [], isLoading: false, error: undefined } as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reportes?period=mes&year=2024&month=3']}>
+        <ReportesRoute />
+      </MemoryRouter>
+    );
+
+    // March 2024 starts on March 1, 2024 (1709262000 approx)
+    const march1Sec = Math.floor(new Date(2024, 2, 1, 0, 0, 0).getTime() / 1000);
+    const expectedStart = march1Sec - 182 * 86400;
+
+    expect(queryParams[0]).toBe(expectedStart);
+  });
 });

@@ -381,10 +381,12 @@ export function InicioRoute() {
   const { data: allCategories } = useQuery<{
     id: string;
     name: string;
+    kind: 'expense' | 'income' | 'transfer';
+    sort_order?: number;
     icon: string;
     color_dark: number;
     color_light: number;
-  }>('SELECT id, name, icon, color_dark, color_light FROM categories WHERE archived = 0 ORDER BY sort_order ASC');
+  }>('SELECT id, name, kind, sort_order, icon, color_dark, color_light FROM categories WHERE archived = 0 ORDER BY sort_order ASC');
 
   // Selected movement for editing
   const [selectedTx, setSelectedTx] = useState<TxRow | null>(null);
@@ -1192,8 +1194,8 @@ export function InicioRoute() {
         categories={(allCategories ?? []).map((c) => ({
           id: c.id,
           name: c.name,
-          kind: 'expense',
-          sort_order: 0,
+          kind: c.kind || 'expense',
+          sort_order: c.sort_order ?? 0,
           icon: c.icon,
           color_dark: c.color_dark,
           color_light: c.color_light,

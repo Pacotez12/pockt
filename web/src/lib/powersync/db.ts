@@ -33,8 +33,21 @@ export async function connectPowerSync(
   endpoint: string = import.meta.env.VITE_POWERSYNC_URL || ''
 ): Promise<void> {
   const backend = createSupabaseBackend(supabase);
-  const connector = new PocktSupabaseConnector(backend, endpoint);
+  const connector = new PocktSupabaseConnector(backend, endpoint, currentUserId);
   await db.connect(connector);
+}
+
+export async function disconnectPowerSync(db?: PowerSyncDatabase | null): Promise<void> {
+  const target = db || activeDatabase;
+  if (target) {
+    try {
+      await target.disconnect();
+    } catch (e) {
+      console.warn('Error during disconnect:', e);
+    }
+  }
+  activeDatabase = null;
+  currentUserId = null;
 }
 
 export async function disconnectAndClearPowerSync(db?: PowerSyncDatabase | null): Promise<void> {

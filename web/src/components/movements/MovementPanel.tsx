@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DBExecutable, createMovement, updateMovement, softDeleteMovement } from '@/lib/movements/write';
 import { useReducedMotion } from 'motion/react';
@@ -90,6 +90,12 @@ export function MovementPanel({
     })
     .sort((a, b) => a.sort_order - b.sort_order);
 
+  const movementId = movement?.id;
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+  const movementRef = useRef(movement);
+  movementRef.current = movement;
+
   // Initialize or reset form state
   useEffect(() => {
     if (!isOpen) {
@@ -99,13 +105,16 @@ export function MovementPanel({
       return;
     }
 
-    if (movement) {
-      setType((movement.type as any) || 'expense');
-      setAmountStr(formatThousands(movement.amount));
-      setCategoryId(movement.category_id || '');
-      setMerchant(movement.merchant || '');
-      setNote(movement.note || '');
-      setOccurredAtStr(toLocalDatetimeInput(movement.occurred_at));
+    const curMovement = movementRef.current;
+    const curCategories = categoriesRef.current;
+
+    if (curMovement) {
+      setType((curMovement.type as any) || 'expense');
+      setAmountStr(formatThousands(curMovement.amount));
+      setCategoryId(curMovement.category_id || '');
+      setMerchant(curMovement.merchant || '');
+      setNote(curMovement.note || '');
+      setOccurredAtStr(toLocalDatetimeInput(curMovement.occurred_at));
     } else {
       setType('expense');
       setAmountStr('');
@@ -113,13 +122,13 @@ export function MovementPanel({
       setNote('');
       setOccurredAtStr(toLocalDatetimeInput(Date.now()));
       // Default to first expense category if available
-      const firstExp = categories.find((c) => c.kind === 'expense');
-      setCategoryId(firstExp ? firstExp.id : categories[0]?.id || '');
+      const firstExp = curCategories.find((c) => c.kind === 'expense');
+      setCategoryId(firstExp ? firstExp.id : curCategories[0]?.id || '');
     }
     setConfirmDelete(false);
     setErrorMsg(null);
     setIsDirty(false);
-  }, [isOpen, movement, categories]);
+  }, [isOpen, movementId]);
 
   // Keep category in sync with type changes if previous category isn't compatible
   const handleTypeChange = (newType: 'expense' | 'income' | 'transfer') => {
@@ -143,13 +152,13 @@ export function MovementPanel({
     if (errorMsg) setErrorMsg(null);
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (isDirty) {
       const confirmDiscard = window.confirm('Hay cambios sin guardar. ¿Descartar?');
       if (!confirmDiscard) return;
     }
     onClose();
-  };
+  }, [isDirty, onClose]);
 
   const panelRef = useFocusTrap<HTMLDivElement>(isOpen, handleClose);
 

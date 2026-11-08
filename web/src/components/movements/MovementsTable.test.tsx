@@ -120,4 +120,42 @@ describe('MovementsTable', () => {
     const amountCell = firstRow?.querySelector('td:last-child');
     expect(amountCell).toHaveClass('shrink-0', 'text-right');
   });
+
+  it('resets currentPage to 1 when movements list changes (5e)', () => {
+    // Generate 150 mock movements
+    const manyMovements = Array.from({ length: 150 }, (_, i) => ({
+      id: `tx-${i}`,
+      type: 'expense',
+      amount: 10000,
+      merchant: `Store ${i}`,
+      occurred_at: occurredOct28,
+      category_name: 'Comida',
+    }));
+
+    const { rerender } = render(
+      <MovementsTable
+        movements={manyMovements as any}
+        isLoading={false}
+        onSelectMovement={vi.fn()}
+      />
+    );
+
+    // Click "Siguiente" to navigate to page 2
+    const nextBtn = screen.getByRole('button', { name: 'Siguiente' });
+    fireEvent.click(nextBtn);
+    expect(screen.getByText('Store 100')).toBeInTheDocument();
+
+    // Now filter changes movements to only 5 items
+    const fewMovements = manyMovements.slice(0, 5);
+    rerender(
+      <MovementsTable
+        movements={fewMovements as any}
+        isLoading={false}
+        onSelectMovement={vi.fn()}
+      />
+    );
+
+    // Page must reset to 1 and show Store 0
+    expect(screen.getByText('Store 0')).toBeInTheDocument();
+  });
 });

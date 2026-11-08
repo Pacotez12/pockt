@@ -55,25 +55,32 @@ function formatDateKey(d: Date): string {
 
 export function computeTusDiasWindow({
   dataPoints,
-  referenceDate = new Date(),
+  referenceDate,
+  today,
   minWeeks = 8,
   maxWeeks = 26,
 }: {
   dataPoints: DailyDataPoint[];
   referenceDate?: Date;
+  today?: Date;
   minWeeks?: number;
   maxWeeks?: number;
 }): TusDiasWindow {
-  const ref = toStartOfDay(referenceDate);
+  const now = new Date();
+  const realToday = toStartOfDay(today ?? referenceDate ?? now);
+  const periodEnd = toStartOfDay(referenceDate ?? today ?? now);
+
+  // Both the window and data cut at min(today, periodEnd)
+  const effectiveCutoff = realToday.getTime() < periodEnd.getTime() ? realToday : periodEnd;
 
   // Monday = 0, ..., Sunday = 6
-  const refDayOfWeek = (ref.getDay() + 6) % 7;
+  const cutoffDayOfWeek = (effectiveCutoff.getDay() + 6) % 7;
 
-  // The current week's Monday
-  const currentMonday = new Date(ref);
-  currentMonday.setDate(ref.getDate() - refDayOfWeek);
+  // The week's Monday containing the cutoff
+  const currentMonday = new Date(effectiveCutoff);
+  currentMonday.setDate(effectiveCutoff.getDate() - cutoffDayOfWeek);
 
-  // The current week's Sunday (end of window)
+  // The week's Sunday (end of window)
   const endSunday = new Date(currentMonday);
   endSunday.setDate(currentMonday.getDate() + 6);
 
@@ -101,7 +108,7 @@ export function computeTusDiasWindow({
   let hasOlderExpenses = false;
   let earliestExpenseDate: Date | null = null;
   for (const dp of map.values()) {
-    if (dp.amount > 0 && dp.date <= ref) {
+    if (dp.amount > 0 && dp.date <= effectiveCutoff) {
       if (dp.date < maxStartMonday) {
         hasOlderExpenses = true;
       } else {
@@ -139,8 +146,8 @@ export function computeTusDiasWindow({
     const key = formatDateKey(d);
     const dp = map.get(key);
 
-    const isToday = d.getTime() === ref.getTime();
-    const isFuture = d.getTime() > ref.getTime();
+    const isToday = d.getTime() === realToday.getTime();
+    const isFuture = d.getTime() > effectiveCutoff.getTime();
 
     days.push({
       date: d,

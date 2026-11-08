@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 import { formatGs } from '@/lib/format';
 import { useTheme } from '@/lib/theme';
@@ -94,6 +94,10 @@ export function MovementsTable({
   const { resolvedTheme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 100;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [movements]);
 
   if (isLoading) {
     return (

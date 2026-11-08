@@ -8,6 +8,7 @@ describe('PocktSupabaseConnector', () => {
   function createMockBackend(overrides: Partial<SupabaseSyncBackend> = {}): SupabaseSyncBackend {
     return {
       getAccessToken: vi.fn().mockResolvedValue('test-access-token'),
+      getCurrentUserId: vi.fn().mockResolvedValue('user-a'),
       upsert: vi.fn().mockResolvedValue({ error: null }),
       update: vi.fn().mockResolvedValue({ error: null }),
       delete: vi.fn().mockResolvedValue({ error: null }),
@@ -54,6 +55,38 @@ describe('PocktSupabaseConnector', () => {
   });
 
   describe('uploadData', () => {
+    it('la base de A con sesión de B no llama a upsert, update ni delete', async () => {
+      const backend = createMockBackend({
+        getCurrentUserId: vi.fn().mockResolvedValue('user-b'),
+      });
+      const connector = new PocktSupabaseConnector(backend, fakeUrl, 'user-a');
+      const db = createMockDb([
+        {
+          id: 'tx-1',
+          table: 'transactions',
+          op: UpdateType.PUT,
+          opData: { amount: 100 },
+        },
+        {
+          id: 'tx-2',
+          table: 'transactions',
+          op: UpdateType.PATCH,
+          opData: { amount: 200 },
+        },
+        {
+          id: 'tx-3',
+          table: 'transactions',
+          op: UpdateType.DELETE,
+        },
+      ]);
+
+      await expect(connector.uploadData(db as any)).rejects.toThrow();
+      expect(backend.upsert).not.toHaveBeenCalled();
+      expect(backend.update).not.toHaveBeenCalled();
+      expect(backend.delete).not.toHaveBeenCalled();
+      expect(db.complete).not.toHaveBeenCalled();
+    });
+
     it('does nothing when there is no crud transaction', async () => {
       const backend = createMockBackend();
       const connector = new PocktSupabaseConnector(backend, fakeUrl);

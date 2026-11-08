@@ -18,6 +18,7 @@ export interface TusDiasProps {
   periodLabel?: string;
   totalAmount?: number;
   referenceDate?: Date;
+  today?: Date;
   onSelectDay?: (day: DayData) => void;
   className?: string;
 }
@@ -126,6 +127,7 @@ export function TusDias({
   periodLabel,
   totalAmount,
   referenceDate,
+  today,
   onSelectDay,
   className = '',
 }: TusDiasProps) {
@@ -151,21 +153,24 @@ export function TusDias({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+  const realToday = useMemo(() => today ?? referenceDate ?? new Date(), [today, referenceDate]);
+
   // Compute adaptive window
   const windowData = useMemo(() => {
     return computeTusDiasWindow({
       dataPoints: days,
       referenceDate,
+      today: realToday,
     });
-  }, [days, referenceDate]);
+  }, [days, referenceDate, realToday]);
 
   // Compute stats on the window
   const stats = useMemo(() => {
     return computeTusDiasStats({
       days: windowData.days,
-      today: referenceDate,
+      today: realToday,
     });
-  }, [windowData.days, referenceDate]);
+  }, [windowData.days, realToday]);
 
   // Compute levels using heatLevels calculation on window days
   const enrichedDays = useMemo<DayDataWithFlags[]>(() => {
@@ -699,13 +704,13 @@ export function TusDias({
       {/* 2D Heatmap Grid */}
       {!show3D && (
         <div className="w-full overflow-hidden">
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center">
             {/* Weekday labels: L, M, V, D in alternating rows */}
             <div
               className="grid grid-rows-7 text-[10px] text-text-tertiary font-semibold select-none shrink-0 pt-6"
               style={{
-                rowGap: '5px',
-                gridTemplateRows: 'repeat(7, clamp(20px, 3.2vw, 30px))',
+                rowGap: 'clamp(4px, 0.8vw, 8px)',
+                gridTemplateRows: 'repeat(7, clamp(22px, 4.5vw, 48px))',
               }}
             >
               <span className="flex items-center justify-center">L</span>
@@ -723,17 +728,23 @@ export function TusDias({
               data-testid="tus-dias-scroll-container"
               className="flex-1 overflow-x-auto pb-1"
             >
-              <div className="flex gap-[5px] min-w-max">
+              <div
+                className="flex min-w-max mx-auto justify-center"
+                style={{ gap: 'clamp(4px, 0.8vw, 8px)' }}
+              >
                 {weeks.map((week, wIdx) => {
                   const monthLabel = monthLabelsByWeek[wIdx];
                   return (
                     <div
                       key={wIdx}
-                      className="flex flex-col gap-[5px] items-center"
-                      style={{ width: 'clamp(20px, 3.2vw, 30px)' }}
+                      className="flex flex-col items-center"
+                      style={{
+                        width: 'clamp(22px, 4.5vw, 48px)',
+                        gap: 'clamp(4px, 0.8vw, 8px)',
+                      }}
                     >
-                      {/* Month label header */}
-                      <div className="h-5 text-[11px] text-text-tertiary font-semibold w-full text-left pl-0.5 select-none truncate">
+                      {/* Month label header - no truncation, allows overflow */}
+                      <div className="h-5 text-[11px] text-text-tertiary font-semibold text-left pl-0.5 select-none whitespace-nowrap overflow-visible">
                         {monthLabel || ''}
                       </div>
 
@@ -764,7 +775,7 @@ export function TusDias({
 
                         if (day.isFuture) {
                           cellClass +=
-                            'bg-transparent border border-dashed border-white/15 dark:border-white/15 border-black/15 cursor-default';
+                            'bg-transparent border border-dashed border-white/15 dark:border-white/15 border-black/20 cursor-default';
                         } else {
                           cellClass += 'cursor-pointer hover:scale-110 active:scale-95';
                         }
@@ -795,8 +806,8 @@ export function TusDias({
                             data-future={day.isFuture ? 'true' : 'false'}
                             className={cellClass}
                             style={{
-                              width: 'clamp(20px, 3.2vw, 30px)',
-                              height: 'clamp(20px, 3.2vw, 30px)',
+                              width: 'clamp(22px, 4.5vw, 48px)',
+                              height: 'clamp(22px, 4.5vw, 48px)',
                               backgroundColor: cellColor,
                             }}
                             onClick={() => handleCellClick(day)}

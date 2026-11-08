@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { PowerSyncContext } from '@powersync/react';
 import type { PowerSyncDatabase } from '@powersync/web';
 import { useAuth } from '@/lib/auth';
-import { getPowerSyncDatabase, connectPowerSync } from '@/lib/powersync/db';
+import { getPowerSyncDatabase, connectPowerSync, disconnectPowerSync } from '@/lib/powersync/db';
 
 export function ProtectedRoute() {
   const { session, user, loading } = useAuth();
@@ -12,6 +12,9 @@ export function ProtectedRoute() {
   useEffect(() => {
     if (!user) {
       setDb(null);
+      void disconnectPowerSync().catch((err) => {
+        console.warn('PowerSync disconnect warning on user null:', err);
+      });
       return;
     }
 
@@ -44,8 +47,8 @@ export function ProtectedRoute() {
   }
 
   return (
-    <PowerSyncContext.Provider value={db as any}>
-      <Outlet />
+    <PowerSyncContext.Provider key={user?.id} value={db as any}>
+      <Outlet key={user?.id} />
     </PowerSyncContext.Provider>
   );
 }

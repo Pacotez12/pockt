@@ -29,6 +29,7 @@ vi.mock('./supabase', () => ({
 }));
 
 vi.mock('./powersync/db', () => ({
+  disconnectPowerSync: vi.fn().mockResolvedValue(undefined),
   disconnectAndClearPowerSync: vi.fn().mockResolvedValue(undefined),
   getPowerSyncDatabase: vi.fn(),
   getActivePowerSyncDatabase: vi.fn(),
@@ -151,5 +152,68 @@ describe('AuthContext logout', () => {
       expect(screen.queryByText(/cambios sin subir/i)).not.toBeInTheDocument();
       expect(screen.getByTestId('session-status')).toHaveTextContent('logged-out');
     });
+  });
+
+  it('logout usa scope local y borra sesión local aunque falle supabase', async () => {
+    vi.mocked(powersyncDb.getActivePowerSyncDatabase).mockReturnValue({
+      getUploadQueueStats: vi.fn().mockResolvedValue({ count: 0 }),
+    } as any);
+    vi.mocked(supabase.auth.signOut).mockResolvedValueOnce({
+      error: new Error('Server 500 error') as any,
+    });
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const btn = screen.getByRole('button', { name: 'Logout Button' });
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.getByTestId('session-status')).toHaveTextContent('logged-out');
+  });
+
+  it('si onAuthStateChange cambia de usuario sin logout, desconecta sin borrar y recarga', async () => {
+    let authChangeCallback: any;
+    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((cb: any) => {
+      authChangeCallback = cb;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as any;
+    });
+
+    const reloadMock = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, reload: reloadMock },
+    });
+
+    render(
+      <AuthProvider>
+        <LogoutTester />
+      </AuthProvider>
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Simulate login of user B in another tab
+    await act(async () => {
+      authChangeCallback('SIGNED_IN', {
+        access_token: 'new-token',
+        user: { id: 'usr-456', email: 'other@example.com' },
+      });
+    });
+
+    expect(powersyncDb.disconnectPowerSync).toHaveBeenCalled();
+    expect(powersyncDb.disconnectAndClearPowerSync).not.toHaveBeenCalled();
+    expect(reloadMock).toHaveBeenCalled();
   });
 });

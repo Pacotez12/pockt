@@ -173,4 +173,31 @@ describe('TusDias Component', () => {
     expect(screen.getByTestId('tus-dias-tooltip')).toBeInTheDocument();
     expect(screen.getByText(/124\.500/)).toBeInTheDocument();
   });
+
+  it('período que termina después de hoy corta en hoy y no marca hoy en el futuro', () => {
+    const realToday = new Date(2026, 10, 8); // 8 Nov 2026
+    const periodEnd = new Date(2026, 11, 5); // 5 Dec 2026
+    const days: DayData[] = [
+      { date: new Date(2026, 10, 6), amount: 50000, txCount: 1 },
+      { date: new Date(2026, 10, 7), amount: 0, txCount: 0 },
+      { date: new Date(2026, 10, 8), amount: 0, txCount: 0 },
+    ];
+
+    render(
+      <TusDias
+        days={days}
+        referenceDate={periodEnd}
+        today={realToday}
+      />
+    );
+
+    const todayCell = screen.getAllByTestId('tus-dias-cell').find(
+      (c) => c.getAttribute('data-today') === 'true'
+    );
+    expect(todayCell).toBeDefined();
+    expect(todayCell).toHaveAttribute('data-date', '2026-11-08');
+
+    // Racha actual should be 2 días, not 25+
+    expect(screen.getByTestId('stat-racha-actual')).toHaveTextContent('2 días');
+  });
 });

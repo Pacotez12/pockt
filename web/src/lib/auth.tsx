@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingLogout, setPendingLogout] = useState<{ count: number } | null>(null);
   const [isSyncingLogout, setIsSyncingLogout] = useState(false);
+  const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -32,14 +33,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check initial session
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
+      previousUserIdRef.current = data.session?.user?.id ?? null;
       setSession(data.session);
       setLoading(false);
     });
 
     // Listen to changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
+      async (_event, nextSession) => {
         if (!mounted) return;
+
+        const nextUserId = nextSession?.user?.id ?? null;
+        const prevUserId = previousUserIdRef.current;
+
+        // If user changed to a different user without a logout in between (e.g. login in another tab)
+        if (prevUserId && nextUserId && prevUserId !== nextUserId) {
+          try {
+            const { disconnectPowerSync } = await import('./powersync/db');
+            await disconnectPowerSync();
+          } catch (e) {
+            console.warn('Error disconnecting PowerSync on user switch:', e);
+          }
+          if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+            window.location.reload();
+            return;
+          }
+        }
+
+        previousUserIdRef.current = nextUserId;
         setSession(nextSession);
         setLoading(false);
       }
@@ -58,7 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn('Error clearing PowerSync db on logout:', e);
     }
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        console.warn('Error during supabase.auth.signOut:', error);
+      }
+    } catch (e) {
+      console.warn('Exception during supabase.auth.signOut:', e);
+    }
+    previousUserIdRef.current = null;
     setSession(null);
     setPendingLogout(null);
     setIsSyncingLogout(false);

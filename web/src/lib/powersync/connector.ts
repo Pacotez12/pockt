@@ -12,6 +12,7 @@ export interface BackendResult {
 
 export interface SupabaseSyncBackend {
   getAccessToken(): Promise<string | null>;
+  getCurrentUserId?(): Promise<string | null>;
   upsert(
     table: string,
     data: Record<string, unknown>,
@@ -31,6 +32,10 @@ export function createSupabaseBackend(client: SupabaseClient): SupabaseSyncBacke
       const { data } = await client.auth.getSession();
       return data.session?.access_token ?? null;
     },
+    async getCurrentUserId() {
+      const { data } = await client.auth.getSession();
+      return data.session?.user?.id ?? null;
+    },
     async upsert(table, data, onConflict) {
       const res = await client.from(table).upsert(data, { onConflict });
       return { error: res.error };
@@ -49,10 +54,20 @@ export function createSupabaseBackend(client: SupabaseClient): SupabaseSyncBacke
 export class PocktSupabaseConnector implements PowerSyncBackendConnector {
   constructor(
     private backend: SupabaseSyncBackend,
-    private endpoint: string = import.meta.env.VITE_POWERSYNC_URL || ''
+    private endpoint: string = import.meta.env.VITE_POWERSYNC_URL || '',
+    private dbOwnerUserId: string | null = null
   ) {}
 
   async fetchCredentials(): Promise<PowerSyncCredentials | null> {
+    if (this.dbOwnerUserId && this.backend.getCurrentUserId) {
+      const currentUserId = await this.backend.getCurrentUserId();
+      if (!currentUserId || currentUserId !== this.dbOwnerUserId) {
+        throw new Error(
+          `PowerSync: sesión no válida o de otro usuario (esperado: ${this.dbOwnerUserId}, actual: ${currentUserId})`
+        );
+      }
+    }
+
     const token = await this.backend.getAccessToken();
     if (!token) return null;
     return {
@@ -62,6 +77,15 @@ export class PocktSupabaseConnector implements PowerSyncBackendConnector {
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
+    if (this.dbOwnerUserId && this.backend.getCurrentUserId) {
+      const currentUserId = await this.backend.getCurrentUserId();
+      if (!currentUserId || currentUserId !== this.dbOwnerUserId) {
+        throw new Error(
+          `PowerSync: sesión no válida o de otro usuario (esperado: ${this.dbOwnerUserId}, actual: ${currentUserId}). Cola intacta.`
+        );
+      }
+    }
+
     const transaction = await database.getNextCrudTransaction();
     if (!transaction) return;
 

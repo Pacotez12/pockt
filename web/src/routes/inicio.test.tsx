@@ -541,4 +541,57 @@ describe('InicioRoute', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('button', { name: 'ene' })).not.toBeInTheDocument();
   });
+
+  it('al editar un ingreso desde Inicio, el selector de categoría muestra las categorías de ingreso (5b)', async () => {
+    const now = new Date();
+    const nowSec = Math.floor(now.getTime() / 1000);
+
+    vi.mocked(powersyncReact.useQuery).mockImplementation((sql: any) => {
+      if (sql.includes('settings')) {
+        return { data: [{ key: 'period_month_start', value: 'calendar' }], isLoading: false } as any;
+      }
+      if (sql.includes('FROM categories')) {
+        return {
+          data: [
+            { id: 'cat-salario', name: 'Salario', kind: 'income', icon: 'wallet', color_dark: 1, color_light: 1, sort_order: 1 },
+            { id: 'cat-comida', name: 'Comida', kind: 'expense', icon: 'food', color_dark: 2, color_light: 2, sort_order: 2 },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      if (sql.includes('LIMIT 5') && sql.includes('transactions')) {
+        return {
+          data: [
+            {
+              id: 'tx-salario-1',
+              type: 'income',
+              amount: 5000000,
+              merchant: 'Empresa',
+              category_id: 'cat-salario',
+              category_name: 'Salario',
+              color_dark: 1,
+              color_light: 1,
+              occurred_at: nowSec,
+            },
+          ],
+          isLoading: false,
+        } as any;
+      }
+      return { data: [], isLoading: false } as any;
+    });
+
+    render(
+      <MemoryRouter>
+        <InicioRoute />
+      </MemoryRouter>
+    );
+
+    // Click on the recent transaction
+    const row = await screen.findByText('Empresa');
+    fireEvent.click(row);
+
+    // MovementPanel should open and show the category select containing "Salario"
+    const catSelect = screen.getByLabelText('Categoría');
+    expect(within(catSelect).getByRole('option', { name: 'Salario' })).toBeInTheDocument();
+  });
 });

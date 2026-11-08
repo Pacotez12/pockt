@@ -90,6 +90,42 @@ describe('tus_dias_stats', () => {
         expect(fd.date.getTime()).toBeGreaterThan(todayDay!.date.getTime());
       });
     });
+
+    it('período que termina después de hoy corta en hoy y hoy tiene la fecha real', () => {
+      // Real today is Sunday 8 Nov 2026
+      const realToday = new Date(2026, 10, 8);
+      // Period ends in December (e.g. 5 Dec 2026)
+      const periodEnd = new Date(2026, 11, 5);
+
+      const dataPoints: DailyDataPoint[] = [
+        { date: new Date(2026, 9, 12), amount: 100000, txCount: 1 },
+        { date: new Date(2026, 10, 6), amount: 50000, txCount: 1 },
+        { date: new Date(2026, 10, 7), amount: 0, txCount: 0 },
+        { date: new Date(2026, 10, 8), amount: 0, txCount: 0 },
+      ];
+
+      const window = computeTusDiasWindow({
+        dataPoints,
+        referenceDate: periodEnd,
+        today: realToday,
+      });
+
+      // Window should cut at min(today, periodEnd) -> the week of 8 Nov 2026
+      expect(window.endDate.getTime()).toBeLessThanOrEqual(new Date(2026, 10, 15).getTime());
+
+      // "Hoy" is 8 Nov 2026, not in December
+      const todayDay = window.days.find((d) => d.isToday);
+      expect(todayDay).toBeDefined();
+      expect(todayDay?.date.getMonth()).toBe(10); // Nov
+      expect(todayDay?.date.getDate()).toBe(8);
+
+      // Stats streak should be 2 (Nov 7 and Nov 8), not 25+
+      const stats = computeTusDiasStats({
+        days: window.days,
+        today: realToday,
+      });
+      expect(stats.currentStreak.days).toBe(2);
+    });
   });
 
   describe('computeTusDiasStats', () => {

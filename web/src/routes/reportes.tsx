@@ -86,8 +86,17 @@ export function ReportesRoute() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  const selectedYear = parseInt(searchParams.get('year') || String(currentYear), 10);
-  const selectedMonth = parseInt(searchParams.get('month') || String(currentMonth + 1), 10) - 1;
+  const parsedYear = parseInt(searchParams.get('year') || '', 10);
+  const selectedYear =
+    !Number.isNaN(parsedYear) && parsedYear >= 1970 && parsedYear <= 2100
+      ? parsedYear
+      : currentYear;
+
+  const parsedMonth = parseInt(searchParams.get('month') || '', 10) - 1;
+  const selectedMonth =
+    !Number.isNaN(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11
+      ? parsedMonth
+      : currentMonth;
 
   const customFrom = searchParams.get('from') || '';
   const customTo = searchParams.get('to') || '';
@@ -106,11 +115,13 @@ export function ReportesRoute() {
     if (periodParam === 'custom' && customFrom && customTo) {
       const start = new Date(`${customFrom}T00:00:00`);
       const end = new Date(`${customTo}T23:59:59`);
-      return {
-        startSec: Math.floor(start.getTime() / 1000),
-        endSec: Math.floor(end.getTime() / 1000) + 1,
-        periodLabel: `${customFrom} a ${customTo}`,
-      };
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) {
+        return {
+          startSec: Math.floor(start.getTime() / 1000),
+          endSec: Math.floor(end.getTime() / 1000) + 1,
+          periodLabel: `${customFrom} a ${customTo}`,
+        };
+      }
     }
 
     // Default: 'mes'
@@ -124,17 +135,13 @@ export function ReportesRoute() {
     };
   }, [periodParam, selectedYear, selectedMonth, customFrom, customTo]);
 
-  // Query transactions: span either 182 days or the selected range, whichever starts earlier
-  const sixMonthsAgoSec = useMemo(
-    () => Math.floor((Date.now() - 182 * 86400 * 1000) / 1000),
-    []
-  );
+  // Query transactions: start 182 days (approx 6 months) before the period start
   const queryStartSec = useMemo(
-    () => Math.min(startSec, sixMonthsAgoSec),
-    [startSec, sixMonthsAgoSec]
+    () => startSec - 182 * 86400,
+    [startSec]
   );
 
-  const { data: rawTxs, isLoading: loadingTxs } = useQuery<TxRow>(
+  const { data: rawTxs, isLoading: loadingTxs, error: errorTxs } = useQuery<TxRow>(
     `SELECT t.id, t.type, t.amount, t.occurred_at, t.merchant, t.note, t.loan_id, t.source,
             t.category_id, c.name as category_name, c.color_dark, c.color_light
      FROM transactions t
@@ -144,8 +151,8 @@ export function ReportesRoute() {
     [queryStartSec, endSec]
   );
 
-  const { data: rawRecurring, isLoading: loadingRecurring } = useQuery<RecurringRow>(
-    `SELECT id, amount, frequency, active FROM recurring_rules WHERE deleted_at IS NULL AND active = 1`
+  const { data: rawRecurring, isLoading: loadingRecurring, error: errorRecurring } = useQuery<RecurringRow>(
+    `SELECT id, amount, frequency, active FROM recurring_rules WHERE active = 1`
   );
 
   const { data: allCategories } = useQuery<{
@@ -494,8 +501,18 @@ export function ReportesRoute() {
       }));
   }, [selectedDay, txs]);
 
+  const queryError = errorRecurring || errorTxs;
+
   return (
     <div className="space-y-6 select-none">
+      {queryError && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium"
+        >
+          {queryError.message || String(queryError)}
+        </div>
+      )}
       {/* Header with Title and Period Segmented Control */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -802,6 +819,7 @@ export function ReportesRoute() {
         <TusDias
           days={tusDiasData}
           referenceDate={new Date(endSec * 1000)}
+          today={now}
           onSelectDay={handleSelectDay}
         />
       </div>

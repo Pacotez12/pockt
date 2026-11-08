@@ -9,6 +9,7 @@ import { usePowerSync } from '@powersync/react';
 vi.mock('@/lib/powersync/db', () => ({
   getPowerSyncDatabase: () => ({ fake: 'db' }),
   connectPowerSync: () => Promise.resolve(),
+  disconnectPowerSync: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Una pantalla privada que, como Inicio, necesita la base local al dibujarse.
@@ -68,5 +69,40 @@ describe('ProtectedRoute', () => {
 
     expect(await screen.findByText('Contenido Privado')).toBeInTheDocument();
     expect(screen.queryByText('Pantalla Login')).not.toBeInTheDocument();
+  });
+
+  it('desconecta la base cuando user pasa a null', async () => {
+    const { disconnectPowerSync } = await import('@/lib/powersync/db');
+
+    const { rerender } = renderWithAuth({
+      session: { user: { id: 'usr-1' } } as any,
+      user: { id: 'usr-1' } as any,
+      loading: false,
+      logout: vi.fn(),
+    });
+
+    expect(await screen.findByText('Contenido Privado')).toBeInTheDocument();
+
+    rerender(
+      <AuthContext.Provider
+        value={{
+          session: null,
+          user: null,
+          loading: false,
+          logout: vi.fn(),
+        }}
+      >
+        <MemoryRouter initialEntries={['/protected']}>
+          <Routes>
+            <Route path="/login" element={<div>Pantalla Login</div>} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/protected" element={<NeedsDb />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    expect(disconnectPowerSync).toHaveBeenCalled();
   });
 });

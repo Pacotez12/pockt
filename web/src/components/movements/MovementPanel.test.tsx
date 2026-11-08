@@ -214,4 +214,45 @@ describe('MovementPanel', () => {
     expect(onDelete).toHaveBeenCalledWith('tx-del');
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('preserves draft edits when parent re-renders with fresh movement/categories object references (5d)', () => {
+    const tx = {
+      id: 'tx-draft',
+      type: 'expense',
+      amount: 50000,
+      category_id: 'cat-food',
+      merchant: 'Bar',
+      occurred_at: Math.floor(Date.now() / 1000),
+      loan_id: null,
+    };
+
+    const { rerender } = render(
+      <MovementPanel
+        isOpen={true}
+        movement={tx as any}
+        db={mockDb}
+        categories={mockCategories}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Edit the merchant field
+    const merchantInput = screen.getByLabelText(/Comercio/i) as HTMLInputElement;
+    fireEvent.change(merchantInput, { target: { value: 'Bar Nuevo' } });
+    expect(merchantInput.value).toBe('Bar Nuevo');
+
+    // Parent re-renders with a NEW object reference with same ID and new categories array reference
+    rerender(
+      <MovementPanel
+        isOpen={true}
+        movement={{ ...tx }}
+        db={mockDb}
+        categories={[...mockCategories]}
+        onClose={vi.fn()}
+      />
+    );
+
+    // The draft must NOT be wiped out
+    expect(merchantInput.value).toBe('Bar Nuevo');
+  });
 });

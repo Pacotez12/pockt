@@ -76,4 +76,40 @@ describe('useFocusTrap', () => {
     // Focus restored to open button
     expect(document.activeElement).toBe(openBtn);
   });
+
+  it('does not refocus the first element when onClose changes identity (5c)', async () => {
+    function ChangingModal() {
+      const [count, setCount] = useState(0);
+      // New onClose function on every re-render
+      const handleClose = () => { setCount((c) => c + 1); };
+      const containerRef = useFocusTrap<HTMLDivElement>(true, handleClose);
+
+      return (
+        <div ref={containerRef} role="dialog">
+          <button data-testid="first-btn">First</button>
+          <input
+            data-testid="text-input"
+            onChange={() => setCount((c) => c + 1)}
+          />
+        </div>
+      );
+    }
+
+    render(<ChangingModal />);
+
+    // Wait for initial focus on first button
+    await new Promise((r) => setTimeout(r, 60));
+    expect(document.activeElement).toBe(screen.getByTestId('first-btn'));
+
+    // Move focus to input and type something (which triggers re-render with new handleClose)
+    const input = screen.getByTestId('text-input');
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    fireEvent.change(input, { target: { value: 'a' } });
+
+    // Wait 70ms: focus must STILL be on input, not stolen back to first button!
+    await new Promise((r) => setTimeout(r, 70));
+    expect(document.activeElement).toBe(input);
+  });
 });
