@@ -49,6 +49,19 @@ describe('MovementPanel', () => {
     expect(writeOps.createMovement).not.toHaveBeenCalled();
   });
 
+  it('elige una categoría por defecto cuando las categorías llegan después de abrir', async () => {
+    vi.mocked(writeOps.createMovement).mockResolvedValueOnce('new-tx-id');
+    const props = { isOpen: true, db: mockDb, onClose: vi.fn(), onSaved: vi.fn() };
+    const { rerender } = render(<MovementPanel {...props} categories={[]} />);
+    rerender(<MovementPanel {...props} categories={mockCategories} />);
+
+    fireEvent.change(screen.getByLabelText(/Monto/i), { target: { value: '1000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Guardar/i }));
+
+    await waitFor(() => expect(writeOps.createMovement).toHaveBeenCalled());
+    expect(vi.mocked(writeOps.createMovement).mock.calls[0][1]).toMatchObject({ categoryId: 'cat-food' });
+  });
+
   it('formats amount with thousands separator and creates movement on save', async () => {
     vi.mocked(writeOps.createMovement).mockResolvedValueOnce('new-tx-id');
     const onClose = vi.fn();

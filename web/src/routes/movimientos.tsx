@@ -369,7 +369,7 @@ export function MovimientosRoute() {
 
       {/* Undo Toast Notification */}
       {undoToastVisible && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-[#1c1c1f]/95 border border-glass-border shadow-2xl backdrop-blur-md flex items-center gap-3.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl bg-sheet-surface/95 border border-glass-border shadow-2xl backdrop-blur-md flex items-center gap-3.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div className="text-[13px] text-text-primary">
             <span>Movimiento borrado. Se borra también del teléfono.</span>
           </div>

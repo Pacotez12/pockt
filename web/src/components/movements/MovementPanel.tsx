@@ -130,6 +130,14 @@ export function MovementPanel({
     setIsDirty(false);
   }, [isOpen, movementId]);
 
+  // Las categorías pueden llegar después de abrir el panel: elegir una por defecto cuando aparezcan.
+  useEffect(() => {
+    if (!isOpen || categoryId || movementRef.current) return;
+    const kind = type === 'income' ? 'income' : 'expense';
+    const first = categories.find((c) => c.kind === kind) ?? categories[0];
+    if (first) setCategoryId(first.id);
+  }, [isOpen, categories, categoryId, type]);
+
   // Keep category in sync with type changes if previous category isn't compatible
   const handleTypeChange = (newType: 'expense' | 'income' | 'transfer') => {
     setType(newType);
@@ -270,7 +278,7 @@ export function MovementPanel({
               'fixed top-[72px] right-3 sm:right-6 bottom-4 z-50',
               'w-[calc(100vw-24px)] sm:w-[420px]',
               'rounded-3xl p-6 flex flex-col',
-              'bg-[#141416]/95 dark:bg-[#141416]/95 backdrop-blur-xl',
+              'bg-sheet-surface/95 backdrop-blur-xl',
               'border border-glass-border shadow-2xl overflow-y-auto'
             )}
           >
@@ -403,13 +411,13 @@ export function MovementPanel({
                         setIsDirty(true);
                       }}
                       className={cn(
-                        'w-full px-3.5 py-2.5 rounded-xl text-[13.5px] bg-[#1a1a1e] border border-glass-border',
+                        'w-full px-3.5 py-2.5 rounded-xl text-[13.5px] bg-glass-fill border border-glass-border',
                         'focus:border-brand-start focus:ring-2 focus:ring-brand-start/20 outline-none transition-all appearance-none text-text-primary',
                         isLoan && 'opacity-60 cursor-not-allowed'
                       )}
                     >
                       {availableCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id} className="bg-[#1a1a1e] text-white">
+                        <option key={cat.id} value={cat.id} className="bg-sheet-surface text-text-primary">
                           {cat.name}
                         </option>
                       ))}
