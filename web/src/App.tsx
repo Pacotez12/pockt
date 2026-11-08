@@ -39,6 +39,9 @@ const PresupuestosRoute = lazy(() =>
 const NotFoundRoute = lazy(() =>
   import('@/routes/not-found').then((m) => ({ default: m.NotFoundRoute }))
 );
+const PreviewTusDiasRoute = import.meta.env.DEV && lazy(() =>
+  import('@/routes/preview-tus-dias').then((m) => ({ default: m.PreviewTusDiasRoute }))
+);
 
 export function App() {
   return (
@@ -56,6 +59,18 @@ export function App() {
                 </ErrorBoundary>
               }
             />
+
+            {/* Solo en desarrollo: vista con datos inventados para revisar Tus días. */}
+            {import.meta.env.DEV && (
+              <Route
+                path="/preview-tus-dias"
+                element={
+                  <Suspense fallback={<RouteSpinner />}>
+                    {PreviewTusDiasRoute && <PreviewTusDiasRoute />}
+                  </Suspense>
+                }
+              />
+            )}
 
             <Route
               element={

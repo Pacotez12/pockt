@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { computeTusDiasCameraFraming } from '@/lib/calc/tus_dias_3d_camera';
 import { formatGs } from '@/lib/format';
 import { heatLevels } from '@/lib/calc/heat_levels';
 import {
@@ -19,6 +21,7 @@ export interface TusDiasProps {
   totalAmount?: number;
   referenceDate?: Date;
   today?: Date;
+  initialMode?: '2d' | '3d';
   onSelectDay?: (day: DayData) => void;
   className?: string;
 }
@@ -69,57 +72,47 @@ function isWebGLAvailable(): boolean {
   }
 }
 
-function createTextSprite(text: string, color: string): THREE.Sprite {
-  const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 64;
-  const ctx = c.getContext('2d');
-  if (ctx) {
-    ctx.font = 'bold 26px Inter, sans-serif';
-    ctx.fillStyle = color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 64, 32);
-  }
-  const texture = new THREE.CanvasTexture(c);
-  const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(1.6, 0.8, 1);
-  return sprite;
+function createTodayRingGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  const w = 0.88;
+  const h = 0.88;
+  const r = 0.12;
+  const x = -w / 2;
+  const y = -h / 2;
+  shape.moveTo(x + r, y);
+  shape.lineTo(x + w - r, y);
+  shape.quadraticCurveTo(x + w, y, x + w, y + r);
+  shape.lineTo(x + w, y + h - r);
+  shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  shape.lineTo(x + r, y + h);
+  shape.quadraticCurveTo(x, y + h, x, y + h - r);
+  shape.lineTo(x, y + r);
+  shape.quadraticCurveTo(x, y, x + r, y);
+
+  const hole = new THREE.Path();
+  const hw = 0.74;
+  const hh = 0.74;
+  const hr = 0.08;
+  const hx = -hw / 2;
+  const hy = -hh / 2;
+  hole.moveTo(hx + hr, hy);
+  hole.lineTo(hx + hw - hr, hy);
+  hole.quadraticCurveTo(hx + hw, hy, hx + hw, hy + hr);
+  hole.lineTo(hx + hw, hy + hh - hr);
+  hole.quadraticCurveTo(hx + hw, hy + hh, hx + hw - hr, hy + hh);
+  hole.lineTo(hx + hr, hy + hh);
+  hole.quadraticCurveTo(hx, hy + hh, hx, hy + hh - hr);
+  hole.lineTo(hx, hy + hr);
+  hole.quadraticCurveTo(hx, hy, hx + hr, hy);
+  shape.holes.push(hole);
+
+  const ringGeo = new THREE.ShapeGeometry(shape);
+  ringGeo.rotateX(-Math.PI / 2);
+  return ringGeo;
 }
 
-function createAmountBadgeSprite(text: string, bgColor: string, textColor: string): THREE.Sprite {
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 64;
-  const ctx = c.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = bgColor;
-    ctx.beginPath();
-    ctx.arc(24, 32, 20, Math.PI * 0.5, Math.PI * 1.5);
-    ctx.arc(232, 32, 20, Math.PI * 1.5, Math.PI * 0.5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.font = 'bold 22px Inter, sans-serif';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 128, 33);
-  }
-  const texture = new THREE.CanvasTexture(c);
-  const spriteMat = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthTest: false,
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(2.4, 0.6, 1);
-  return sprite;
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
 }
 
 export function TusDias({
@@ -128,6 +121,7 @@ export function TusDias({
   totalAmount,
   referenceDate,
   today,
+  initialMode = '2d',
   onSelectDay,
   className = '',
 }: TusDiasProps) {
@@ -139,7 +133,7 @@ export function TusDias({
   const resolvedTheme: 'light' | 'dark' = isLight ? 'light' : 'dark';
   const palette = resolvedTheme === 'light' ? HEAT_PALETTE_LIGHT : HEAT_PALETTE_DARK;
 
-  const [mode, setMode] = useState<'2d' | '3d'>('2d');
+  const [mode, setMode] = useState<'2d' | '3d'>(initialMode);
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
   const [hoveredDay, setHoveredDay] = useState<{
     day: DayDataWithFlags;
@@ -152,6 +146,8 @@ export function TusDias({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const maxBadgeRef = useRef<HTMLDivElement>(null);
+  const monthRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const realToday = useMemo(() => today ?? referenceDate ?? new Date(), [today, referenceDate]);
 
@@ -237,6 +233,16 @@ export function TusDias({
     return labels;
   }, [weeks]);
 
+  const monthOverlayData = useMemo(() => {
+    const items: { key: string; w: number; label: string }[] = [];
+    monthLabelsByWeek.forEach((lbl, w) => {
+      if (lbl) {
+        items.push({ key: `month-${w}-${lbl}`, w, label: lbl });
+      }
+    });
+    return items;
+  }, [monthLabelsByWeek]);
+
   useEffect(() => {
     setWebGLSupported(isWebGLAvailable());
   }, []);
@@ -260,7 +266,11 @@ export function TusDias({
         alpha: true,
       });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.setSize(canvas.clientWidth || 856, canvas.clientHeight || 360, false);
+      const initialW = canvas.clientWidth || 800;
+      const initialH =
+        canvas.clientHeight ||
+        (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
+      renderer.setSize(initialW, initialH, false);
     } catch {
       setWebGLSupported(false);
       setMode('2d');
@@ -269,26 +279,40 @@ export function TusDias({
 
     const scene = new THREE.Scene();
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const dl = new THREE.DirectionalLight(0xffffff, 1.6);
-    dl.position.set(-12, 30, 18);
+
+    // Hemisphere light + directional light (soft, balanced, true colors)
+    const hemiLight = new THREE.HemisphereLight(
+      0xffffff,
+      resolvedTheme === 'light' ? 0xd0d0d8 : 0x22222a,
+      0.85
+    );
+    scene.add(hemiLight);
+
+    const dl = new THREE.DirectionalLight(0xffffff, 1.15);
+    dl.position.set(12, 28, 16);
     scene.add(dl);
 
     const totalDays = enrichedDays.length;
     const W = weeks.length;
     const D = 7;
 
-    const geo = new THREE.CylinderGeometry(0.38, 0.38, 1, 24);
-    geo.translate(0, 0.5, 0);
-    const mat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.05 });
+    // RoundedBoxGeometry: width=0.85, height=1.0, depth=0.85, segments=3, radius=0.10
+    const geo = new RoundedBoxGeometry(0.85, 1.0, 0.85, 3, 0.10);
+    geo.translate(0, 0.5, 0); // Put base at Y=0 so scaling in Y grows upwards
+    const mat = new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.04 });
     const mesh = new THREE.InstancedMesh(geo, mat, totalDays);
     scene.add(mesh);
 
     const threePalette = palette.map((c) => new THREE.Color(c));
+    const emptyColor = new THREE.Color(palette[0]);
+    const futureColor = new THREE.Color(resolvedTheme === 'light' ? 0xe2e2e5 : 0x18181b);
+
     for (let i = 0; i < totalDays; i++) {
       const d = enrichedDays[i];
       if (d?.isFuture) {
-        mesh.setColorAt(i, new THREE.Color(resolvedTheme === 'light' ? 0xe0e0e0 : 0x222226));
+        mesh.setColorAt(i, futureColor);
+      } else if (d?.amount <= 0) {
+        mesh.setColorAt(i, emptyColor);
       } else {
         const lvl = d?.level ?? 0;
         mesh.setColorAt(i, threePalette[lvl]);
@@ -296,21 +320,15 @@ export function TusDias({
     }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 
-    // Floor Month Sprites
-    const spritesToDispose: THREE.Sprite[] = [];
-    monthLabelsByWeek.forEach((lbl, w) => {
-      if (lbl) {
-        const sprite = createTextSprite(
-          lbl,
-          resolvedTheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.5)'
-        );
-        sprite.position.set(w - (W - 1) / 2, 0.02, -(D - 1) / 2 - 0.9);
-        scene.add(sprite);
-        spritesToDispose.push(sprite);
-      }
-    });
+    // Today indicator: orange rounded ring on today's tile
+    const todayIdx = enrichedDays.findIndex((d) => d.isToday);
+    const todayRingGeo = createTodayRingGeometry();
+    const todayMat = new THREE.MeshBasicMaterial({ color: 0xff8a3d, side: THREE.DoubleSide });
+    const todayMesh = new THREE.Mesh(todayRingGeo, todayMat);
+    todayMesh.visible = todayIdx >= 0;
+    scene.add(todayMesh);
 
-    // Tallest building badge
+    // Tallest building index
     let maxIdx = -1;
     let maxAmt = 0;
     for (let i = 0; i < totalDays; i++) {
@@ -320,21 +338,11 @@ export function TusDias({
       }
     }
 
-    let badgeSprite: THREE.Sprite | null = null;
-    if (maxIdx >= 0 && maxAmt > 0) {
-      badgeSprite = createAmountBadgeSprite(
-        formatGs(maxAmt),
-        '#18181b',
-        '#FF8A3D'
-      );
-      scene.add(badgeSprite);
-      spritesToDispose.push(badgeSprite);
-    }
-
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const s = new THREE.Vector3();
     const p = new THREE.Vector3();
+    const projVector = new THREE.Vector3();
 
     let k = mode === '3d' ? 1 : 0;
     let v = 0;
@@ -350,56 +358,61 @@ export function TusDias({
     const maxAmtRef = Math.max(...enrichedDays.map((d) => d.amount), 1);
 
     function updateLayout() {
-      const h = k;
       for (let i = 0; i < totalDays; i++) {
         const e = enrichedDays[i];
         const w = Math.floor(i / 7);
         const d = i % 7;
         const isHovered = i === hoverIndex;
 
-        let ht: number;
+        let targetHt: number;
         if (e.isFuture) {
-          ht = 0.04;
+          targetHt = 0.06;
+        } else if (e.amount <= 0) {
+          targetHt = 0.12;
         } else {
-          ht = 0.06 + h * ((e.amount / maxAmtRef) * 6.5 + 0.05) + (isHovered ? 0.25 * h : 0);
+          targetHt = 0.35 + Math.sqrt(e.amount / maxAmtRef) * 3.2;
         }
 
+        const ht = lerp(0.12, targetHt, k) + (isHovered ? 0.15 * k : 0);
+        const scaleXZ = isHovered ? 1.06 : 1.0;
+
         p.set(w - (W - 1) / 2, 0, d - (D - 1) / 2);
-        s.set(isHovered ? 1.15 : 1, ht, isHovered ? 1.15 : 1);
+        s.set(scaleXZ, ht, scaleXZ);
         m.compose(p, q, s);
         mesh.setMatrixAt(i, m);
 
-        if (i === maxIdx && badgeSprite) {
-          badgeSprite.position.set(p.x, ht + 0.55, p.z);
+        if (i === todayIdx) {
+          todayMesh.position.set(p.x, ht + 0.005, p.z);
         }
       }
       mesh.instanceMatrix.needsUpdate = true;
     }
 
-    function lerp(a: number, b: number, t: number) {
-      return a + (b - a) * t;
-    }
-
     function updateCamera() {
-      const asp = (canvas.clientWidth || 856) / (canvas.clientHeight || 360);
-      const baseSpan = Math.max(5.5, W * 0.32);
-      const z = lerp(baseSpan * 0.9, baseSpan * 1.35, k);
-      cam.left = -z * asp;
-      cam.right = z * asp;
-      cam.top = z;
-      cam.bottom = -z;
-      cam.updateProjectionMatrix();
+      const canvasW = canvas.clientWidth || 800;
+      const canvasH =
+        canvas.clientHeight ||
+        (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
+      const maxHeight = 0.35 + 3.2;
+      const currentMax = lerp(0.12, maxHeight, k);
 
-      const tilt = lerp(0.001, 0.95, k);
-      const az = lerp(0, -0.72, k) + yaw * k;
-      const r = 60;
-      cam.position.set(
-        Math.sin(az) * Math.cos(Math.PI / 2 - tilt) * r,
-        Math.sin(Math.PI / 2 - tilt) * r * 1.0,
-        Math.cos(az) * Math.cos(Math.PI / 2 - tilt) * r
-      );
-      if (k < 0.002) cam.position.set(0, 60, 0.001);
-      cam.lookAt(0, lerp(0, 1.2, k), 0);
+      const framing = computeTusDiasCameraFraming({
+        weeks: W,
+        days: D,
+        maxHeight: currentMax,
+        canvasWidth: canvasW,
+        canvasHeight: canvasH,
+        k,
+        yaw,
+      });
+
+      cam.left = framing.left;
+      cam.right = framing.right;
+      cam.top = framing.top;
+      cam.bottom = framing.bottom;
+      cam.position.set(framing.camPosition.x, framing.camPosition.y, framing.camPosition.z);
+      cam.lookAt(framing.camTarget.x, framing.camTarget.y, framing.camTarget.z);
+      cam.updateProjectionMatrix();
     }
 
     let lastTime = performance.now();
@@ -422,10 +435,53 @@ export function TusDias({
       updateCamera();
       renderer.render(scene, cam);
 
+      // Project HTML overlay positions
+      const cWidth = canvas.clientWidth || 800;
+      const cHeight =
+        canvas.clientHeight ||
+        (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
+
+      for (const item of monthOverlayData) {
+        const el = monthRefsMap.current.get(item.key);
+        if (el) {
+          projVector.set(item.w - (W - 1) / 2, 0, (D - 1) / 2 + 0.65);
+          projVector.project(cam);
+          const screenX = ((projVector.x + 1) / 2) * cWidth;
+          const screenY = ((-projVector.y + 1) / 2) * cHeight;
+          el.style.transform = `translate3d(${screenX}px, ${screenY}px, 0) translate(-50%, 0)`;
+        }
+      }
+
+      if (maxBadgeRef.current && maxIdx >= 0) {
+        const maxW = Math.floor(maxIdx / 7);
+        const maxD = maxIdx % 7;
+        const maxX = maxW - (W - 1) / 2;
+        const maxZ = maxD - (D - 1) / 2;
+        const maxHt = lerp(0.12, 0.35 + 3.2, k);
+        projVector.set(maxX, maxHt + 0.15, maxZ);
+        projVector.project(cam);
+        const screenX = ((projVector.x + 1) / 2) * cWidth;
+        const screenY = ((-projVector.y + 1) / 2) * cHeight;
+        maxBadgeRef.current.style.transform = `translate3d(${screenX}px, ${screenY - 10}px, 0) translate(-50%, -100%)`;
+        maxBadgeRef.current.style.opacity = k > 0.15 ? '1' : '0';
+      }
+
       animationFrameRef.current = requestAnimationFrame(tick);
     }
 
     animationFrameRef.current = requestAnimationFrame(tick);
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!canvas || !renderer) return;
+      const w = canvas.clientWidth || 800;
+      const h =
+        canvas.clientHeight ||
+        (typeof window !== 'undefined' && window.innerWidth < 640 ? 280 : 340);
+      renderer.setSize(w, h, false);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      updateCamera();
+    });
+    resizeObserver.observe(canvas);
 
     const ray = new THREE.Raycaster();
     const mv = new THREE.Vector2();
@@ -489,28 +545,26 @@ export function TusDias({
 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      resizeObserver.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('click', onClick);
 
-      spritesToDispose.forEach((s) => {
-        scene.remove(s);
-        s.material.map?.dispose();
-        s.material.dispose();
-      });
-
-      renderer.dispose();
       geo.dispose();
       mat.dispose();
+      todayRingGeo.dispose();
+      todayMat.dispose();
+      renderer.dispose();
+      scene.clear();
     };
   }, [
     mode,
     webGLSupported,
     enrichedDays,
     weeks.length,
-    monthLabelsByWeek,
+    monthOverlayData,
     onSelectDay,
     palette,
     resolvedTheme,
@@ -694,11 +748,49 @@ export function TusDias({
 
       {/* 3D WebGL Canvas */}
       {show3D && (
-        <canvas
-          ref={canvasRef}
-          className="w-full h-[360px] cursor-crosshair block"
-          data-testid="tus-dias-3d-canvas"
-        />
+        <div
+          className="relative w-full h-[280px] sm:h-[340px] overflow-hidden select-none"
+          data-testid="tus-dias-3d-wrapper"
+        >
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full cursor-crosshair block"
+            data-testid="tus-dias-3d-canvas"
+          />
+
+          {/* Month Labels HTML Overlay */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {monthOverlayData.map((item) => (
+              <div
+                key={item.key}
+                ref={(el) => {
+                  if (el) monthRefsMap.current.set(item.key, el);
+                  else monthRefsMap.current.delete(item.key);
+                }}
+                className="absolute top-0 left-0 text-[12px] font-medium text-text-secondary select-none pointer-events-none will-change-transform"
+                style={{
+                  transform: 'translate3d(-9999px, -9999px, 0)',
+                }}
+              >
+                {item.label}
+              </div>
+            ))}
+
+            {/* Max Expense Day Amount Badge */}
+            {stats.maxExpenseDay.amount > 0 && (
+              <div
+                ref={maxBadgeRef}
+                className="absolute top-0 left-0 px-2 py-0.5 rounded-lg bg-sheet-surface/90 dark:bg-zinc-900/90 backdrop-blur-md border border-glass-border shadow-md text-[12px] font-bold text-text-primary tabular-nums pointer-events-none will-change-transform transition-opacity duration-200"
+                style={{
+                  transform: 'translate3d(-9999px, -9999px, 0)',
+                  opacity: 0,
+                }}
+              >
+                {formatGs(stats.maxExpenseDay.amount)}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* 2D Heatmap Grid */}
